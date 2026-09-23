@@ -1,0 +1,21 @@
+# Utvecklingsdatabas. Starta med: docker compose up -d
+services:
+  postgres:
+    image: postgres:18
+    container_name: taleshaven-postgres
+    environment:
+      POSTGRES_DB: taleshaven
+      POSTGRES_USER: taleshaven
+      POSTGRES_PASSWORD: taleshaven_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - taleshaven-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taleshaven -d taleshaven"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  taleshaven-pgdata:

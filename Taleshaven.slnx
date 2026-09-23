@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Taleshaven.Core/Taleshaven.Core.csproj" />
+    <Project Path="src/Taleshaven.Infrastructure/Taleshaven.Infrastructure.csproj" />
+    <Project Path="src/Taleshaven.Web/Taleshaven.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Taleshaven.Tests/Taleshaven.Tests.csproj" />
+  </Folder>
+</Solution>
