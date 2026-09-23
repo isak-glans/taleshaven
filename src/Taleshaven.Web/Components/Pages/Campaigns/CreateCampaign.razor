@@ -1,0 +1,80 @@
+@page "/campaigns/new"
+@attribute [Authorize]
+
+@using System.ComponentModel.DataAnnotations
+
+@inject ICampaignService CampaignService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Skapa kampanj</PageTitle>
+
+<h1>Skapa kampanj</h1>
+
+<div class="row">
+    <div class="col-lg-8">
+        <EditForm Model="Input" method="post" OnValidSubmit="CreateAsync" FormName="create-campaign">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+
+            <div class="mb-3">
+                <label for="Input.Name" class="form-label">Namn</label>
+                <InputText @bind-Value="Input.Name" id="Input.Name" class="form-control" maxlength="@CampaignLimits.NameMaxLength" />
+                <ValidationMessage For="() => Input.Name" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="Input.Description" class="form-label">Beskrivning</label>
+                <InputTextArea @bind-Value="Input.Description" id="Input.Description" class="form-control" rows="6" maxlength="@CampaignLimits.DescriptionMaxLength" />
+                <div class="form-text">Högst @CampaignLimits.DescriptionMaxLength tecken. Visas i kampanjlistan.</div>
+                <ValidationMessage For="() => Input.Description" class="text-danger" />
+            </div>
+
+            <div class="mb-3">
+                <label for="Input.MaxPlayers" class="form-label">Max antal spelare</label>
+                <InputNumber @bind-Value="Input.MaxPlayers" id="Input.MaxPlayers" class="form-control" style="max-width: 10rem"
+                             min="@CampaignLimits.MinPlayers" max="@CampaignLimits.MaxPlayers" />
+                <div class="form-text">Lämna tomt för obegränsat.</div>
+                <ValidationMessage For="() => Input.MaxPlayers" class="text-danger" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Skapa kampanj</button>
+            <a href="" class="btn btn-link">Avbryt</a>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+    }
+
+    private async Task CreateAsync()
+    {
+        var user = (await AuthenticationState).User;
+        var userId = user.GetUserId() ?? throw new InvalidOperationException("Inloggad användare saknar id.");
+
+        await CampaignService.CreateCampaignAsync(userId, new NewCampaign(Input.Name, Input.Description, Input.MaxPlayers));
+
+        NavigationManager.NavigateTo("");
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "Ange ett namn.")]
+        [StringLength(CampaignLimits.NameMaxLength, ErrorMessage = "Namnet får vara högst {1} tecken.")]
+        public string Name { get; set; } = "";
+
+        [StringLength(CampaignLimits.DescriptionMaxLength, ErrorMessage = "Beskrivningen får vara högst {1} tecken.")]
+        public string? Description { get; set; }
+
+        [Range(CampaignLimits.MinPlayers, CampaignLimits.MaxPlayers, ErrorMessage = "Ange ett värde mellan {1} och {2}.")]
+        public int? MaxPlayers { get; set; }
+    }
+}

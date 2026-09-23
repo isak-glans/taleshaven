@@ -1,0 +1,22 @@
+<span class="badge @CssClass">@Text</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public CampaignStatus Status { get; set; }
+
+    private string Text => Status switch
+    {
+        CampaignStatus.OpenForApplications => "Öppen för ansökningar",
+        CampaignStatus.Ongoing => "Pågående",
+        CampaignStatus.Closed => "Stängd",
+        CampaignStatus.Archived => "Arkiverad",
+        _ => Status.ToString(),
+    };
+
+    private string CssClass => Status switch
+    {
+        CampaignStatus.OpenForApplications => "text-bg-success",
+        CampaignStatus.Ongoing => "text-bg-primary",
+        _ => "text-bg-secondary",
+    };
+}

@@ -14,3 +14,13 @@ dotnet build
 dotnet run --project src/Taleshaven.Web
 dotnet test
 ```
+
+I utvecklingsläge körs databasmigreringar automatiskt när appen startar. Ingen
+riktig e-posttjänst är kopplad än; efter registrering visas bekräftelselänken
+direkt på sidan.
+
+### Ny migrering
+
+```bash
+dotnet ef migrations add <Namn> --project src/Taleshaven.Infrastructure --startup-project src/Taleshaven.Web --output-dir Data/Migrations
+```

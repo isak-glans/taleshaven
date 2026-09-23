@@ -1,7 +1,77 @@
 @page "/"
 
+@inject ICampaignService CampaignService
+
 <PageTitle>Taleshaven</PageTitle>
 
-<h1>Taleshaven</h1>
+<AuthorizeView>
+    <Authorized>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="mb-0">Kampanjer</h1>
+            <a class="btn btn-primary" href="campaigns/new">Skapa kampanj</a>
+        </div>
 
-<p>Play-by-post-plattform för rollspel. Kampanjlistan kommer här.</p>
+        @if (campaigns is null)
+        {
+            <p>Laddar…</p>
+        }
+        else if (campaigns.Count == 0)
+        {
+            <p>Det finns inga kampanjer än. Bli den första att <a href="campaigns/new">skapa en</a>!</p>
+        }
+        else
+        {
+            <ul class="list-group">
+                @foreach (var campaign in campaigns)
+                {
+                    <li class="list-group-item py-3">
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+                            <div class="campaign-summary">
+                                <h2 class="h5 mb-1">@campaign.Name</h2>
+                                <div class="text-secondary small mb-1">
+                                    GM: @campaign.GameMasterName
+                                    · @campaign.PlayerCount@(campaign.MaxPlayers is { } max ? $"/{max}" : "") spelare
+                                </div>
+                                @if (campaign.Description.Length > 0)
+                                {
+                                    <p class="mb-0 campaign-description">@campaign.Description</p>
+                                }
+                            </div>
+                            <div class="text-end flex-shrink-0">
+                                <CampaignStatusBadge Status="campaign.Status" />
+                                @if (campaign.Status == CampaignStatus.OpenForApplications && !campaign.AcceptsApplications)
+                                {
+                                    <div class="small text-secondary mt-1">Fullt</div>
+                                }
+                            </div>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <h1>Välkommen till Taleshaven</h1>
+        <p class="lead">En plats för rollspel i play-by-post-format, oavsett regelsystem.</p>
+        <p>
+            <a class="btn btn-primary" href="Account/Login">Logga in</a>
+            <a class="btn btn-outline-primary ms-2" href="Account/Register">Skapa konto</a>
+        </p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private IReadOnlyList<CampaignListItem>? campaigns;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationState;
+        if (state.User.Identity?.IsAuthenticated == true)
+        {
+            campaigns = await CampaignService.GetCampaignsAsync();
+        }
+    }
+}
