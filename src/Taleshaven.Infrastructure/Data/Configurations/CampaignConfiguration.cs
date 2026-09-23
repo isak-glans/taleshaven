@@ -27,7 +27,40 @@ internal sealed class CampaignConfiguration : IEntityTypeConfiguration<Campaign>
             .HasForeignKey(m => m.CampaignId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasMany(c => c.Applications)
+            .WithOne()
+            .HasForeignKey(a => a.CampaignId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.HasIndex(c => c.Status);
+    }
+}
+
+internal sealed class CampaignApplicationConfiguration : IEntityTypeConfiguration<CampaignApplication>
+{
+    public void Configure(EntityTypeBuilder<CampaignApplication> builder)
+    {
+        // Id skapas i domänen (Guid v7), så att nya ansökningar alltid sparas som nya rader.
+        builder.Property(a => a.Id).ValueGeneratedNever();
+
+        builder.Property(a => a.Message)
+            .IsRequired()
+            .HasMaxLength(CampaignLimits.ApplicationMessageMaxLength);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(a => a.DecidedById)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // Högst en väntande ansökan per användare och kampanj, även vid samtidiga anrop.
+        builder.HasIndex(a => new { a.CampaignId, a.UserId })
+            .IsUnique()
+            .HasFilter($"\"{nameof(CampaignApplication.Status)}\" = {(int)ApplicationStatus.Pending}");
     }
 }
 

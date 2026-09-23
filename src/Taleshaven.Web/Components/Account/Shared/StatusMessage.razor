@@ -23,6 +23,7 @@
 
         if (messageFromCookie is not null)
         {
+            messageFromCookie = Uri.UnescapeDataString(messageFromCookie);
             HttpContext.Response.Cookies.Delete(IdentityRedirectManager.StatusCookieName);
         }
     }

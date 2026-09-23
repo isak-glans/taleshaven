@@ -86,10 +86,22 @@ public class CampaignTests
     [Fact]
     public void ListItem_AcceptsApplications_UsesSameRuleAsCampaign()
     {
-        var full = new CampaignListItem(1, "Namn", "GM", "", 4, 4, CampaignStatus.OpenForApplications);
+        var full = new CampaignListItem(1, "Namn", "GM", "", 4, 4, CampaignStatus.OpenForApplications, CampaignRole.None, false);
         var open = full with { PlayerCount = 3 };
 
         Assert.False(full.AcceptsApplications);
         Assert.True(open.AcceptsApplications);
+    }
+
+    [Theory]
+    [InlineData(CampaignRole.None, false, true)]
+    [InlineData(CampaignRole.None, true, false)]
+    [InlineData(CampaignRole.Player, false, false)]
+    [InlineData(CampaignRole.GameMaster, false, false)]
+    public void ListItem_CanViewerApply_OnlyForOutsidersWithoutPendingApplication(CampaignRole role, bool hasPending, bool expected)
+    {
+        var item = new CampaignListItem(1, "Namn", "GM", "", 0, 4, CampaignStatus.OpenForApplications, role, hasPending);
+
+        Assert.Equal(expected, item.CanViewerApply);
     }
 }

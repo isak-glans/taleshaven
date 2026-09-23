@@ -39,7 +39,8 @@ internal sealed class IdentityRedirectManager(NavigationManager navigationManage
 
     public void RedirectToWithStatus(string uri, string message, HttpContext context)
     {
-        context.Response.Cookies.Append(StatusCookieName, message, StatusCookieBuilder.Build(context));
+        // Kakvärden får bara innehålla ASCII, så meddelandet (som kan innehålla å, ä, ö) kodas.
+        context.Response.Cookies.Append(StatusCookieName, Uri.EscapeDataString(message), StatusCookieBuilder.Build(context));
         RedirectTo(uri);
     }
 

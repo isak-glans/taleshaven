@@ -1,0 +1,4 @@
+.campaign-description,
+.application-message {
+    white-space: pre-line;
+}

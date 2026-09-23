@@ -17,6 +17,7 @@ public static class DependencyInjection
 
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<ICampaignService, CampaignService>();
+        services.AddScoped<ICampaignApplicationService, CampaignApplicationService>();
 
         return services;
     }

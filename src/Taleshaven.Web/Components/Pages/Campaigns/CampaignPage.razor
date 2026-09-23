@@ -1,0 +1,246 @@
+@page "/campaigns/{CampaignId:int}"
+@attribute [Authorize]
+
+@using System.ComponentModel.DataAnnotations
+@using Taleshaven.Core
+@using Taleshaven.Web.Components.Account
+@using Taleshaven.Web.Components.Account.Shared
+
+@inject ICampaignService CampaignService
+@inject ICampaignApplicationService ApplicationService
+@inject IdentityRedirectManager RedirectManager
+
+@if (campaign is null)
+{
+    <PageTitle>Kampanjen finns inte</PageTitle>
+    <h1>Kampanjen finns inte</h1>
+    <p><a href="">Tillbaka till kampanjerna</a></p>
+    return;
+}
+
+<PageTitle>@campaign.Name</PageTitle>
+
+<p class="mb-2"><a href="">← Kampanjer</a></p>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+    <h1 class="mb-0">@campaign.Name</h1>
+    <CampaignStatusBadge Status="campaign.Status" />
+</div>
+<p class="text-secondary">
+    GM: @campaign.GameMasterName
+    · @campaign.Players.Count@(campaign.MaxPlayers is { } max ? $"/{max}" : "") spelare
+    · Skapad @campaign.CreatedAt.ToLocalTime().ToString("d MMM yyyy")
+</p>
+
+<StatusMessage Message="@errorMessage" />
+
+@if (campaign.Description.Length > 0)
+{
+    <p class="campaign-description">@campaign.Description</p>
+}
+
+<div class="row g-4 mt-1">
+    <div class="col-lg-7">
+        @switch (campaign.ViewerRole)
+        {
+            case CampaignRole.GameMaster:
+                <h2 class="h4">Ansökningar</h2>
+                @if (pendingApplications.Count == 0)
+                {
+                    <p class="text-secondary">Inga ansökningar väntar på svar.</p>
+                }
+                else
+                {
+                    <ul class="list-group">
+                        @foreach (var application in pendingApplications)
+                        {
+                            <li class="list-group-item py-3">
+                                <div class="d-flex justify-content-between flex-wrap gap-2">
+                                    <strong>@application.ApplicantName</strong>
+                                    <span class="text-secondary small">@application.SubmittedAt.ToLocalTime().ToString("d MMM yyyy HH:mm")</span>
+                                </div>
+                                @if (application.Message.Length > 0)
+                                {
+                                    <p class="my-2 application-message">@application.Message</p>
+                                }
+                                <form method="post" @formname="@($"decide-{application.Id}")" @onsubmit="DecideAsync" class="d-flex gap-2 mt-2">
+                                    <AntiforgeryToken />
+                                    <input type="hidden" name="Decision.ApplicationId" value="@application.Id" />
+                                    <button type="submit" name="Decision.Action" value="@ApproveAction" class="btn btn-sm btn-success">Godkänn</button>
+                                    <button type="submit" name="Decision.Action" value="@RejectAction" class="btn btn-sm btn-outline-danger">Avslå</button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                }
+                break;
+
+            case CampaignRole.Player:
+                <div class="alert alert-info">Du deltar i den här kampanjen.</div>
+                break;
+
+            default:
+                <h2 class="h4" id="ansok">Ansökan</h2>
+                @if (campaign.ViewerApplication is { Status: ApplicationStatus.Pending } pending)
+                {
+                    <div class="alert alert-info">
+                        Din ansökan skickades @pending.SubmittedAt.ToLocalTime().ToString("d MMM yyyy HH:mm") och väntar på svar från GM.
+                    </div>
+                }
+                else
+                {
+                    @if (campaign.ViewerApplication is { Status: ApplicationStatus.Rejected, DecidedAt: { } rejectedAt })
+                    {
+                        <div class="alert alert-secondary">
+                            Din tidigare ansökan avslogs @rejectedAt.ToLocalTime().ToString("d MMM yyyy").
+                        </div>
+                    }
+
+                    @if (campaign.CanViewerApply)
+                    {
+                        <EditForm Model="ApplyInput" method="post" OnValidSubmit="ApplyAsync" FormName="apply">
+                            <DataAnnotationsValidator />
+                            <div class="mb-3">
+                                <label for="ApplyInput.Message" class="form-label">Meddelande till GM</label>
+                                <InputTextArea @bind-Value="ApplyInput.Message" id="ApplyInput.Message" class="form-control" rows="5"
+                                               maxlength="@CampaignLimits.ApplicationMessageMaxLength"
+                                               placeholder="Berätta gärna lite om dig själv och karaktären du vill spela." />
+                                <div class="form-text">Valfritt. Högst @CampaignLimits.ApplicationMessageMaxLength tecken.</div>
+                                <ValidationMessage For="() => ApplyInput.Message" class="text-danger" />
+                            </div>
+                            <button type="submit" class="btn btn-primary">Skicka ansökan</button>
+                        </EditForm>
+                    }
+                    else
+                    {
+                        <p class="text-secondary">Kampanjen tar inte emot ansökningar just nu.</p>
+                    }
+                }
+                break;
+        }
+    </div>
+
+    <div class="col-lg-5">
+        <h2 class="h4">Spelare</h2>
+        @if (campaign.Players.Count == 0)
+        {
+            <p class="text-secondary">Inga spelare ännu.</p>
+        }
+        else
+        {
+            <ul class="list-group">
+                @foreach (var player in campaign.Players)
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>@player.DisplayName</span>
+                        <span class="text-secondary small">sedan @player.JoinedAt.ToLocalTime().ToString("d MMM yyyy")</span>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+@code {
+    private const string ApproveAction = "approve";
+    private const string RejectAction = "reject";
+
+    [Parameter]
+    public int CampaignId { get; set; }
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "apply")]
+    private ApplyInputModel ApplyInput { get; set; } = default!;
+
+    // Binds från GM:ns godkänn/avslå-formulär (ett per ansökan).
+    [SupplyParameterFromForm]
+    private DecisionModel? Decision { get; set; }
+
+    private string userId = "";
+    private CampaignDetails? campaign;
+    private IReadOnlyList<PendingApplication> pendingApplications = [];
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ApplyInput ??= new();
+
+        userId = (await AuthenticationState).User.GetUserId()
+            ?? throw new InvalidOperationException("Inloggad användare saknar id.");
+
+        campaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
+        if (campaign is null)
+        {
+            HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        if (campaign.ViewerRole == CampaignRole.GameMaster)
+        {
+            pendingApplications = await ApplicationService.GetPendingApplicationsAsync(CampaignId, userId);
+        }
+    }
+
+    private async Task ApplyAsync()
+    {
+        try
+        {
+            await ApplicationService.ApplyAsync(CampaignId, userId, ApplyInput.Message);
+        }
+        catch (CampaignRuleException ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+            return;
+        }
+
+        RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}", "Din ansökan har skickats till GM.", HttpContext);
+    }
+
+    private async Task DecideAsync()
+    {
+        if (Decision?.ApplicationId is not { } applicationId)
+            return;
+
+        string status;
+        try
+        {
+            switch (Decision.Action)
+            {
+                case ApproveAction:
+                    await ApplicationService.ApproveAsync(CampaignId, applicationId, userId);
+                    status = "Ansökan godkändes. Spelaren är nu med i kampanjen.";
+                    break;
+                case RejectAction:
+                    await ApplicationService.RejectAsync(CampaignId, applicationId, userId);
+                    status = "Ansökan avslogs.";
+                    break;
+                default:
+                    return;
+            }
+        }
+        catch (CampaignRuleException ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+            return;
+        }
+
+        RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}", status, HttpContext);
+    }
+
+    private sealed class ApplyInputModel
+    {
+        [StringLength(CampaignLimits.ApplicationMessageMaxLength, ErrorMessage = "Meddelandet får vara högst {1} tecken.")]
+        public string? Message { get; set; }
+    }
+
+    private sealed class DecisionModel
+    {
+        public Guid? ApplicationId { get; set; }
+        public string? Action { get; set; }
+    }
+}

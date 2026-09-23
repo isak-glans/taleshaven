@@ -31,6 +31,9 @@ skissen, tillsammans med de beslut som fattats hittills.
 | F4 | Karaktär och kampanj | En karaktär tillhör en kampanj. En spelare kan ha flera karaktärer i samma kampanj. |
 | F5 | Textformat | Text lagras som Markdown, renderas server-side och saneras före visning. |
 | F6 | Redigering | Egna inlägg kan redigeras. Inlägget markeras som redigerat och historiken sparas. |
+| F7 | Ny ansökan efter avslag | Tillåten. Den avslagna ansökan finns kvar som historik. |
+| F8 | Meddelande i ansökan | Valfritt, högst 1 000 tecken. |
+| F9 | Full kampanj | Väntande ansökningar ligger kvar men kan inte godkännas förrän det finns plats. |
 
 ---
 
@@ -340,4 +343,4 @@ Beroenden: `Web → Core, Infrastructure` och `Infrastructure → Core`.
 4. Hur hanteras borttagning av ett användarkonto: anonymiseras inläggen?
 5. Ska GM kunna exportera kampanjen?
 6. Ska arkiverade kampanjer kunna återställas?
-7. Ska det gå att ansöka på nytt efter ett avslag?
+7. Ska den som ansöker kunna dra tillbaka sin ansökan?

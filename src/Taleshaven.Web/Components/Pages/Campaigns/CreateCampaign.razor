@@ -60,9 +60,9 @@
         var user = (await AuthenticationState).User;
         var userId = user.GetUserId() ?? throw new InvalidOperationException("Inloggad användare saknar id.");
 
-        await CampaignService.CreateCampaignAsync(userId, new NewCampaign(Input.Name, Input.Description, Input.MaxPlayers));
+        var campaignId = await CampaignService.CreateCampaignAsync(userId, new NewCampaign(Input.Name, Input.Description, Input.MaxPlayers));
 
-        NavigationManager.NavigateTo("");
+        NavigationManager.NavigateTo($"campaigns/{campaignId}");
     }
 
     private sealed class InputModel

@@ -9,6 +9,7 @@ public class TaleshavenDbContext(DbContextOptions<TaleshavenDbContext> options) 
 {
     public DbSet<Campaign> Campaigns => Set<Campaign>();
     public DbSet<CampaignMembership> CampaignMemberships => Set<CampaignMembership>();
+    public DbSet<CampaignApplication> CampaignApplications => Set<CampaignApplication>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
