@@ -2,53 +2,9 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 
-@inject ICampaignService CampaignService
-@inject IThreadService ThreadService
-@inject NavigationManager NavigationManager
-
-@if (campaign is null || thread is null)
-{
-    return;
-}
-
-<PageTitle>OOC · @campaign.Name</PageTitle>
-
-<CampaignHeader Campaign="campaign" Active="CampaignTab.Ooc" />
-
-<p class="text-secondary small">
-    Här pratar ni utanför rollspelet: planering, regelfrågor, frånvaro och annat.
-</p>
-
-<PostStream @key="thread.Id" Thread="thread" Placeholder="Skriv ett meddelande…" />
+<CampaignChannel CampaignId="CampaignId" Kind="ThreadKind.Ooc" />
 
 @code {
     [Parameter]
     public int CampaignId { get; set; }
-
-    [CascadingParameter]
-    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
-
-    // Förs över från förrenderingen så att sidan inte blinkar tom när den blir interaktiv.
-    [PersistentState]
-    public CampaignDetails? LoadedCampaign { get; set; }
-
-    [PersistentState]
-    public ThreadDetails? LoadedThread { get; set; }
-
-    private CampaignDetails? campaign => LoadedCampaign;
-    private ThreadDetails? thread => LoadedThread;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        var userId = (await AuthenticationState).User.GetUserId() ?? "";
-
-        if (LoadedCampaign?.Id != CampaignId)
-        {
-            LoadedCampaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
-            LoadedThread = LoadedCampaign is null ? null : await ThreadService.GetOocThreadAsync(CampaignId, userId);
-        }
-
-        if (LoadedThread is null)
-            NavigationManager.NotFound();
-    }
 }

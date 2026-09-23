@@ -1,0 +1,98 @@
+.chat-messages {
+    min-height: 40vh;
+    /* Läspositionen styrs av ChatView.razor.js; webbläsarens egen förankring skulle justera en gång till. */
+    overflow-anchor: none;
+    padding-bottom: 0.5rem;
+}
+
+.chat-top {
+    padding: 0.75rem 0;
+    text-align: center;
+}
+
+.chat-day {
+    align-items: center;
+    color: var(--bs-secondary-color);
+    display: flex;
+    font-size: 0.8rem;
+    font-weight: 600;
+    gap: 0.75rem;
+    margin: 1rem 0 0.5rem;
+}
+
+.chat-day::before,
+.chat-day::after {
+    border-top: 1px solid var(--bs-border-color);
+    content: "";
+    flex: 1;
+}
+
+.chat-message {
+    border-radius: 0.375rem;
+    display: grid;
+    gap: 0 0.75rem;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    margin-top: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.chat-message:hover {
+    background: var(--bs-tertiary-bg);
+}
+
+.chat-continuation {
+    margin-top: 0;
+}
+
+/* Rak linje (utan rundning) så att en grupp GM-inlägg får en sammanhängande markering. */
+.chat-gm {
+    border-radius: 0;
+    box-shadow: inset 3px 0 0 var(--bs-dark);
+}
+
+.chat-avatar {
+    align-items: center;
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    font-size: 0.9rem;
+    font-weight: 600;
+    height: 2.5rem;
+    justify-content: center;
+    width: 2.5rem;
+}
+
+.chat-side-time {
+    color: var(--bs-secondary-color);
+    font-size: 0.7rem;
+    opacity: 0;
+    padding-top: 0.2rem;
+    text-align: right;
+}
+
+.chat-message:hover .chat-side-time {
+    opacity: 1;
+}
+
+.chat-header {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.chat-composer {
+    background: var(--bs-body-bg);
+    border-top: 1px solid var(--bs-border-color);
+    bottom: 0;
+    padding: 0.5rem 0 0.75rem;
+    position: sticky;
+    z-index: 2;
+}
+
+.chat-new-below {
+    left: 50%;
+    position: absolute;
+    top: -2.5rem;
+    transform: translateX(-50%);
+}

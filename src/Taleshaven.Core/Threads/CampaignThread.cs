@@ -14,7 +14,8 @@ public enum ThreadStatus
 }
 
 /// <summary>
-/// En tråd med inlägg. RPG-trådar skapas av GM; varje kampanj har dessutom exakt en OOC-tråd.
+/// En chattkanal i en kampanj. Varje kampanj har en RPG-kanal och en OOC-kanal (beslut B6, B7).
+/// Modellen tillåter fler kanaler per kampanj om det behövs senare.
 /// </summary>
 public class CampaignThread
 {
@@ -29,52 +30,18 @@ public class CampaignThread
     public string CreatedById { get; private set; } = "";
     public DateTimeOffset CreatedAt { get; private set; }
 
-    public static CampaignThread CreateRpg(int campaignId, string? title, string? description, string createdById, DateTimeOffset now)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(createdById);
-
-        title = title?.Trim() ?? "";
-        if (title.Length == 0)
-            throw new CampaignRuleException("Tråden måste ha en titel.");
-        if (title.Length > ThreadLimits.TitleMaxLength)
-            throw new CampaignRuleException($"Titeln får vara högst {ThreadLimits.TitleMaxLength} tecken.");
-
-        description = description?.Trim() ?? "";
-        if (description.Length > ThreadLimits.DescriptionMaxLength)
-            throw new CampaignRuleException($"Beskrivningen får vara högst {ThreadLimits.DescriptionMaxLength} tecken.");
-
-        return new CampaignThread
-        {
-            CampaignId = campaignId,
-            Kind = ThreadKind.Rpg,
-            Title = title,
-            Description = description,
-            Status = ThreadStatus.Open,
-            CreatedById = createdById,
-            CreatedAt = now,
-        };
-    }
-
-    public static CampaignThread CreateOoc(int campaignId, string createdById, DateTimeOffset now)
+    public static CampaignThread CreateChannel(int campaignId, ThreadKind kind, string createdById, DateTimeOffset now)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(createdById);
 
         return new CampaignThread
         {
             CampaignId = campaignId,
-            Kind = ThreadKind.Ooc,
-            Title = "OOC",
+            Kind = kind,
+            Title = kind == ThreadKind.Rpg ? "RPG" : "OOC",
             Status = ThreadStatus.Open,
             CreatedById = createdById,
             CreatedAt = now,
         };
-    }
-
-    public void SetLocked(bool locked)
-    {
-        if (Kind != ThreadKind.Rpg)
-            throw new CampaignRuleException("Endast RPG-trådar kan låsas.");
-
-        Status = locked ? ThreadStatus.Locked : ThreadStatus.Open;
     }
 }

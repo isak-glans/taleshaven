@@ -1,9 +1,14 @@
 const DRAFT_PREFIX = 'taleshaven:draft:';
 
-export function init(container, draftKey) {
+export function init(container, draftKey, sendOnEnter) {
     const textarea = container.querySelector('textarea');
     const counter = container.querySelector('[data-md-counter]');
     const updateCounter = () => { if (counter) counter.textContent = textarea.value.length; };
+
+    // På pekskärmar ger Enter alltid ny rad; man skickar med knappen.
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    const hint = container.querySelector('[data-md-hint]');
+    if (isTouch && hint) hint.textContent = 'Tryck på knappen för att skicka';
 
     // Blazor lyssnar på "change" (@bind), så ändringar gjorda från JS måste meddelas.
     const notifyBlazor = () => {
@@ -26,6 +31,19 @@ export function init(container, draftKey) {
         saveTimer = setTimeout(() => saveDraft(draftKey, textarea.value), 400);
     });
 
+    textarea.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' || event.isComposing) return;
+
+        const modifier = event.ctrlKey || event.metaKey;
+        const plainEnter = !event.shiftKey && !event.altKey && !modifier;
+        const send = modifier || (sendOnEnter && !isTouch && plainEnter);
+        if (!send) return;
+
+        event.preventDefault();
+        notifyBlazor();
+        container.querySelector('[data-md-submit]')?.click();
+    });
+
     for (const button of container.querySelectorAll('[data-md]')) {
         button.addEventListener('click', () => {
             applyFormat(textarea, button.dataset.md);
@@ -36,6 +54,10 @@ export function init(container, draftKey) {
     }
 
     updateCounter();
+}
+
+export function focus(container) {
+    container.querySelector('textarea')?.focus();
 }
 
 export function clearDraft(draftKey) {

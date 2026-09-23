@@ -1,0 +1,59 @@
+@* En kampanjs RPG- eller OOC-chatt med rubrik och flikar. Används av RpgPage och OocPage.
+   Sidorna är separata komponenter så att ett flikbyte alltid ger nya parametrar; en gemensam sida
+   med två adresser återanvändes av Blazor och visade fel kanal. *@
+
+@inject ICampaignService CampaignService
+@inject IThreadService ThreadService
+@inject NavigationManager NavigationManager
+
+@if (campaign is null || thread is null)
+{
+    return;
+}
+
+<PageTitle>@(Kind == ThreadKind.Ooc ? "OOC · " : "")@campaign.Name</PageTitle>
+
+<CampaignHeader Campaign="campaign" Active="@(Kind == ThreadKind.Ooc ? CampaignTab.Ooc : CampaignTab.Rpg)" />
+
+@if (Kind == ThreadKind.Ooc)
+{
+    <p class="text-secondary small mb-0">Här pratar ni utanför rollspelet: planering, regelfrågor, frånvaro och annat.</p>
+}
+
+<ChatView @key="thread.Id" Thread="thread" SendOnEnter="@(Kind == ThreadKind.Ooc)"
+          Placeholder="@(Kind == ThreadKind.Ooc ? "Skriv ett meddelande…" : "Skriv ditt inlägg…")" />
+
+@code {
+    [Parameter, EditorRequired]
+    public int CampaignId { get; set; }
+
+    [Parameter, EditorRequired]
+    public ThreadKind Kind { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    // Förs över från förrenderingen så att sidan inte blinkar tom när den blir interaktiv.
+    [PersistentState]
+    public CampaignDetails? LoadedCampaign { get; set; }
+
+    [PersistentState]
+    public ThreadDetails? LoadedThread { get; set; }
+
+    private CampaignDetails? campaign => LoadedCampaign;
+    private ThreadDetails? thread => LoadedThread;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var userId = (await AuthenticationState).User.GetUserId() ?? "";
+
+        if (LoadedCampaign?.Id != CampaignId)
+            LoadedCampaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
+
+        if (LoadedThread is null || LoadedThread.CampaignId != CampaignId || LoadedThread.Kind != Kind)
+            LoadedThread = LoadedCampaign is null ? null : await ThreadService.GetChannelAsync(CampaignId, Kind, userId);
+
+        if (LoadedThread is null)
+            NavigationManager.NotFound();
+    }
+}

@@ -1,0 +1,349 @@
+﻿@* Chatt i stil med Discord för en kanal (RPG eller OOC). Kräver interaktiv rendering.
+   Äldre inlägg laddas när man scrollar mot toppen; nya inlägg kommer in live. *@
+
+@implements IAsyncDisposable
+
+@inject IThreadService ThreadService
+@inject IMarkdownRenderer Markdown
+@inject PostNotifier Notifier
+@inject TimeProvider TimeProvider
+@inject IJSRuntime JS
+@inject ILogger<ChatView> Logger
+
+<div class="chat">
+    <div class="chat-messages">
+        @if (hasOlder)
+        {
+            <div class="chat-top text-secondary small" @ref="topSentinel">Laddar äldre inlägg…</div>
+        }
+        else if (posts.Count > 0)
+        {
+            <div class="chat-top text-secondary small">Början av kanalen</div>
+        }
+
+        @if (posts.Count == 0)
+        {
+            <p class="text-secondary py-4">Inga inlägg ännu.@(Thread.CanWrite ? " Skriv det första!" : "")</p>
+        }
+
+        @{
+            var now = TimeProvider.GetUtcNow();
+        }
+        @* Egen behållare så att laddningsraden ovanför inte blandas med nycklade inlägg och återskapas. *@
+        <div class="chat-list">
+        @for (var i = 0; i < posts.Count; i++)
+        {
+            var post = posts[i].Item;
+            var html = posts[i].Html;
+            var previous = i > 0 ? posts[i - 1].Item : null;
+            var newDay = previous is null || Dates.Day(previous.CreatedAt) != Dates.Day(post.CreatedAt);
+            var continuation = !newDay && previous!.AuthorId == post.AuthorId && post.CreatedAt - previous.CreatedAt < GroupingWindow;
+
+            <div @key="post.Id">
+                @if (newDay)
+                {
+                    <div class="chat-day" role="separator"><span>@Dates.DayHeading(post.CreatedAt, now)</span></div>
+                }
+                <article id="post-@post.Id" class="chat-message @(continuation ? "chat-continuation" : "") @(post.AuthorIsGameMaster ? "chat-gm" : "")">
+                    @if (continuation)
+                    {
+                        <time class="chat-side-time" datetime="@post.CreatedAt.ToString("o")" title="@Dates.DateTime(post.CreatedAt)">@Dates.Time(post.CreatedAt)</time>
+                    }
+                    else
+                    {
+                        <div class="chat-avatar" style="background-color: @AvatarColor(post.AuthorId)" aria-hidden="true">@Initials(post.AuthorName)</div>
+                    }
+                    <div class="chat-body">
+                        @if (!continuation)
+                        {
+                            <header class="chat-header">
+                                <strong class="chat-author">@post.AuthorName</strong>
+                                @if (post.AuthorIsGameMaster)
+                                {
+                                    <span class="badge text-bg-dark">GM</span>
+                                }
+                                <time class="text-secondary small" datetime="@post.CreatedAt.ToString("o")" title="@Dates.DateTime(post.CreatedAt)">@Dates.Time(post.CreatedAt)</time>
+                            </header>
+                        }
+                        <div class="post-content">@html</div>
+                    </div>
+                </article>
+            </div>
+        }
+        </div>
+    </div>
+
+    <div class="chat-composer">
+        @if (newBelow)
+        {
+            <button type="button" class="btn btn-sm btn-primary chat-new-below" @onclick="JumpToNewest">Nya inlägg ↓</button>
+        }
+
+        @if (Thread.CanWrite)
+        {
+            <MarkdownEditor MaxLength="ThreadLimits.PostMaxLength" DraftKey="@($"thread-{Thread.Id}")" OnSubmit="SubmitAsync"
+                            SubmitText="Skicka" Label="Nytt inlägg" Placeholder="@Placeholder" Rows="3" SendOnEnter="SendOnEnter" />
+        }
+        else
+        {
+            <p class="text-secondary fst-italic mb-0">Du kan läsa men inte skriva här.</p>
+        }
+    </div>
+</div>
+
+@code {
+    // Inlägg från samma person inom den här tiden visas under samma namn.
+    private static readonly TimeSpan GroupingWindow = TimeSpan.FromMinutes(10);
+
+    private readonly List<DisplayPost> posts = [];
+    private IJSObjectReference? module;
+    private IJSObjectReference? topObserver;
+    private DotNetObjectReference<ChatView>? selfReference;
+    private ElementReference topSentinel;
+    private string userId = "";
+    private bool hasOlder;
+    private bool loadingOlder;
+    private bool startObserving;
+    private bool scrollToBottom;
+    private bool newBelow;
+    private (string ElementId, double? Top)? anchorBeforePrepend;
+
+    [Parameter, EditorRequired]
+    public ThreadDetails Thread { get; set; } = default!;
+
+    [Parameter]
+    public string? Placeholder { get; set; }
+
+    /// <summary>OOC: Enter skickar. RPG: Ctrl+Enter skickar (beslut B9).</summary>
+    [Parameter]
+    public bool SendOnEnter { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    /// <summary>Förs över från förrenderingen så att chatten inte töms och laddas om när den blir interaktiv.</summary>
+    [PersistentState]
+    public PostPage? InitialPage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+
+        InitialPage ??= await ThreadService.GetInitialPostsAsync(Thread.Id);
+        hasOlder = InitialPage.HasOlder;
+        posts.AddRange(InitialPage.Posts.Select(ToDisplay));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Körs bara när komponenten är interaktiv (inte vid förrendering).
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Playroom/ChatView.razor.js");
+            selfReference = DotNetObjectReference.Create(this);
+            Notifier.PostCreated += OnPostCreated;
+
+            // Inlägg som skrevs mellan förrenderingen och att kretsen startade.
+            Append(await ThreadService.GetPostsAfterAsync(Thread.Id, LastPostId));
+
+            scrollToBottom = true;
+            startObserving = true;
+            StateHasChanged();
+            return;
+        }
+
+        if (module is null)
+            return;
+
+        if (anchorBeforePrepend is var (elementId, top))
+        {
+            anchorBeforePrepend = null;
+            await module.InvokeVoidAsync("restoreAnchor", elementId, top);
+
+            if (hasOlder)
+            {
+                // Om toppen fortfarande syns (korta inlägg) kommer ingen ny signal från observern, så ladda direkt.
+                if (await module.InvokeAsync<bool>("isNearTop", topSentinel))
+                    await LoadOlderAsync();
+                else
+                    await ObserveTopAsync();
+            }
+        }
+
+        if (scrollToBottom)
+        {
+            scrollToBottom = false;
+            await module.InvokeVoidAsync("scrollToBottom");
+        }
+
+        // Börja lyssna på toppen först när vi har scrollat ner, annars laddas äldre inlägg direkt.
+        if (startObserving)
+        {
+            startObserving = false;
+            if (hasOlder)
+                await ObserveTopAsync();
+        }
+    }
+
+    // Startar om bevakningen av toppen, så att den alltid gäller det aktuella laddningselementet.
+    private async Task ObserveTopAsync()
+    {
+        await StopObservingTopAsync();
+        topObserver = await module!.InvokeAsync<IJSObjectReference>("observeTop", topSentinel, selfReference);
+    }
+
+    private async Task StopObservingTopAsync()
+    {
+        if (topObserver is null)
+            return;
+
+        await topObserver.InvokeVoidAsync("disconnect");
+        await topObserver.DisposeAsync();
+        topObserver = null;
+    }
+
+    [JSInvokable]
+    public async Task LoadOlderAsync()
+    {
+        if (loadingOlder || !hasOlder || posts.Count == 0 || module is null)
+            return;
+
+        loadingOlder = true;
+        try
+        {
+            var older = await ThreadService.GetPostsBeforeAsync(Thread.Id, posts[0].Item.Id);
+
+            // Inlägget som var överst ska stå kvar på samma plats på skärmen när äldre läggs in ovanför.
+            var anchorId = $"post-{posts[0].Item.Id}";
+            anchorBeforePrepend = (anchorId, await module.InvokeAsync<double?>("anchorTop", anchorId));
+
+            posts.InsertRange(0, older.Posts.Select(ToDisplay));
+            hasOlder = older.HasOlder;
+
+            // Pausa bevakningen tills läspositionen är återställd (se OnAfterRenderAsync).
+            await StopObservingTopAsync();
+        }
+        finally
+        {
+            loadingOlder = false;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task<string?> SubmitAsync(string content)
+    {
+        try
+        {
+            var created = await ThreadService.CreatePostAsync(Thread.CampaignId, Thread.Id, userId, content);
+            Append([created]);
+            scrollToBottom = true;
+            newBelow = false;
+            Notifier.NotifyPostCreated(Thread.Id);
+
+            // Anropet kommer från editorn (en Func, inte EventCallback), så den här komponenten renderas inte om automatiskt.
+            StateHasChanged();
+            return null;
+        }
+        catch (CampaignRuleException ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    private void OnPostCreated(int threadId)
+    {
+        if (threadId != Thread.Id)
+            return;
+
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                var newer = await ThreadService.GetPostsAfterAsync(Thread.Id, LastPostId);
+                if (newer.Count == 0 || module is null)
+                    return;
+
+                // Följ med nedåt bara om läsaren redan är längst ner; annars visas "Nya inlägg".
+                var atBottom = await module.InvokeAsync<bool>("isNearBottom");
+                if (!Append(newer))
+                    return;
+
+                if (atBottom)
+                    scrollToBottom = true;
+                else
+                    newBelow = true;
+
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Kunde inte hämta nya inlägg för kanal {ThreadId}", Thread.Id);
+            }
+        });
+    }
+
+    private void JumpToNewest()
+    {
+        newBelow = false;
+        scrollToBottom = true;
+    }
+
+    private long LastPostId => posts.Count > 0 ? posts[^1].Item.Id : 0;
+
+    // Lägger till inlägg som är nyare än det senaste som visas. Skyddar mot dubbletter vid samtidiga uppdateringar.
+    private bool Append(IEnumerable<PostItem> newPosts)
+    {
+        var added = false;
+        foreach (var post in newPosts.OrderBy(p => p.Id))
+        {
+            if (post.Id <= LastPostId)
+                continue;
+
+            posts.Add(ToDisplay(post));
+            added = true;
+        }
+        return added;
+    }
+
+    private DisplayPost ToDisplay(PostItem post) => new(post, (MarkupString)Markdown.ToSafeHtml(post.Content));
+
+    private static string Initials(string name)
+    {
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return string.Concat(words.Take(2).Select(w => char.ToUpperInvariant(w[0])));
+    }
+
+    // Stabil färg per användare (string.GetHashCode varierar mellan körningar).
+    private static string AvatarColor(string userId)
+    {
+        var hash = 0;
+        foreach (var c in userId)
+            hash = unchecked(hash * 31 + c);
+        return $"hsl({(hash & 0x7fffffff) % 360} 45% 42%)";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Notifier.PostCreated -= OnPostCreated;
+
+        try
+        {
+            if (topObserver is not null)
+            {
+                await topObserver.InvokeVoidAsync("disconnect");
+                await topObserver.DisposeAsync();
+            }
+            if (module is not null)
+                await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // Kretsen är redan nedkopplad.
+        }
+
+        selfReference?.Dispose();
+    }
+
+    private sealed record DisplayPost(PostItem Item, MarkupString Html);
+}

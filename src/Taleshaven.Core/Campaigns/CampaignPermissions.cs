@@ -9,7 +9,7 @@ namespace Taleshaven.Core.Campaigns;
 public static class CampaignPermissions
 {
     /// <summary>
-    /// GM får alltid skriva. Spelare får skriva i öppna trådar så länge kampanjen inte är stängd eller arkiverad.
+    /// GM får alltid skriva. Spelare får skriva i öppna kanaler så länge kampanjen inte är stängd eller arkiverad.
     /// </summary>
     public static bool CanWritePost(CampaignRole role, CampaignStatus campaignStatus, ThreadStatus threadStatus) => role switch
     {
@@ -17,8 +17,6 @@ public static class CampaignPermissions
         CampaignRole.Player => threadStatus == ThreadStatus.Open && IsActive(campaignStatus),
         _ => false,
     };
-
-    public static bool CanManageThreads(CampaignRole role) => role == CampaignRole.GameMaster;
 
     private static bool IsActive(CampaignStatus status) =>
         status is CampaignStatus.OpenForApplications or CampaignStatus.Ongoing;

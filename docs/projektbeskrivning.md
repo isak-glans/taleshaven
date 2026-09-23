@@ -129,9 +129,11 @@ RPG | OOC (2) | Krönika | Karaktärer | Spelare
   högst cirka 100 (B8). Gränserna ska vara lätta att ändra.
 - CH-3: När man scrollar mot toppen laddas nästa omgång äldre inlägg (20 st)
   automatiskt och läggs ovanför, med bibehållen läsposition.
-- CH-4: Flera inlägg i följd från samma person grupperas under ett namn.
+- CH-4: Flera inlägg i följd från samma person (inom 10 minuter, samma dag)
+  grupperas under ett namn.
 - CH-5: Datumavdelare visas mellan dagar (t.ex. "Tisdag 23 september").
-- CH-6: Nya inlägg visas direkt för alla som har chatten öppen.
+- CH-6: Nya inlägg visas direkt för alla som har chatten öppen. Den som är
+  längst ner följer med; den som läser längre upp får knappen "Nya inlägg ↓".
 - CH-7: Inlägg stödjer formaterad text (se 3.13).
 - CH-8: GM:s inlägg är tydligt märkta.
 - CH-9 (efter chattbygget): Egna inlägg kan redigeras och markeras som
@@ -265,9 +267,9 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
 
 ### Fas 2 – Spelrummet
 4. ✅ Spelrum med flikar.
-5. ⏳ RPG och OOC som chatt. Inlägg, formaterad text, liveuppdatering och
-   inläggsladdning finns, men i trådformat. Ombyggnad till chatt enligt B6–B9
-   återstår.
+5. ✅ RPG och OOC som chatt enligt B6–B9: en kanal av varje per kampanj,
+   gruppering och datumavdelare, 7 dagar/min 20/max 100, automatisk laddning
+   uppåt, "Nya inlägg ↓", Enter/Ctrl+Enter och liveuppdatering.
 6. Tärningar i OOC.
 7. Krönika som bok.
 8. Karaktärer med bild och textdokument, val av karaktär vid RPG-inlägg.

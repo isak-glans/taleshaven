@@ -1,10 +1,6 @@
 /* Formaterad användartext (inlägg och förhandsgranskning). Global fil eftersom innehållet är MarkupString
    och därför inte får CSS-isoleringens attribut. */
 
-.post-gm {
-    border-left: 4px solid var(--bs-dark);
-}
-
 .post-content {
     overflow-wrap: anywhere;
 }

@@ -1,4 +1,4 @@
-@* Textfält för Markdown med verktygsrad, teckenräknare, förhandsgranskning och utkast som sparas i webbläsaren.
+﻿@* Textfält för Markdown med verktygsrad, teckenräknare, förhandsgranskning och utkast som sparas i webbläsaren.
    Kräver interaktiv rendering. Verktygsraden och räknaren körs i JS så att inte varje tangenttryckning skickas till servern. *@
 
 @implements IAsyncDisposable
@@ -21,7 +21,7 @@
     </div>
 
     <textarea class="form-control" rows="@Rows" maxlength="@MaxLength" placeholder="@Placeholder" aria-label="@Label"
-              @bind="text" hidden="@preview" disabled="@(!interactive || busy)"></textarea>
+              @bind="text" hidden="@preview" disabled="@(!interactive)"></textarea>
 
     @if (preview)
     {
@@ -38,8 +38,10 @@
     }
 
     <div class="d-flex justify-content-between align-items-center mt-2 gap-2">
-        <small class="text-secondary"><span data-md-counter>@text.Length</span> / @MaxLength tecken · Markdown stöds</small>
-        <button type="button" class="btn btn-primary" @onclick="SubmitAsync" disabled="@(!interactive || busy)">@SubmitText</button>
+        <small class="text-secondary">
+            <span data-md-counter>@text.Length</span> / @MaxLength · <span data-md-hint>@(SendOnEnter ? "Enter skickar, Shift+Enter ny rad" : "Ctrl+Enter skickar")</span>
+        </small>
+        <button type="button" class="btn btn-primary" data-md-submit @onclick="SubmitAsync" disabled="@(!interactive || busy)">@SubmitText</button>
     </div>
 
     @if (error is not null)
@@ -56,6 +58,7 @@
     private bool busy;
     private bool interactive;
     private bool initialized;
+    private bool refocus;
     private string? error;
 
     [Parameter, EditorRequired]
@@ -81,6 +84,10 @@
     [Parameter]
     public int Rows { get; set; } = 6;
 
+    /// <summary>true: Enter skickar och Shift+Enter ger ny rad (chatt). false: Enter ger ny rad och Ctrl+Enter skickar.</summary>
+    [Parameter]
+    public bool SendOnEnter { get; set; }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -93,7 +100,13 @@
         else if (module is not null && !initialized)
         {
             initialized = true;
-            await module.InvokeVoidAsync("init", container, DraftKey);
+            await module.InvokeVoidAsync("init", container, DraftKey, SendOnEnter);
+        }
+        else if (module is not null && refocus)
+        {
+            // Klickade man på Skicka flyttades fokus till knappen; låt skribenten fortsätta skriva direkt.
+            refocus = false;
+            await module.InvokeVoidAsync("focus", container);
         }
     }
 
@@ -119,6 +132,7 @@
             {
                 text = "";
                 preview = false;
+                refocus = true;
                 if (module is not null)
                     await module.InvokeVoidAsync("clearDraft", DraftKey);
             }

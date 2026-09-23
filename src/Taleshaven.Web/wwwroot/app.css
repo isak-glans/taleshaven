@@ -2,6 +2,11 @@ html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
+/* Bootstrap slår på mjuk scroll. Chatten behöver att programmatisk scroll sker direkt. */
+:root {
+    scroll-behavior: auto;
+}
+
 a, .btn-link {
     color: #006bb7;
 }

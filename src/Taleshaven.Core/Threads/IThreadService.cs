@@ -1,25 +1,17 @@
 namespace Taleshaven.Core.Threads;
 
 /// <summary>
-/// RPG-trådar, OOC-kanalen och deras inlägg. Regelbrott och saknad behörighet ger <see cref="CampaignRuleException"/>.
+/// Kampanjens chattkanaler (RPG och OOC) och deras inlägg. Regelbrott och saknad behörighet ger <see cref="CampaignRuleException"/>.
 /// </summary>
 public interface IThreadService
 {
-    Task<IReadOnlyList<ThreadListItem>> GetRpgThreadsAsync(int campaignId, CancellationToken cancellationToken = default);
+    Task<ThreadDetails?> GetChannelAsync(int campaignId, ThreadKind kind, string viewerId, CancellationToken cancellationToken = default);
 
-    Task<int> CreateRpgThreadAsync(int campaignId, string userId, NewThread thread, CancellationToken cancellationToken = default);
+    /// <summary>Inläggen som visas när chatten öppnas (<see cref="ChatWindow"/>), äldst först.</summary>
+    Task<PostPage> GetInitialPostsAsync(int threadId, CancellationToken cancellationToken = default);
 
-    Task SetThreadLockedAsync(int campaignId, int threadId, string userId, bool locked, CancellationToken cancellationToken = default);
-
-    Task<ThreadDetails?> GetThreadAsync(int campaignId, int threadId, string viewerId, CancellationToken cancellationToken = default);
-
-    Task<ThreadDetails?> GetOocThreadAsync(int campaignId, string viewerId, CancellationToken cancellationToken = default);
-
-    /// <summary>De senaste <paramref name="count"/> inläggen, äldst först.</summary>
-    Task<IReadOnlyList<PostItem>> GetLatestPostsAsync(int threadId, int count, CancellationToken cancellationToken = default);
-
-    /// <summary>Upp till <paramref name="count"/> inlägg som är äldre än <paramref name="beforePostId"/>, äldst först.</summary>
-    Task<IReadOnlyList<PostItem>> GetPostsBeforeAsync(int threadId, long beforePostId, int count, CancellationToken cancellationToken = default);
+    /// <summary>Nästa omgång inlägg som är äldre än <paramref name="beforePostId"/>, äldst först.</summary>
+    Task<PostPage> GetPostsBeforeAsync(int threadId, long beforePostId, CancellationToken cancellationToken = default);
 
     /// <summary>Alla inlägg som är nyare än <paramref name="afterPostId"/>, äldst först.</summary>
     Task<IReadOnlyList<PostItem>> GetPostsAfterAsync(int threadId, long afterPostId, CancellationToken cancellationToken = default);
@@ -27,26 +19,15 @@ public interface IThreadService
     Task<PostItem> CreatePostAsync(int campaignId, int threadId, string userId, string? content, CancellationToken cancellationToken = default);
 }
 
-public sealed record NewThread(string? Title, string? Description);
-
-public sealed record ThreadListItem(
-    int Id,
-    string Title,
-    string Description,
-    ThreadStatus Status,
-    int PostCount,
-    DateTimeOffset? LastPostAt,
-    DateTimeOffset CreatedAt);
-
 public sealed record ThreadDetails(
     int Id,
     int CampaignId,
     ThreadKind Kind,
-    string Title,
-    string Description,
     ThreadStatus Status,
-    bool CanWrite,
-    bool CanManage);
+    bool CanWrite);
+
+/// <summary>En sammanhängande följd inlägg, äldst först, och om det finns äldre inlägg före dem.</summary>
+public sealed record PostPage(IReadOnlyList<PostItem> Posts, bool HasOlder);
 
 public sealed record PostItem(
     long Id,

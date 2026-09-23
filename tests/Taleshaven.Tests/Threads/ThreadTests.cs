@@ -8,55 +8,19 @@ public class ThreadTests
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 23, 12, 0, 0, TimeSpan.Zero);
 
-    [Fact]
-    public void CreateRpg_TrimsAndOpensThread()
-    {
-        var thread = CampaignThread.CreateRpg(7, "  Kapitel 1  ", "  Ankomsten  ", "gm", Now);
-
-        Assert.Equal(7, thread.CampaignId);
-        Assert.Equal(ThreadKind.Rpg, thread.Kind);
-        Assert.Equal("Kapitel 1", thread.Title);
-        Assert.Equal("Ankomsten", thread.Description);
-        Assert.Equal(ThreadStatus.Open, thread.Status);
-        Assert.Equal("gm", thread.CreatedById);
-    }
-
     [Theory]
-    [InlineData(null)]
-    [InlineData("   ")]
-    public void CreateRpg_RequiresTitle(string? title)
+    [InlineData(ThreadKind.Rpg, "RPG")]
+    [InlineData(ThreadKind.Ooc, "OOC")]
+    public void CreateChannel_CreatesOpenChannelOfKind(ThreadKind kind, string expectedTitle)
     {
-        Assert.Throws<CampaignRuleException>(() => CampaignThread.CreateRpg(7, title, null, "gm", Now));
-    }
+        var channel = CampaignThread.CreateChannel(7, kind, "gm", Now);
 
-    [Fact]
-    public void CreateRpg_RejectsTooLongTitleAndDescription()
-    {
-        Assert.Throws<CampaignRuleException>(() =>
-            CampaignThread.CreateRpg(7, new string('a', ThreadLimits.TitleMaxLength + 1), null, "gm", Now));
-        Assert.Throws<CampaignRuleException>(() =>
-            CampaignThread.CreateRpg(7, "Titel", new string('a', ThreadLimits.DescriptionMaxLength + 1), "gm", Now));
-    }
-
-    [Fact]
-    public void RpgThread_CanBeLockedAndUnlocked()
-    {
-        var thread = CampaignThread.CreateRpg(7, "Titel", null, "gm", Now);
-
-        thread.SetLocked(true);
-        Assert.Equal(ThreadStatus.Locked, thread.Status);
-
-        thread.SetLocked(false);
-        Assert.Equal(ThreadStatus.Open, thread.Status);
-    }
-
-    [Fact]
-    public void OocThread_CannotBeLocked()
-    {
-        var thread = CampaignThread.CreateOoc(7, "gm", Now);
-
-        Assert.Equal(ThreadKind.Ooc, thread.Kind);
-        Assert.Throws<CampaignRuleException>(() => thread.SetLocked(true));
+        Assert.Equal(7, channel.CampaignId);
+        Assert.Equal(kind, channel.Kind);
+        Assert.Equal(expectedTitle, channel.Title);
+        Assert.Equal(ThreadStatus.Open, channel.Status);
+        Assert.Equal("gm", channel.CreatedById);
+        Assert.Equal(Now, channel.CreatedAt);
     }
 
     [Fact]
@@ -92,7 +56,7 @@ public class ThreadTests
     [InlineData(CampaignRole.GameMaster, CampaignStatus.Ongoing, ThreadStatus.Open, true)]
     [InlineData(CampaignRole.GameMaster, CampaignStatus.Ongoing, ThreadStatus.Locked, true)]
     [InlineData(CampaignRole.GameMaster, CampaignStatus.Archived, ThreadStatus.Open, true)]
-    // Spelare får skriva i öppna trådar i aktiva kampanjer.
+    // Spelare får skriva i öppna kanaler i aktiva kampanjer.
     [InlineData(CampaignRole.Player, CampaignStatus.OpenForApplications, ThreadStatus.Open, true)]
     [InlineData(CampaignRole.Player, CampaignStatus.Ongoing, ThreadStatus.Open, true)]
     [InlineData(CampaignRole.Player, CampaignStatus.Ongoing, ThreadStatus.Locked, false)]
@@ -104,13 +68,60 @@ public class ThreadTests
     {
         Assert.Equal(expected, CampaignPermissions.CanWritePost(role, campaignStatus, threadStatus));
     }
+}
 
-    [Theory]
-    [InlineData(CampaignRole.GameMaster, true)]
-    [InlineData(CampaignRole.Player, false)]
-    [InlineData(CampaignRole.None, false)]
-    public void CanManageThreads_OnlyGameMaster(CampaignRole role, bool expected)
+public class ChatWindowTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 9, 23, 12, 0, 0, TimeSpan.Zero);
+
+    // Skapar tidpunkter, nyast först: först "recent" inlägg inom en dag, sedan "old" inlägg för 30 dagar sedan.
+    private static List<DateTimeOffset> Posts(int recent, int old) =>
+        [
+            .. Enumerable.Range(0, recent).Select(i => Now.AddMinutes(-i)),
+            .. Enumerable.Range(0, old).Select(i => Now.AddDays(-30).AddMinutes(-i)),
+        ];
+
+    [Fact]
+    public void ShowsAllRecentPostsWithinSevenDays()
     {
-        Assert.Equal(expected, CampaignPermissions.CanManageThreads(role));
+        Assert.Equal(45, ChatWindow.InitialCount(Posts(recent: 45, old: 56), Now));
+    }
+
+    [Fact]
+    public void ShowsAtLeastMinimumWhenFewRecentPosts()
+    {
+        Assert.Equal(ChatWindow.InitialMinPosts, ChatWindow.InitialCount(Posts(recent: 3, old: 98), Now));
+    }
+
+    [Fact]
+    public void ShowsMinimumWhenNothingIsRecent()
+    {
+        Assert.Equal(ChatWindow.InitialMinPosts, ChatWindow.InitialCount(Posts(recent: 0, old: 50), Now));
+    }
+
+    [Fact]
+    public void NeverShowsMoreThanMaximum()
+    {
+        Assert.Equal(ChatWindow.InitialMaxPosts, ChatWindow.InitialCount(Posts(recent: 101, old: 0), Now));
+    }
+
+    [Fact]
+    public void NeverShowsMoreThanExist()
+    {
+        Assert.Equal(5, ChatWindow.InitialCount(Posts(recent: 0, old: 5), Now));
+        Assert.Equal(0, ChatWindow.InitialCount([], Now));
+    }
+
+    [Fact]
+    public void SevenDayBoundaryIsInclusive()
+    {
+        List<DateTimeOffset> posts =
+        [
+            .. Enumerable.Range(0, 30).Select(i => Now.AddHours(-i)),
+            Now.AddDays(-ChatWindow.InitialDays),
+            Now.AddDays(-ChatWindow.InitialDays).AddSeconds(-1),
+        ];
+
+        Assert.Equal(31, ChatWindow.InitialCount(posts, Now));
     }
 }

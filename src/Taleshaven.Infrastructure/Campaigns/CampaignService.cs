@@ -95,8 +95,9 @@ internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbF
         db.Campaigns.Add(entity);
         await db.SaveChangesAsync(cancellationToken);
 
-        // Varje kampanj har en OOC-kanal från start.
-        db.Threads.Add(CampaignThread.CreateOoc(entity.Id, gameMasterId, now));
+        // Varje kampanj har en RPG- och en OOC-kanal från start.
+        db.Threads.Add(CampaignThread.CreateChannel(entity.Id, ThreadKind.Rpg, gameMasterId, now));
+        db.Threads.Add(CampaignThread.CreateChannel(entity.Id, ThreadKind.Ooc, gameMasterId, now));
         await db.SaveChangesAsync(cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
