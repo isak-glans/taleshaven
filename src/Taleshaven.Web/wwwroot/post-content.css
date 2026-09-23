@@ -1,0 +1,38 @@
+/* Formaterad användartext (inlägg och förhandsgranskning). Global fil eftersom innehållet är MarkupString
+   och därför inte får CSS-isoleringens attribut. */
+
+.post-gm {
+    border-left: 4px solid var(--bs-dark);
+}
+
+.post-content {
+    overflow-wrap: anywhere;
+}
+
+.post-content > :last-child {
+    margin-bottom: 0;
+}
+
+.post-content h1 { font-size: 1.5rem; }
+.post-content h2 { font-size: 1.35rem; }
+.post-content h3 { font-size: 1.2rem; }
+.post-content h4,
+.post-content h5,
+.post-content h6 { font-size: 1.05rem; }
+
+.post-content blockquote {
+    border-left: 3px solid var(--bs-border-color);
+    color: var(--bs-secondary-color);
+    margin: 0 0 1rem;
+    padding: 0.25rem 0 0.25rem 0.75rem;
+}
+
+.post-content pre {
+    background: var(--bs-tertiary-bg);
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+}
+
+.md-preview {
+    min-height: 9.5rem;
+}

@@ -1,0 +1,60 @@
+@* Kampanjens rubrik och flikar, gemensamt för alla delar av spelrummet. *@
+
+<p class="mb-2 small"><a href="">← Kampanjer</a></p>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+    <h1 class="h2 mb-0">@Campaign.Name</h1>
+    <CampaignStatusBadge Status="Campaign.Status" />
+</div>
+<p class="text-secondary mb-2">
+    GM: @Campaign.GameMasterName
+    · @Campaign.Players.Count@(Campaign.MaxPlayers is { } max ? $"/{max}" : "") spelare
+</p>
+
+@if (Campaign.Description.Length > 0)
+{
+    <details class="mb-3">
+        <summary class="text-secondary">Om kampanjen</summary>
+        <p class="campaign-description mt-2 mb-0">@Campaign.Description</p>
+    </details>
+}
+
+@if (Campaign.ViewerRole == CampaignRole.None && Active != CampaignTab.Players)
+{
+    <div class="alert alert-light border d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
+        <span>Du deltar inte i kampanjen och kan bara läsa.</span>
+        @if (Campaign.CanViewerApply)
+        {
+            <a class="btn btn-sm btn-primary" href="campaigns/@(Campaign.Id)/players#ansok">Ansök</a>
+        }
+    </div>
+}
+
+<nav>
+    <ul class="nav nav-tabs campaign-tabs mb-3">
+        @foreach (var (tab, label, path) in Tabs)
+        {
+            <li class="nav-item">
+                <a class="nav-link @(tab == Active ? "active" : "")" aria-current="@(tab == Active ? "page" : null)"
+                   href="@($"campaigns/{Campaign.Id}{path}")">@label</a>
+            </li>
+        }
+    </ul>
+</nav>
+
+@code {
+    private static readonly (CampaignTab Tab, string Label, string Path)[] Tabs =
+    [
+        (CampaignTab.Rpg, "RPG", ""),
+        (CampaignTab.Ooc, "OOC", "/ooc"),
+        (CampaignTab.Chronicle, "Krönika", "/chronicle"),
+        (CampaignTab.Characters, "Karaktärer", "/characters"),
+        (CampaignTab.Players, "Spelare", "/players"),
+    ];
+
+    [Parameter, EditorRequired]
+    public CampaignDetails Campaign { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public CampaignTab Active { get; set; }
+}

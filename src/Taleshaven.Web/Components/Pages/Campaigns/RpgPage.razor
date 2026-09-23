@@ -1,0 +1,146 @@
+﻿@page "/campaigns/{CampaignId:int}"
+@attribute [Authorize]
+
+@using System.ComponentModel.DataAnnotations
+
+@inject ICampaignService CampaignService
+@inject IThreadService ThreadService
+@inject NavigationManager NavigationManager
+
+@if (campaign is null)
+{
+    return;
+}
+
+<PageTitle>@campaign.Name</PageTitle>
+
+<CampaignHeader Campaign="campaign" Active="CampaignTab.Rpg" />
+
+@if (campaign.ViewerRole == CampaignRole.GameMaster)
+{
+    <details class="mb-3" open="@(errorMessage is not null)">
+        <summary class="btn btn-outline-primary btn-sm">Ny tråd</summary>
+        <div class="card card-body mt-2">
+            <EditForm Model="Input" method="post" OnValidSubmit="CreateThreadAsync" FormName="create-thread">
+                <DataAnnotationsValidator />
+                @if (errorMessage is not null)
+                {
+                    <div class="alert alert-danger py-2">@errorMessage</div>
+                }
+                <div class="mb-2">
+                    <label for="Input.Title" class="form-label">Titel</label>
+                    <InputText @bind-Value="Input.Title" id="Input.Title" class="form-control" maxlength="@ThreadLimits.TitleMaxLength"
+                               placeholder="T.ex. Kapitel 1 – Ankomsten till byn" />
+                    <ValidationMessage For="() => Input.Title" class="text-danger" />
+                </div>
+                <div class="mb-2">
+                    <label for="Input.Description" class="form-label">Kort beskrivning</label>
+                    <InputTextArea @bind-Value="Input.Description" id="Input.Description" class="form-control" rows="2"
+                                   maxlength="@ThreadLimits.DescriptionMaxLength" />
+                    <ValidationMessage For="() => Input.Description" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Skapa tråd</button>
+            </EditForm>
+        </div>
+    </details>
+}
+
+@if (threads.Count == 0)
+{
+    <p class="text-secondary">
+        Inga trådar ännu.
+        @if (campaign.ViewerRole == CampaignRole.GameMaster)
+        {
+            <text>Skapa den första tråden för att starta äventyret.</text>
+        }
+    </p>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var thread in threads)
+        {
+            <a class="list-group-item list-group-item-action py-3" href="campaigns/@campaign.Id/threads/@thread.Id">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <strong>@thread.Title</strong>
+                    @if (thread.Status == ThreadStatus.Locked)
+                    {
+                        <span class="badge text-bg-secondary">Låst</span>
+                    }
+                </div>
+                @if (thread.Description.Length > 0)
+                {
+                    <div class="small mt-1">@thread.Description</div>
+                }
+                <div class="small text-secondary mt-1">
+                    @thread.PostCount inlägg
+                    @if (thread.LastPostAt is { } lastPostAt)
+                    {
+                        <text> · senaste @Dates.DateTime(lastPostAt)</text>
+                    }
+                    else
+                    {
+                        <text> · skapad @Dates.Date(thread.CreatedAt)</text>
+                    }
+                </div>
+            </a>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int CampaignId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "create-thread")]
+    private ThreadInputModel Input { get; set; } = default!;
+
+    private string userId = "";
+    private CampaignDetails? campaign;
+    private IReadOnlyList<ThreadListItem> threads = [];
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+
+        campaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
+        if (campaign is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        threads = await ThreadService.GetRpgThreadsAsync(CampaignId);
+    }
+
+    private async Task CreateThreadAsync()
+    {
+        int threadId;
+        try
+        {
+            threadId = await ThreadService.CreateRpgThreadAsync(CampaignId, userId, new NewThread(Input.Title, Input.Description));
+        }
+        catch (CampaignRuleException ex)
+        {
+            errorMessage = ex.Message;
+            return;
+        }
+
+        NavigationManager.NavigateTo($"campaigns/{CampaignId}/threads/{threadId}");
+    }
+
+    private sealed class ThreadInputModel
+    {
+        [Required(ErrorMessage = "Ange en titel.")]
+        [StringLength(ThreadLimits.TitleMaxLength, ErrorMessage = "Titeln får vara högst {1} tecken.")]
+        public string? Title { get; set; }
+
+        [StringLength(ThreadLimits.DescriptionMaxLength, ErrorMessage = "Beskrivningen får vara högst {1} tecken.")]
+        public string? Description { get; set; }
+    }
+}

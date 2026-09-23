@@ -1,0 +1,101 @@
+﻿@page "/campaigns/{CampaignId:int}/threads/{ThreadId:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject ICampaignService CampaignService
+@inject IThreadService ThreadService
+@inject NavigationManager NavigationManager
+
+@if (campaign is null || thread is null)
+{
+    return;
+}
+
+<PageTitle>@thread.Title · @campaign.Name</PageTitle>
+
+<CampaignHeader Campaign="campaign" Active="CampaignTab.Rpg" />
+
+<p class="small mb-1"><a href="campaigns/@campaign.Id">RPG-trådar</a> ›</p>
+<div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+    <h2 class="h4 mb-0">@thread.Title</h2>
+    @if (thread.Status == ThreadStatus.Locked)
+    {
+        <span class="badge text-bg-secondary">Låst</span>
+    }
+    @if (thread.CanManage)
+    {
+        <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" @onclick="ToggleLockAsync">
+            @(thread.Status == ThreadStatus.Locked ? "Lås upp tråden" : "Lås tråden")
+        </button>
+    }
+</div>
+@if (thread.Description.Length > 0)
+{
+    <p class="text-secondary">@thread.Description</p>
+}
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger py-2">@errorMessage</div>
+}
+
+<div class="mt-3">
+    <PostStream @key="thread.Id" Thread="thread" Placeholder="Skriv ditt inlägg…" />
+</div>
+
+@code {
+    [Parameter]
+    public int CampaignId { get; set; }
+
+    [Parameter]
+    public int ThreadId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    // Förs över från förrenderingen så att sidan inte blinkar tom när den blir interaktiv.
+    [PersistentState]
+    public CampaignDetails? LoadedCampaign { get; set; }
+
+    [PersistentState]
+    public ThreadDetails? LoadedThread { get; set; }
+
+    private string userId = "";
+    private string? errorMessage;
+
+    private CampaignDetails? campaign => LoadedCampaign;
+    private ThreadDetails? thread => LoadedThread;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+
+        if (LoadedCampaign?.Id != CampaignId)
+            LoadedCampaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
+
+        if (LoadedThread?.Id != ThreadId || LoadedThread.CampaignId != CampaignId)
+            LoadedThread = LoadedCampaign is null ? null : await ThreadService.GetThreadAsync(CampaignId, ThreadId, userId);
+
+        if (LoadedThread is null || LoadedThread.Kind != ThreadKind.Rpg)
+        {
+            LoadedThread = null;
+            NavigationManager.NotFound();
+        }
+    }
+
+    private async Task ToggleLockAsync()
+    {
+        if (thread is null)
+            return;
+
+        errorMessage = null;
+        try
+        {
+            await ThreadService.SetThreadLockedAsync(CampaignId, ThreadId, userId, locked: thread.Status == ThreadStatus.Open);
+            LoadedThread = await ThreadService.GetThreadAsync(CampaignId, ThreadId, userId);
+        }
+        catch (CampaignRuleException ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+}

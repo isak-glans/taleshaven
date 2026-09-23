@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Taleshaven.Core\Taleshaven.Core.csproj" />
+    <ProjectReference Include="..\..\src\Taleshaven.Infrastructure\Taleshaven.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

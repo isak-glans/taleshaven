@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Taleshaven.Core.Campaigns;
+using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Data;
 
 namespace Taleshaven.Infrastructure.Campaigns;
@@ -85,12 +86,20 @@ internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbF
 
     public async Task<int> CreateCampaignAsync(string gameMasterId, NewCampaign campaign, CancellationToken cancellationToken = default)
     {
-        var entity = Campaign.Create(gameMasterId, campaign.Name, campaign.Description, campaign.MaxPlayers, timeProvider.GetUtcNow());
+        var now = timeProvider.GetUtcNow();
+        var entity = Campaign.Create(gameMasterId, campaign.Name, campaign.Description, campaign.MaxPlayers, now);
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         db.Campaigns.Add(entity);
         await db.SaveChangesAsync(cancellationToken);
 
+        // Varje kampanj har en OOC-kanal från start.
+        db.Threads.Add(CampaignThread.CreateOoc(entity.Id, gameMasterId, now));
+        await db.SaveChangesAsync(cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
         return entity.Id;
     }
 }

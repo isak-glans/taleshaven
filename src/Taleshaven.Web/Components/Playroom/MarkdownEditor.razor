@@ -1,0 +1,146 @@
+@* Textfält för Markdown med verktygsrad, teckenräknare, förhandsgranskning och utkast som sparas i webbläsaren.
+   Kräver interaktiv rendering. Verktygsraden och räknaren körs i JS så att inte varje tangenttryckning skickas till servern. *@
+
+@implements IAsyncDisposable
+
+@inject IMarkdownRenderer Markdown
+@inject IJSRuntime JS
+
+<div class="md-editor" @ref="container">
+    <div class="d-flex flex-wrap gap-1 mb-1" role="toolbar" aria-label="Formatering">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-md="bold" title="Fetstil" disabled="@preview"><strong>F</strong></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-md="italic" title="Kursiv" disabled="@preview"><em>K</em></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-md="heading" title="Rubrik" disabled="@preview">Rubrik</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-md="ul" title="Punktlista" disabled="@preview">• Lista</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-md="ol" title="Numrerad lista" disabled="@preview">1. Lista</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-md="quote" title="Citat" disabled="@preview">Citat</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-md="link" title="Länk" disabled="@preview">Länk</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" @onclick="TogglePreview" disabled="@(!interactive)">
+            @(preview ? "Redigera" : "Förhandsgranska")
+        </button>
+    </div>
+
+    <textarea class="form-control" rows="@Rows" maxlength="@MaxLength" placeholder="@Placeholder" aria-label="@Label"
+              @bind="text" hidden="@preview" disabled="@(!interactive || busy)"></textarea>
+
+    @if (preview)
+    {
+        <div class="md-preview post-content border rounded p-2">
+            @if (text.Trim().Length == 0)
+            {
+                <span class="text-secondary">Inget att förhandsgranska.</span>
+            }
+            else
+            {
+                @((MarkupString)Markdown.ToSafeHtml(text))
+            }
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mt-2 gap-2">
+        <small class="text-secondary"><span data-md-counter>@text.Length</span> / @MaxLength tecken · Markdown stöds</small>
+        <button type="button" class="btn btn-primary" @onclick="SubmitAsync" disabled="@(!interactive || busy)">@SubmitText</button>
+    </div>
+
+    @if (error is not null)
+    {
+        <div class="text-danger mt-1" role="alert">@error</div>
+    }
+</div>
+
+@code {
+    private ElementReference container;
+    private IJSObjectReference? module;
+    private string text = "";
+    private bool preview;
+    private bool busy;
+    private bool interactive;
+    private bool initialized;
+    private string? error;
+
+    [Parameter, EditorRequired]
+    public int MaxLength { get; set; }
+
+    /// <summary>Nyckel för utkastet i webbläsarens localStorage, t.ex. "thread-12".</summary>
+    [Parameter, EditorRequired]
+    public string DraftKey { get; set; } = "";
+
+    /// <summary>Anropas med texten. Returnerar null vid lyckat resultat, annars ett felmeddelande.</summary>
+    [Parameter, EditorRequired]
+    public Func<string, Task<string?>> OnSubmit { get; set; } = default!;
+
+    [Parameter]
+    public string SubmitText { get; set; } = "Skicka";
+
+    [Parameter]
+    public string Label { get; set; } = "Text";
+
+    [Parameter]
+    public string? Placeholder { get; set; }
+
+    [Parameter]
+    public int Rows { get; set; } = 6;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Aktivera fälten först; init körs efter nästa rendering när textfältet inte längre är disabled.
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Playroom/MarkdownEditor.razor.js");
+            interactive = true;
+            StateHasChanged();
+        }
+        else if (module is not null && !initialized)
+        {
+            initialized = true;
+            await module.InvokeVoidAsync("init", container, DraftKey);
+        }
+    }
+
+    private void TogglePreview()
+    {
+        preview = !preview;
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            error = "Skriv något först.";
+            return;
+        }
+
+        busy = true;
+        error = null;
+        try
+        {
+            error = await OnSubmit(text);
+            if (error is null)
+            {
+                text = "";
+                preview = false;
+                if (module is not null)
+                    await module.InvokeVoidAsync("clearDraft", DraftKey);
+            }
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (module is null)
+            return;
+
+        try
+        {
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // Kretsen är redan nedkopplad.
+        }
+    }
+}

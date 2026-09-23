@@ -1,4 +1,4 @@
-@page "/"
+﻿@page "/"
 
 @inject ICampaignService CampaignService
 
@@ -54,7 +54,7 @@
                                     }
                                     else if (campaign.CanViewerApply)
                                     {
-                                        <a class="btn btn-sm btn-outline-primary" href="campaigns/@(campaign.Id)#ansok">Ansök</a>
+                                        <a class="btn btn-sm btn-outline-primary" href="campaigns/@(campaign.Id)/players#ansok">Ansök</a>
                                     }
                                     else if (campaign.Status == CampaignStatus.OpenForApplications && !campaign.AcceptsApplications)
                                     {

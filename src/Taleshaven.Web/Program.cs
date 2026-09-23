@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Taleshaven.Infrastructure;
 using Taleshaven.Infrastructure.Data;
 using Taleshaven.Infrastructure.Identity;
+using Taleshaven.Web;
 using Taleshaven.Web.Components;
 using Taleshaven.Web.Components.Account;
 
@@ -26,6 +27,7 @@ builder.Services.AddAuthentication(options =>
 var connectionString = builder.Configuration.GetConnectionString("Taleshaven")
     ?? throw new InvalidOperationException("Connection string 'Taleshaven' not found.");
 builder.Services.AddTaleshavenInfrastructure(connectionString);
+builder.Services.AddSingleton<PostNotifier>();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {

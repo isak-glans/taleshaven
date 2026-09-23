@@ -57,6 +57,7 @@ internal sealed class CampaignApplicationService(IDbContextFactory<TaleshavenDbC
         await db.Campaigns
             .Include(c => c.Memberships)
             .Include(c => c.Applications.Where(a => a.Status == ApplicationStatus.Pending))
+            .AsSplitQuery()
             .SingleOrDefaultAsync(c => c.Id == campaignId, cancellationToken)
         ?? throw new CampaignRuleException("Kampanjen finns inte.");
 

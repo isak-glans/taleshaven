@@ -1,0 +1,14 @@
+.campaign-description {
+    white-space: pre-line;
+}
+
+/* Flikarna scrollar i sidled på smala skärmar i stället för att radbrytas. */
+.campaign-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.campaign-tabs .nav-link {
+    white-space: nowrap;
+}

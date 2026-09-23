@@ -1,45 +1,27 @@
-@page "/campaigns/{CampaignId:int}"
+﻿@page "/campaigns/{CampaignId:int}/players"
 @attribute [Authorize]
 
 @using System.ComponentModel.DataAnnotations
-@using Taleshaven.Core
 @using Taleshaven.Web.Components.Account
 @using Taleshaven.Web.Components.Account.Shared
 
 @inject ICampaignService CampaignService
 @inject ICampaignApplicationService ApplicationService
 @inject IdentityRedirectManager RedirectManager
+@inject NavigationManager NavigationManager
 
 @if (campaign is null)
 {
-    <PageTitle>Kampanjen finns inte</PageTitle>
-    <h1>Kampanjen finns inte</h1>
-    <p><a href="">Tillbaka till kampanjerna</a></p>
     return;
 }
 
-<PageTitle>@campaign.Name</PageTitle>
+<PageTitle>Spelare · @campaign.Name</PageTitle>
 
-<p class="mb-2"><a href="">← Kampanjer</a></p>
-
-<div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-    <h1 class="mb-0">@campaign.Name</h1>
-    <CampaignStatusBadge Status="campaign.Status" />
-</div>
-<p class="text-secondary">
-    GM: @campaign.GameMasterName
-    · @campaign.Players.Count@(campaign.MaxPlayers is { } max ? $"/{max}" : "") spelare
-    · Skapad @campaign.CreatedAt.ToLocalTime().ToString("d MMM yyyy")
-</p>
+<CampaignHeader Campaign="campaign" Active="CampaignTab.Players" />
 
 <StatusMessage Message="@errorMessage" />
 
-@if (campaign.Description.Length > 0)
-{
-    <p class="campaign-description">@campaign.Description</p>
-}
-
-<div class="row g-4 mt-1">
+<div class="row g-4">
     <div class="col-lg-7">
         @switch (campaign.ViewerRole)
         {
@@ -57,7 +39,7 @@
                             <li class="list-group-item py-3">
                                 <div class="d-flex justify-content-between flex-wrap gap-2">
                                     <strong>@application.ApplicantName</strong>
-                                    <span class="text-secondary small">@application.SubmittedAt.ToLocalTime().ToString("d MMM yyyy HH:mm")</span>
+                                    <span class="text-secondary small">@Dates.DateTime(application.SubmittedAt)</span>
                                 </div>
                                 @if (application.Message.Length > 0)
                                 {
@@ -84,7 +66,7 @@
                 @if (campaign.ViewerApplication is { Status: ApplicationStatus.Pending } pending)
                 {
                     <div class="alert alert-info">
-                        Din ansökan skickades @pending.SubmittedAt.ToLocalTime().ToString("d MMM yyyy HH:mm") och väntar på svar från GM.
+                        Din ansökan skickades @Dates.DateTime(pending.SubmittedAt) och väntar på svar från GM.
                     </div>
                 }
                 else
@@ -92,7 +74,7 @@
                     @if (campaign.ViewerApplication is { Status: ApplicationStatus.Rejected, DecidedAt: { } rejectedAt })
                     {
                         <div class="alert alert-secondary">
-                            Din tidigare ansökan avslogs @rejectedAt.ToLocalTime().ToString("d MMM yyyy").
+                            Din tidigare ansökan avslogs @Dates.Date(rejectedAt).
                         </div>
                     }
 
@@ -133,7 +115,7 @@
                 {
                     <li class="list-group-item d-flex justify-content-between">
                         <span>@player.DisplayName</span>
-                        <span class="text-secondary small">sedan @player.JoinedAt.ToLocalTime().ToString("d MMM yyyy")</span>
+                        <span class="text-secondary small">sedan @Dates.Date(player.JoinedAt)</span>
                     </li>
                 }
             </ul>
@@ -176,7 +158,7 @@
         campaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
         if (campaign is null)
         {
-            HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+            NavigationManager.NotFound();
             return;
         }
 
@@ -198,7 +180,7 @@
             return;
         }
 
-        RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}", "Din ansökan har skickats till GM.", HttpContext);
+        RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}/players", "Din ansökan har skickats till GM.", HttpContext);
     }
 
     private async Task DecideAsync()
@@ -229,7 +211,7 @@
             return;
         }
 
-        RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}", status, HttpContext);
+        RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}/players", status, HttpContext);
     }
 
     private sealed class ApplyInputModel
