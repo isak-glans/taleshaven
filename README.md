@@ -15,6 +15,9 @@ dotnet run --project src/Taleshaven.Web
 dotnet test
 ```
 
+I VS Code (med C# Dev Kit) räcker det att trycka **F5**: konfigurationen
+*Taleshaven.Web* startar databasen i Docker och sedan appen med debugger.
+
 I utvecklingsläge körs databasmigreringar automatiskt när appen startar. Ingen
 riktig e-posttjänst är kopplad än; efter registrering visas bekräftelselänken
 direkt på sidan.

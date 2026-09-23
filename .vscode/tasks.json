@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Starta databas",
+            "detail": "Startar PostgreSQL i Docker och väntar tills den är redo.",
+            "type": "shell",
+            "command": "docker compose up -d --wait",
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": [],
+            "presentation": { "reveal": "silent" }
+        },
+        {
+            "label": "Stoppa databas",
+            "type": "shell",
+            "command": "docker compose stop",
+            "options": { "cwd": "${workspaceFolder}" },
+            "problemMatcher": []
+        }
+    ]
+}

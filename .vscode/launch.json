@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Taleshaven.Web",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}/src/Taleshaven.Web/Taleshaven.Web.csproj",
+            "launchConfigurationId": "TargetFramework=;https",
+            "preLaunchTask": "Starta databas"
+        }
+    ]
+}
