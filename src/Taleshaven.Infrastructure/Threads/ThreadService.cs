@@ -3,6 +3,7 @@ using Taleshaven.Core;
 using Taleshaven.Core.Campaigns;
 using Taleshaven.Core.Dice;
 using Taleshaven.Core.Threads;
+using Taleshaven.Infrastructure.Campaigns;
 using Taleshaven.Infrastructure.Data;
 
 namespace Taleshaven.Infrastructure.Threads;
@@ -21,7 +22,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         if (thread is null)
             return null;
 
-        var access = await GetAccessAsync(db, campaignId, viewerId, cancellationToken);
+        var access = await CampaignAccess.GetAsync(db, campaignId, viewerId, cancellationToken);
 
         return new ThreadDetails(
             thread.Id,
@@ -97,7 +98,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         var thread = await db.Threads.AsNoTracking().SingleOrDefaultAsync(t => t.Id == threadId && t.CampaignId == campaignId, cancellationToken)
             ?? throw new CampaignRuleException("Kanalen finns inte.");
 
-        var access = await GetAccessAsync(db, campaignId, userId, cancellationToken);
+        var access = await CampaignAccess.GetAsync(db, campaignId, userId, cancellationToken);
         if (!CampaignPermissions.CanWritePost(access.Role, access.CampaignStatus, thread.Status))
             throw new CampaignRuleException("Du har inte behörighet att skriva här.");
 
@@ -110,24 +111,6 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         await db.SaveChangesAsync(cancellationToken);
 
         return (await ToPostItemsAsync(db, db.Posts.Where(p => p.Id == post.Id), cancellationToken)).Single();
-    }
-
-    private static async Task<(CampaignRole Role, CampaignStatus CampaignStatus)> GetAccessAsync(
-        TaleshavenDbContext db, int campaignId, string userId, CancellationToken cancellationToken)
-    {
-        var access = await db.Campaigns.AsNoTracking()
-            .Where(c => c.Id == campaignId)
-            .Select(c => new
-            {
-                c.Status,
-                Role = c.GameMasterId == userId ? CampaignRole.GameMaster
-                    : c.Memberships.Any(m => m.UserId == userId) ? CampaignRole.Player
-                    : CampaignRole.None,
-            })
-            .SingleOrDefaultAsync(cancellationToken)
-            ?? throw new CampaignRuleException("Kampanjen finns inte.");
-
-        return (access.Role, access.Status);
     }
 
     // Projektionen sker efter filtrering och sortering, och ordningen återställs i minnet (äldst först).

@@ -1,8 +1,7 @@
-@page "/campaigns/{CampaignId:int}/chronicle"
 @page "/campaigns/{CampaignId:int}/characters"
 @attribute [Authorize]
 
-@* Tillfällig sida för flikar som inte är byggda än. *@
+@* Tillfällig sida för fliken Karaktärer tills den är byggd. *@
 
 @inject ICampaignService CampaignService
 @inject NavigationManager NavigationManager
@@ -12,11 +11,11 @@
     return;
 }
 
-<PageTitle>@TabName · @campaign.Name</PageTitle>
+<PageTitle>Karaktärer · @campaign.Name</PageTitle>
 
-<CampaignHeader Campaign="campaign" Active="tab" />
+<CampaignHeader Campaign="campaign" Active="CampaignTab.Characters" />
 
-<p class="text-secondary">@TabName kommer i ett senare steg.</p>
+<p class="text-secondary">Karaktärerna kommer i ett senare steg.</p>
 
 @code {
     [Parameter]
@@ -26,16 +25,9 @@
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
 
     private CampaignDetails? campaign;
-    private CampaignTab tab;
-
-    private string TabName => tab == CampaignTab.Chronicle ? "Krönikan" : "Karaktärerna";
 
     protected override async Task OnInitializedAsync()
     {
-        tab = NavigationManager.Uri.Contains("/chronicle", StringComparison.OrdinalIgnoreCase)
-            ? CampaignTab.Chronicle
-            : CampaignTab.Characters;
-
         var userId = (await AuthenticationState).User.GetUserId() ?? "";
         campaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
         if (campaign is null)

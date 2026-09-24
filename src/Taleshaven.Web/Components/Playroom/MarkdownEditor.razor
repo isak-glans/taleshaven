@@ -39,7 +39,7 @@
 
     <div class="d-flex justify-content-between align-items-center mt-2 gap-2">
         <small class="text-secondary">
-            <span data-md-counter>@text.Length</span> / @MaxLength · <span data-md-hint>@(SendOnEnter ? "Enter skickar, Shift+Enter ny rad" : "Ctrl+Enter skickar")</span>
+            <span data-md-counter>@text.Length</span> / @MaxLength · <span data-md-hint>@(ShortcutHint ?? (SendOnEnter ? "Enter skickar, Shift+Enter ny rad" : "Ctrl+Enter skickar"))</span>
         </small>
         <button type="button" class="btn btn-primary" data-md-submit @onclick="SubmitAsync" disabled="@(!interactive || busy)">@SubmitText</button>
     </div>
@@ -87,6 +87,19 @@
     /// <summary>true: Enter skickar och Shift+Enter ger ny rad (chatt). false: Enter ger ny rad och Ctrl+Enter skickar.</summary>
     [Parameter]
     public bool SendOnEnter { get; set; }
+
+    /// <summary>Text som finns i fältet från början, t.ex. vid redigering. Läses bara när editorn skapas.</summary>
+    [Parameter]
+    public string? InitialText { get; set; }
+
+    /// <summary>Ersätter standardtipset om kortkommando, t.ex. "Ctrl+Enter sparar".</summary>
+    [Parameter]
+    public string? ShortcutHint { get; set; }
+
+    protected override void OnInitialized()
+    {
+        text = InitialText ?? "";
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

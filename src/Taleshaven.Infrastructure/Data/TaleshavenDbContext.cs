@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Taleshaven.Core.Campaigns;
+using Taleshaven.Core.Chronicle;
 using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Identity;
 
@@ -13,6 +14,7 @@ public class TaleshavenDbContext(DbContextOptions<TaleshavenDbContext> options) 
     public DbSet<CampaignApplication> CampaignApplications => Set<CampaignApplication>();
     public DbSet<CampaignThread> Threads => Set<CampaignThread>();
     public DbSet<Post> Posts => Set<Post>();
+    public DbSet<ChronicleChapter> ChronicleChapters => Set<ChronicleChapter>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

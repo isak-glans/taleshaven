@@ -175,8 +175,9 @@ och stred mot fyra spindlar. Sedan fortsatte de till orchbyn Xrashh …"*
   senaste, som är tydligt markerat.
 - C-6: Varje sida och kapitel har en egen adress som kan delas, t.ex.
   `/chronicle?sida=2#kapitel-7`.
-- C-7: GM kan skapa, redigera, ta bort och ändra ordningen på kapitel.
-  Numreringen följer ordningen (F14).
+- C-7: GM kan skapa, redigera, ta bort och ändra ordningen på kapitel
+  (flytta ett steg i taget med ↑/↓). Numreringen följer ordningen (F14).
+  Borttagning kräver bekräftelse.
 - C-8: Teckengränsen syns för användaren och valideras på servern.
 - C-9 (senare): Kapitel kan länka till relevanta inlägg i RPG-chatten.
 
@@ -275,7 +276,9 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
    uppåt, "Nya inlägg ↓", Enter/Ctrl+Enter och liveuppdatering.
 6. ✅ Tärningar i OOC: `/slå` och `/roll` med valfri beskrivning, tärningspanel,
    kast på servern och visning i chatten.
-7. Krönika som bok.
+7. ✅ Krönika som bok: innehållsförteckning, 5 kapitel per sida, "Läs från början"
+   och "Senaste kapitlet", länkbara kapitel, GM skriver, redigerar, flyttar och
+   tar bort kapitel.
 8. Karaktärer med bild och textdokument, val av karaktär vid RPG-inlägg.
 
 ### Fas 3 – Komplettering

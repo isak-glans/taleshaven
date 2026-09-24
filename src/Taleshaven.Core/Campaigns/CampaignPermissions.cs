@@ -18,6 +18,9 @@ public static class CampaignPermissions
         _ => false,
     };
 
+    /// <summary>Endast GM skriver krönikan (C-7). Gäller även stängda och arkiverade kampanjer.</summary>
+    public static bool CanEditChronicle(CampaignRole role) => role == CampaignRole.GameMaster;
+
     private static bool IsActive(CampaignStatus status) =>
         status is CampaignStatus.OpenForApplications or CampaignStatus.Ongoing;
 }

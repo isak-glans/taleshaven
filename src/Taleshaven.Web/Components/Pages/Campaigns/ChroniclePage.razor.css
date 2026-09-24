@@ -1,0 +1,41 @@
+/* Krönikan ska kännas som en bok: smal textspalt och serif-typsnitt. */
+.chronicle {
+    max-width: 46rem;
+}
+
+.chronicle-toc {
+    columns: 2 16rem;
+    margin-bottom: 0;
+}
+
+.chronicle-toc li {
+    break-inside: avoid;
+    margin-bottom: 0.2rem;
+}
+
+.chronicle-chapter {
+    border-bottom: 1px solid var(--bs-border-color);
+    margin: 2.5rem 0;
+    padding-bottom: 1.5rem;
+    scroll-margin-top: 1rem;
+}
+
+.chronicle-chapter-number {
+    color: var(--bs-secondary-color);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.chronicle-chapter-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.75rem;
+    margin: 0.25rem 0;
+}
+
+.chronicle-text {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.1rem;
+    line-height: 1.75;
+    margin-top: 1rem;
+}

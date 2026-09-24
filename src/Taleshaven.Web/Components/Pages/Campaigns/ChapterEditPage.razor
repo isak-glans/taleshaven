@@ -1,0 +1,164 @@
+@page "/campaigns/{CampaignId:int}/chronicle/new"
+@page "/campaigns/{CampaignId:int}/chronicle/{ChapterId:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Taleshaven.Core.Chronicle
+
+@* GM skriver eller redigerar ett kapitel i krönikan. *@
+
+@inject ICampaignService CampaignService
+@inject IChronicleService ChronicleService
+@inject NavigationManager NavigationManager
+
+@if (!loaded || LoadedCampaign is null)
+{
+    return;
+}
+
+<PageTitle>@Heading · @LoadedCampaign.Name</PageTitle>
+
+<CampaignHeader Campaign="LoadedCampaign" Active="CampaignTab.Chronicle" />
+
+@if (!CampaignPermissions.CanEditChronicle(LoadedCampaign.ViewerRole))
+{
+    <div class="alert alert-warning">Endast kampanjens GM kan skriva i krönikan.</div>
+    return;
+}
+
+<div class="chapter-editor">
+    <h2 class="h4 mb-3">@Heading</h2>
+
+    <div class="mb-3">
+        <label for="chapter-title" class="form-label">Titel</label>
+        <input id="chapter-title" class="form-control" maxlength="@ChronicleLimits.TitleMaxLength"
+               placeholder="T.ex. Den mörka skogen" @bind="title" />
+    </div>
+
+    <label class="form-label">Text</label>
+    <MarkdownEditor @key="ChapterId" MaxLength="ChronicleLimits.ContentMaxLength" DraftKey="@DraftKey"
+                    InitialText="@LoadedChapter?.Content" OnSubmit="SaveAsync" SubmitText="Spara kapitel"
+                    ShortcutHint="Ctrl+Enter sparar" Label="Kapitlets text" Rows="14"
+                    Placeholder="Vad har hänt i berättelsen? T.ex. Spelarna gick in i den mörka skogen och stred mot fyra spindlar…" />
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+        <a class="btn btn-link px-0" href="@BackLink">Avbryt</a>
+
+        @if (LoadedChapter is not null)
+        {
+            @if (!confirmDelete)
+            {
+                <button type="button" class="btn btn-outline-danger ms-auto" @onclick="() => confirmDelete = true">Ta bort kapitel</button>
+            }
+            else
+            {
+                <span class="ms-auto">Ta bort kapitel @LoadedChapter.Number för gott?</span>
+                <button type="button" class="btn btn-danger" @onclick="DeleteAsync">Ja, ta bort</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="() => confirmDelete = false">Avbryt</button>
+            }
+        }
+    </div>
+
+    @if (deleteError is not null)
+    {
+        <div class="text-danger mt-2" role="alert">@deleteError</div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int CampaignId { get; set; }
+
+    [Parameter]
+    public int? ChapterId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    // Förs över från förrenderingen så att sidan inte blinkar tom och editorn får kapitlets text direkt.
+    [PersistentState]
+    public CampaignDetails? LoadedCampaign { get; set; }
+
+    [PersistentState]
+    public ChapterView? LoadedChapter { get; set; }
+
+    private string userId = "";
+    private string? title;
+    private bool loaded;
+    private bool confirmDelete;
+    private string? deleteError;
+
+    private string Heading => LoadedChapter is null ? "Nytt kapitel" : $"Redigera kapitel {LoadedChapter.Number}";
+
+    private string DraftKey => ChapterId is null ? $"chronicle-new-{CampaignId}" : $"chronicle-{ChapterId}";
+
+    private string BackLink => LoadedChapter is null
+        ? $"campaigns/{CampaignId}/chronicle"
+        : ChapterLink(LoadedChapter.Number);
+
+    private string ChapterLink(int number) => $"campaigns/{CampaignId}/chronicle?sida={ChronicleLimits.PageOf(number)}#kapitel-{number}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+
+        if (LoadedCampaign?.Id != CampaignId)
+            LoadedCampaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
+
+        if (LoadedCampaign is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        if (ChapterId is null)
+        {
+            LoadedChapter = null;
+        }
+        else if (LoadedChapter?.Id != ChapterId)
+        {
+            LoadedChapter = await ChronicleService.GetChapterAsync(CampaignId, ChapterId.Value);
+            if (LoadedChapter is null)
+            {
+                NavigationManager.NotFound();
+                return;
+            }
+        }
+
+        title ??= LoadedChapter?.Title;
+        loaded = true;
+    }
+
+    private async Task<string?> SaveAsync(string content)
+    {
+        try
+        {
+            var number = LoadedChapter is null
+                ? await ChronicleService.CreateChapterAsync(CampaignId, userId, title, content)
+                : await ChronicleService.UpdateChapterAsync(CampaignId, LoadedChapter.Id, userId, title, content);
+
+            NavigationManager.NavigateTo(ChapterLink(number));
+            return null;
+        }
+        catch (CampaignRuleException ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (LoadedChapter is null)
+            return;
+
+        try
+        {
+            await ChronicleService.DeleteChapterAsync(CampaignId, LoadedChapter.Id, userId);
+            NavigationManager.NavigateTo($"campaigns/{CampaignId}/chronicle");
+        }
+        catch (CampaignRuleException ex)
+        {
+            deleteError = ex.Message;
+        }
+    }
+}
