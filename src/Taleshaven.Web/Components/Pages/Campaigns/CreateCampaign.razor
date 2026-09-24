@@ -1,4 +1,4 @@
-@page "/campaigns/new"
+﻿@page "/campaigns/new"
 @attribute [Authorize]
 
 @using System.ComponentModel.DataAnnotations
@@ -15,6 +15,10 @@
         <EditForm Model="Input" method="post" OnValidSubmit="CreateAsync" FormName="create-campaign">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
+            @if (errorMessage is not null)
+            {
+                <div class="alert alert-danger py-2">@errorMessage</div>
+            }
 
             <div class="mb-3">
                 <label for="Input.Name" class="form-label">Namn</label>
@@ -50,6 +54,8 @@
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = default!;
 
+    private string? errorMessage;
+
     protected override void OnInitialized()
     {
         Input ??= new();
@@ -60,7 +66,16 @@
         var user = (await AuthenticationState).User;
         var userId = user.GetUserId() ?? throw new InvalidOperationException("Inloggad användare saknar id.");
 
-        var campaignId = await CampaignService.CreateCampaignAsync(userId, new NewCampaign(Input.Name, Input.Description, Input.MaxPlayers));
+        int campaignId;
+        try
+        {
+            campaignId = await CampaignService.CreateCampaignAsync(userId, new NewCampaign(Input.Name, Input.Description, Input.MaxPlayers));
+        }
+        catch (CampaignRuleException ex)
+        {
+            errorMessage = ex.Message;
+            return;
+        }
 
         NavigationManager.NavigateTo($"campaigns/{campaignId}");
     }

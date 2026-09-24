@@ -50,6 +50,8 @@ skissen, tillsammans med de beslut som fattats hittills.
 | F16 | GM:s karaktärer | Allt GM skapar är NPC:er. Spelare skriver som egna karaktärer eller som sig själva; GM som NPC eller som berättare. |
 | F17 | Ta bort karaktär | Går bara om karaktären inte har skrivit några inlägg, så att gamla inlägg behåller sin karaktär. |
 | F18 | Ny spelare och olästa | När en spelare godkänns räknas allt som redan skrivits som läst, så att historiken inte blir hundratals olästa. |
+| F19 | Radera kampanj | GM skriver kampanjens namn för att bekräfta. Allt innehåll raderas, även karaktärsbilder. Arkivering rekommenderas för kampanjer som bara är avslutade. |
+| F20 | Ta bort spelare | Spelarens inlägg och karaktärer finns kvar. Spelaren kan ansöka igen och börjar då om utan olästa (F18). |
 
 ---
 
@@ -100,7 +102,8 @@ Exempel från skissen:
 
 - A-1: En användare kan skapa en kampanj och blir då dess GM.
 - A-2: GM kan redigera namn, beskrivning, max antal spelare och status.
-- A-3: GM kan öppna, stänga och arkivera kampanjen. Radering kräver bekräftelse.
+- A-3: GM kan öppna, stänga, arkivera och återställa kampanjen genom att byta status.
+  Radering kräver att GM skriver kampanjens namn (F19).
 - A-4: GM kan ta bort spelare från kampanjen.
 
 ### 3.4 Ansökan
@@ -270,7 +273,7 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
 
 ### Fas 1 – Grund
 1. ✅ Konto: registrering, inloggning, profil (e-post och lösenord).
-2. ⏳ Kampanjer: skapa, lista och status visas. GM kan ännu inte redigera kampanjen.
+2. ✅ Kampanjer: skapa, lista, status och redigering (se punkt 11).
 3. ✅ Ansökningsflöde med meddelande och GM-godkännande.
 
 ### Fas 2 – Spelrummet
@@ -289,7 +292,7 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
 ### Fas 3 – Komplettering
 9. ✅ Redigering av egna inlägg (B12): "(redigerad)", liveuppdatering och sparad historik.
 10. ✅ Olästmarkeringar: antal på flikarna RPG/OOC och i kampanjlistan, "Nya inlägg" i chatten.
-11. Kampanjredigering för GM (A-2 till A-4).
+11. ✅ Kampanjadministration för GM (A-2 till A-4): inställningar, status, ta bort spelare och radera kampanjen.
 
 ### Senare
 Social inloggning, privata meddelanden, notiser/e-postnotiser, flera
@@ -396,5 +399,4 @@ Beroenden: `Web → Core, Infrastructure` och `Infrastructure → Core`.
 3. Ska GM kunna dölja tärningskast (privata kast)?
 4. Hur hanteras borttagning av ett användarkonto: anonymiseras inläggen?
 5. Ska GM kunna exportera kampanjen?
-6. Ska arkiverade kampanjer kunna återställas?
-7. Ska den som ansöker kunna dra tillbaka sin ansökan?
+6. Ska den som ansöker kunna dra tillbaka sin ansökan?

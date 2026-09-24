@@ -1,0 +1,208 @@
+﻿@page "/campaigns/{CampaignId:int}/settings"
+@attribute [Authorize]
+
+@using System.ComponentModel.DataAnnotations
+@using Taleshaven.Web.Components.Account
+@using Taleshaven.Web.Components.Account.Shared
+
+@* GM administrerar kampanjen: namn, beskrivning, max antal spelare, status och radering (A-2, A-3). *@
+
+@inject ICampaignService CampaignService
+@inject IdentityRedirectManager RedirectManager
+@inject NavigationManager NavigationManager
+
+@if (campaign is null)
+{
+    return;
+}
+
+<PageTitle>Inställningar · @campaign.Name</PageTitle>
+
+<CampaignHeader Campaign="campaign" Active="CampaignTab.Settings" />
+
+@if (!CampaignPermissions.CanManageCampaign(campaign.ViewerRole))
+{
+    <div class="alert alert-warning">Endast kampanjens GM kan ändra kampanjen.</div>
+    return;
+}
+
+<div class="settings">
+    <h2 class="h4">Inställningar</h2>
+    <StatusMessage Message="@settingsError" />
+
+    <EditForm Model="Input" method="post" OnValidSubmit="SaveAsync" FormName="settings">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" role="alert" />
+
+        <div class="mb-3">
+            <label for="Input.Name" class="form-label">Namn</label>
+            <InputText @bind-Value="Input.Name" id="Input.Name" class="form-control" maxlength="@CampaignLimits.NameMaxLength" />
+        </div>
+
+        <div class="mb-3">
+            <label for="Input.Description" class="form-label">Beskrivning</label>
+            <InputTextArea @bind-Value="Input.Description" id="Input.Description" class="form-control" rows="5"
+                           maxlength="@CampaignLimits.DescriptionMaxLength" />
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-sm-4">
+                <label for="Input.MaxPlayers" class="form-label">Max antal spelare</label>
+                <InputNumber @bind-Value="Input.MaxPlayers" id="Input.MaxPlayers" class="form-control"
+                             min="@CampaignLimits.MinPlayers" max="@CampaignLimits.MaxPlayers" />
+                <div class="form-text">Tomt = obegränsat. Nu @campaign.Players.Count spelare.</div>
+            </div>
+            <div class="col-sm-8">
+                <label for="Input.Status" class="form-label">Status</label>
+                <InputSelect @bind-Value="Input.Status" id="Input.Status" class="form-select">
+                    @foreach (var status in Enum.GetValues<CampaignStatus>())
+                    {
+                        <option value="@status">@StatusText(status)</option>
+                    }
+                </InputSelect>
+                @* Sidan är statisk, så förklaringen visas för alla statusar i stället för att följa valet. *@
+                <ul class="form-text ps-3 mb-0">
+                    @foreach (var status in Enum.GetValues<CampaignStatus>())
+                    {
+                        <li><strong>@StatusText(status):</strong> @StatusHelp(status)</li>
+                    }
+                </ul>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Spara inställningar</button>
+    </EditForm>
+
+    <section class="danger-zone border border-danger rounded p-3 mt-5">
+        <h2 class="h5 text-danger">Radera kampanjen</h2>
+        <p class="mb-2">
+            Allt i kampanjen raderas för gott: chattar, tärningskast, krönika, karaktärer, ansökningar och spelare.
+            Det går inte att ångra. Vill du bara avsluta kampanjen kan du i stället sätta status till <em>Arkiverad</em>.
+        </p>
+        @if (deleteError is not null)
+        {
+            <div class="alert alert-danger py-2">@deleteError</div>
+        }
+        <form method="post" @formname="delete-campaign" @onsubmit="DeleteAsync">
+            <AntiforgeryToken />
+            <label for="confirm-name" class="form-label">Skriv kampanjens namn, <strong>@campaign.Name</strong>, för att bekräfta</label>
+            <div class="d-flex flex-wrap gap-2">
+                <input id="confirm-name" name="DeleteInput.ConfirmationName" class="form-control confirm-name" autocomplete="off" />
+                <button type="submit" class="btn btn-danger">Radera kampanjen för gott</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+@code {
+    [Parameter]
+    public int CampaignId { get; set; }
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "settings")]
+    private SettingsInputModel Input { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "delete-campaign")]
+    private DeleteInputModel? DeleteInput { get; set; }
+
+    private string userId = "";
+    private CampaignDetails? campaign;
+    private string? settingsError;
+    private string? deleteError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+
+        campaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
+        if (campaign is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        // Vid visning fylls formuläret med kampanjens värden; vid POST kommer värdena från formuläret.
+        Input ??= new SettingsInputModel
+        {
+            Name = campaign.Name,
+            Description = campaign.Description,
+            MaxPlayers = campaign.MaxPlayers,
+            Status = campaign.Status,
+        };
+        DeleteInput ??= new();
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            await CampaignService.UpdateCampaignAsync(CampaignId, userId,
+                new CampaignSettings(Input.Name, Input.Description, Input.MaxPlayers, Input.Status));
+        }
+        catch (CampaignRuleException ex)
+        {
+            settingsError = $"Error: {ex.Message}";
+            return;
+        }
+
+        RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}/settings", "Inställningarna har sparats.", HttpContext);
+    }
+
+    private async Task DeleteAsync()
+    {
+        try
+        {
+            await CampaignService.DeleteCampaignAsync(CampaignId, userId, DeleteInput?.ConfirmationName);
+        }
+        catch (CampaignRuleException ex)
+        {
+            deleteError = ex.Message;
+            return;
+        }
+
+        NavigationManager.NavigateTo("");
+    }
+
+    private static string StatusText(CampaignStatus status) => status switch
+    {
+        CampaignStatus.OpenForApplications => "Öppen för ansökningar",
+        CampaignStatus.Ongoing => "Pågående",
+        CampaignStatus.Closed => "Stängd",
+        CampaignStatus.Archived => "Arkiverad",
+        _ => status.ToString(),
+    };
+
+    private static string StatusHelp(CampaignStatus status) => status switch
+    {
+        CampaignStatus.OpenForApplications => "Spelet pågår och nya spelare kan ansöka.",
+        CampaignStatus.Ongoing => "Spelet pågår men tar inte emot ansökningar.",
+        CampaignStatus.Closed => "Pausad. Spelarna kan läsa men inte skriva; GM kan fortfarande skriva.",
+        CampaignStatus.Archived => "Avslutad. Allt finns kvar att läsa; spelarna kan inte skriva.",
+        _ => "",
+    };
+
+    private sealed class SettingsInputModel
+    {
+        [Required(ErrorMessage = "Ange ett namn.")]
+        [StringLength(CampaignLimits.NameMaxLength, ErrorMessage = "Namnet får vara högst {1} tecken.")]
+        public string? Name { get; set; }
+
+        [StringLength(CampaignLimits.DescriptionMaxLength, ErrorMessage = "Beskrivningen får vara högst {1} tecken.")]
+        public string? Description { get; set; }
+
+        [Range(CampaignLimits.MinPlayers, CampaignLimits.MaxPlayers, ErrorMessage = "Max antal spelare måste vara mellan {1} och {2}.")]
+        public int? MaxPlayers { get; set; }
+
+        public CampaignStatus Status { get; set; }
+    }
+
+    private sealed class DeleteInputModel
+    {
+        public string? ConfirmationName { get; set; }
+    }
+}

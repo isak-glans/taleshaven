@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using Taleshaven.Core;
 using Taleshaven.Core.Campaigns;
+using Taleshaven.Core.Media;
 using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Data;
 
 namespace Taleshaven.Infrastructure.Campaigns;
 
-internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbFactory, TimeProvider timeProvider) : ICampaignService
+internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbFactory, IImageStore imageStore, TimeProvider timeProvider) : ICampaignService
 {
     public async Task<IReadOnlyList<CampaignListItem>> GetCampaignsAsync(string viewerId, CancellationToken cancellationToken = default)
     {
@@ -102,5 +104,63 @@ internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbF
 
         await transaction.CommitAsync(cancellationToken);
         return entity.Id;
+    }
+
+    public async Task UpdateCampaignAsync(int campaignId, string userId, CampaignSettings settings, CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var campaign = await LoadManagedCampaignAsync(db, campaignId, userId, cancellationToken);
+
+        campaign.UpdateDetails(settings.Name, settings.Description, settings.MaxPlayers);
+        campaign.ChangeStatus(settings.Status);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RemovePlayerAsync(int campaignId, string userId, string playerId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var campaign = await LoadManagedCampaignAsync(db, campaignId, userId, cancellationToken);
+
+        campaign.RemovePlayer(playerId);
+        await db.SaveChangesAsync(cancellationToken);
+
+        // Läspositionerna tas bort, så att spelaren börjar om från nuläget om hen godkänns igen (F18).
+        await db.ReadMarkers
+            .Where(m => m.UserId == playerId && db.Threads.Any(t => t.Id == m.ThreadId && t.CampaignId == campaignId))
+            .ExecuteDeleteAsync(cancellationToken);
+    }
+
+    public async Task DeleteCampaignAsync(int campaignId, string userId, string? confirmationName, CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var campaign = await LoadManagedCampaignAsync(db, campaignId, userId, cancellationToken);
+
+        if (!string.Equals(confirmationName?.Trim(), campaign.Name, StringComparison.Ordinal))
+            throw new CampaignRuleException("Skriv kampanjens namn exakt för att bekräfta att den ska raderas.");
+
+        var avatarKeys = await db.Characters
+            .Where(c => c.CampaignId == campaignId && c.AvatarKey != null)
+            .Select(c => c.AvatarKey!)
+            .ToListAsync(cancellationToken);
+
+        // Databasen raderar allt som hör till kampanjen i samma sats (kaskad): kanaler, inlägg, historik,
+        // krönika, karaktärer, ansökningar, medlemskap och läspositioner.
+        await db.Campaigns.Where(c => c.Id == campaignId).ExecuteDeleteAsync(cancellationToken);
+
+        foreach (var key in avatarKeys)
+            imageStore.DeleteAvatar(key);
+    }
+
+    private static async Task<Campaign> LoadManagedCampaignAsync(TaleshavenDbContext db, int campaignId, string userId, CancellationToken cancellationToken)
+    {
+        var campaign = await db.Campaigns
+            .Include(c => c.Memberships)
+            .SingleOrDefaultAsync(c => c.Id == campaignId, cancellationToken)
+            ?? throw new CampaignRuleException("Kampanjen finns inte.");
+
+        if (!CampaignPermissions.CanManageCampaign(campaign.IsGameMaster(userId) ? CampaignRole.GameMaster : CampaignRole.None))
+            throw new CampaignRuleException("Endast kampanjens GM kan ändra kampanjen.");
+
+        return campaign;
     }
 }

@@ -120,6 +120,19 @@
                             <span>@player.DisplayName</span>
                             <span class="text-secondary small">sedan @Dates.Date(player.JoinedAt)</span>
                         </div>
+                        @if (campaign.ViewerRole == CampaignRole.GameMaster)
+                        {
+                            @* Två steg (öppna, sedan bekräfta) så att ingen tas bort av misstag. Fungerar utan JavaScript. *@
+                            <details class="remove-player mt-1">
+                                <summary class="small text-danger">Ta bort ur kampanjen</summary>
+                                <form method="post" @formname="@($"remove-{player.UserId}")" @onsubmit="RemovePlayerAsync" class="mt-1">
+                                    <AntiforgeryToken />
+                                    <input type="hidden" name="Removal.PlayerId" value="@player.UserId" />
+                                    <p class="small mb-1">@player.DisplayName kan inte längre skriva. Inlägg och karaktärer finns kvar.</p>
+                                    <button type="submit" class="btn btn-sm btn-danger">Ta bort @player.DisplayName</button>
+                                </form>
+                            </details>
+                        }
                         @if (CharactersOf(player.UserId) is { Count: > 0 } ownCharacters)
                         {
                             <div class="small mt-1">
@@ -151,6 +164,10 @@
 
     [SupplyParameterFromForm(FormName = "apply")]
     private ApplyInputModel ApplyInput { get; set; } = default!;
+
+    // Binds från GM:ns ta bort-formulär (ett per spelare).
+    [SupplyParameterFromForm]
+    private RemovalModel? Removal { get; set; }
 
     // Binds från GM:ns godkänn/avslå-formulär (ett per ansökan).
     [SupplyParameterFromForm]
@@ -230,6 +247,30 @@
         }
 
         RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}/players", status, HttpContext);
+    }
+
+    private async Task RemovePlayerAsync()
+    {
+        if (Removal?.PlayerId is not { Length: > 0 } playerId)
+            return;
+
+        var name = campaign?.Players.FirstOrDefault(p => p.UserId == playerId)?.DisplayName ?? "Spelaren";
+        try
+        {
+            await CampaignService.RemovePlayerAsync(CampaignId, userId, playerId);
+        }
+        catch (CampaignRuleException ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+            return;
+        }
+
+        RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}/players", $"{name} är borttagen ur kampanjen.", HttpContext);
+    }
+
+    private sealed class RemovalModel
+    {
+        public string? PlayerId { get; set; }
     }
 
     private sealed class ApplyInputModel

@@ -50,10 +50,12 @@ internal sealed class PostConfiguration : IEntityTypeConfiguration<Post>
             .HasMaxLength(ThreadLimits.PostMaxLength);
 
         // En karaktär som har skrivit inlägg kan inte tas bort, så att gamla inlägg behåller sin karaktär.
+        // NO ACTION (inte RESTRICT) kontrolleras först när hela satsen är klar, så att en raderad kampanj
+        // kan ta med sig både inlägg och karaktärer i samma kaskad.
         builder.HasOne<Character>()
             .WithMany()
             .HasForeignKey(p => p.CharacterId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.NoAction);
 
         // Tärningskastet lagras som jsonb i samma rad som inlägget (null för vanliga inlägg).
         builder.OwnsOne(p => p.Roll, roll => roll.ToJson());

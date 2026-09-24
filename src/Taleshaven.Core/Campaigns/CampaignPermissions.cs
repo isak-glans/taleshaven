@@ -25,6 +25,9 @@ public static class CampaignPermissions
     public static bool CanEditPost(CampaignRole role, CampaignStatus campaignStatus, ThreadStatus threadStatus, string userId, string authorId) =>
         userId == authorId && CanWritePost(role, campaignStatus, threadStatus);
 
+    /// <summary>Endast GM administrerar kampanjen: inställningar, status, spelare och radering (A-2–A-4).</summary>
+    public static bool CanManageCampaign(CampaignRole role) => role == CampaignRole.GameMaster;
+
     /// <summary>Endast GM skriver krönikan (C-7). Gäller även stängda och arkiverade kampanjer.</summary>
     public static bool CanEditChronicle(CampaignRole role) => role == CampaignRole.GameMaster;
 

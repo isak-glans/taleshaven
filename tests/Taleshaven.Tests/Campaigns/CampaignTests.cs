@@ -1,3 +1,4 @@
+using Taleshaven.Core;
 using Taleshaven.Core.Campaigns;
 
 namespace Taleshaven.Tests.Campaigns;
@@ -35,7 +36,7 @@ public class CampaignTests
     [InlineData("   ")]
     public void Create_RejectsEmptyName(string name)
     {
-        Assert.Throws<ArgumentException>(() => Campaign.Create("gm-1", name, null, null, Now));
+        Assert.Throws<CampaignRuleException>(() => Campaign.Create("gm-1", name, null, null, Now));
     }
 
     [Fact]
@@ -43,7 +44,7 @@ public class CampaignTests
     {
         var name = new string('a', CampaignLimits.NameMaxLength + 1);
 
-        Assert.Throws<ArgumentException>(() => Campaign.Create("gm-1", name, null, null, Now));
+        Assert.Throws<CampaignRuleException>(() => Campaign.Create("gm-1", name, null, null, Now));
     }
 
     [Fact]
@@ -51,7 +52,7 @@ public class CampaignTests
     {
         var description = new string('a', CampaignLimits.DescriptionMaxLength + 1);
 
-        Assert.Throws<ArgumentException>(() => Campaign.Create("gm-1", "Namn", description, null, Now));
+        Assert.Throws<CampaignRuleException>(() => Campaign.Create("gm-1", "Namn", description, null, Now));
     }
 
     [Theory]
@@ -60,7 +61,7 @@ public class CampaignTests
     [InlineData(CampaignLimits.MaxPlayers + 1)]
     public void Create_RejectsMaxPlayersOutOfRange(int maxPlayers)
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => Campaign.Create("gm-1", "Namn", null, maxPlayers, Now));
+        Assert.Throws<CampaignRuleException>(() => Campaign.Create("gm-1", "Namn", null, maxPlayers, Now));
     }
 
     [Theory]

@@ -11,6 +11,10 @@
 <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
     <h1 class="h2 mb-0">@Campaign.Name</h1>
     <CampaignStatusBadge Status="Campaign.Status" />
+    @if (CampaignPermissions.CanManageCampaign(Campaign.ViewerRole) && Active != CampaignTab.Settings)
+    {
+        <a class="btn btn-sm btn-outline-secondary ms-auto" href="campaigns/@(Campaign.Id)/settings">Inställningar</a>
+    }
 </div>
 <p class="text-secondary mb-2">
     GM: @Campaign.GameMasterName

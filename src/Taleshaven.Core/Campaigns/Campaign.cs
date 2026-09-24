@@ -31,6 +31,36 @@ public class Campaign
         };
     }
 
+    /// <summary>GM ändrar namn, beskrivning och max antal spelare (A-2).</summary>
+    public void UpdateDetails(string? name, string? description, int? maxPlayers)
+    {
+        var validatedMax = ValidateMaxPlayers(maxPlayers);
+        if (validatedMax < Memberships.Count)
+            throw new CampaignRuleException($"Kampanjen har redan {Memberships.Count} spelare. Ta bort spelare först eller välj ett högre antal.");
+
+        Name = ValidateName(name);
+        Description = ValidateDescription(description);
+        MaxPlayers = validatedMax;
+    }
+
+    /// <summary>GM öppnar, stänger, arkiverar eller återställer kampanjen (A-3).</summary>
+    public void ChangeStatus(CampaignStatus status)
+    {
+        if (!Enum.IsDefined(status))
+            throw new CampaignRuleException("Okänd status.");
+
+        Status = status;
+    }
+
+    /// <summary>GM tar bort en spelare ur kampanjen (A-4). Spelarens karaktärer och inlägg finns kvar.</summary>
+    public void RemovePlayer(string userId)
+    {
+        var membership = Memberships.SingleOrDefault(m => m.UserId == userId)
+            ?? throw new CampaignRuleException("Spelaren deltar inte i kampanjen.");
+
+        Memberships.Remove(membership);
+    }
+
     public bool IsGameMaster(string? userId) => userId is not null && userId == GameMasterId;
 
     public bool IsPlayer(string? userId) => userId is not null && Memberships.Any(m => m.UserId == userId);
@@ -90,13 +120,14 @@ public class Campaign
             ?? throw new CampaignRuleException("Ansökan finns inte eller är redan behandlad.");
     }
 
+    // Valideringsfelen är CampaignRuleException så att de kan visas för GM som redigerar kampanjen.
     private static string ValidateName(string? name)
     {
         name = name?.Trim() ?? "";
         if (name.Length == 0)
-            throw new ArgumentException("Kampanjen måste ha ett namn.", nameof(name));
+            throw new CampaignRuleException("Kampanjen måste ha ett namn.");
         if (name.Length > CampaignLimits.NameMaxLength)
-            throw new ArgumentException($"Namnet får vara högst {CampaignLimits.NameMaxLength} tecken.", nameof(name));
+            throw new CampaignRuleException($"Namnet får vara högst {CampaignLimits.NameMaxLength} tecken.");
         return name;
     }
 
@@ -104,15 +135,14 @@ public class Campaign
     {
         description = description?.Trim() ?? "";
         if (description.Length > CampaignLimits.DescriptionMaxLength)
-            throw new ArgumentException($"Beskrivningen får vara högst {CampaignLimits.DescriptionMaxLength} tecken.", nameof(description));
+            throw new CampaignRuleException($"Beskrivningen får vara högst {CampaignLimits.DescriptionMaxLength} tecken.");
         return description;
     }
 
     private static int? ValidateMaxPlayers(int? maxPlayers)
     {
         if (maxPlayers is < CampaignLimits.MinPlayers or > CampaignLimits.MaxPlayers)
-            throw new ArgumentOutOfRangeException(nameof(maxPlayers), maxPlayers,
-                $"Max antal spelare måste vara mellan {CampaignLimits.MinPlayers} och {CampaignLimits.MaxPlayers}.");
+            throw new CampaignRuleException($"Max antal spelare måste vara mellan {CampaignLimits.MinPlayers} och {CampaignLimits.MaxPlayers}.");
         return maxPlayers;
     }
 }
