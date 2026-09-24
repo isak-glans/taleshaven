@@ -1,0 +1,28 @@
+@using Taleshaven.Core.Characters
+
+<div class="character-grid">
+    @foreach (var character in Characters)
+    {
+        <a class="character-card card card-body" href="campaigns/@CampaignId/characters/@character.Id">
+            <Avatar Name="@character.Name" ImageUrl="@character.AvatarUrl" ColorKey="@($"character-{character.Id}")" Size="56" />
+            <div class="character-card-text">
+                <div class="fw-semibold character-name">@character.Name</div>
+                <div class="small text-secondary">
+                    @(character.IsNpc ? "NPC" : $"Spelas av {character.OwnerName}")
+                    @if (character.RuleSystem is not null)
+                    {
+                        <text> · @character.RuleSystem</text>
+                    }
+                </div>
+            </div>
+        </a>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public int CampaignId { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<CharacterSummary> Characters { get; set; } = [];
+}

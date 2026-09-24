@@ -92,6 +92,10 @@
     [Parameter]
     public string? InitialText { get; set; }
 
+    /// <summary>Tillåt att spara tom text (t.ex. ett karaktärsdokument som inte är ifyllt än).</summary>
+    [Parameter]
+    public bool AllowEmpty { get; set; }
+
     /// <summary>Ersätter standardtipset om kortkommando, t.ex. "Ctrl+Enter sparar".</summary>
     [Parameter]
     public string? ShortcutHint { get; set; }
@@ -130,7 +134,7 @@
 
     private async Task SubmitAsync()
     {
-        if (string.IsNullOrWhiteSpace(text))
+        if (!AllowEmpty && string.IsNullOrWhiteSpace(text))
         {
             error = "Skriv något först.";
             return;

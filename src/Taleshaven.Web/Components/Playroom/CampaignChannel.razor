@@ -1,9 +1,12 @@
+﻿@using Taleshaven.Core.Characters
+
 @* En kampanjs RPG- eller OOC-chatt med rubrik och flikar. Används av RpgPage och OocPage.
    Sidorna är separata komponenter så att ett flikbyte alltid ger nya parametrar; en gemensam sida
    med två adresser återanvändes av Blazor och visade fel kanal. *@
 
 @inject ICampaignService CampaignService
 @inject IThreadService ThreadService
+@inject ICharacterService CharacterService
 @inject NavigationManager NavigationManager
 
 @if (campaign is null || thread is null)
@@ -20,7 +23,8 @@
     <p class="text-secondary small mb-0">Här pratar ni utanför rollspelet: planering, regelfrågor, frånvaro och annat.</p>
 }
 
-<ChatView @key="thread.Id" Thread="thread" SendOnEnter="@(Kind == ThreadKind.Ooc)"
+<ChatView @key="thread.Id" Thread="thread" SendOnEnter="@(Kind == ThreadKind.Ooc)" CampaignId="CampaignId"
+          ViewerRole="campaign.ViewerRole" PostingOptions="@(LoadedPostingOptions ?? [])"
           Placeholder="@(Kind == ThreadKind.Ooc ? "Skriv ett meddelande…" : "Skriv ditt inlägg…")" />
 
 @code {
@@ -40,6 +44,10 @@
     [PersistentState]
     public ThreadDetails? LoadedThread { get; set; }
 
+    /// <summary>Karaktärer användaren kan skriva som (endast RPG).</summary>
+    [PersistentState]
+    public List<CharacterOption>? LoadedPostingOptions { get; set; }
+
     private CampaignDetails? campaign => LoadedCampaign;
     private ThreadDetails? thread => LoadedThread;
 
@@ -51,7 +59,12 @@
             LoadedCampaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
 
         if (LoadedThread is null || LoadedThread.CampaignId != CampaignId || LoadedThread.Kind != Kind)
+        {
             LoadedThread = LoadedCampaign is null ? null : await ThreadService.GetChannelAsync(CampaignId, Kind, userId);
+            LoadedPostingOptions = LoadedThread is { Kind: ThreadKind.Rpg, CanWrite: true }
+                ? [.. await CharacterService.GetPostingOptionsAsync(CampaignId, userId)]
+                : [];
+        }
 
         if (LoadedThread is null)
             NavigationManager.NotFound();

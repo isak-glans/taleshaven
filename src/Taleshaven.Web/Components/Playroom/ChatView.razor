@@ -3,6 +3,7 @@
 
 @implements IAsyncDisposable
 
+@using Taleshaven.Core.Characters
 @using Taleshaven.Core.Dice
 
 @inject IThreadService ThreadService
@@ -39,9 +40,12 @@
             var html = posts[i].Html;
             var previous = i > 0 ? posts[i - 1].Item : null;
             var newDay = previous is null || Dates.Day(previous.CreatedAt) != Dates.Day(post.CreatedAt);
+            var character = post.Character;
             // Tärningskast visar alltid vem som slog, så de grupperas aldrig in under föregående inlägg.
+            // Byter skribenten karaktär börjar en ny grupp.
             var continuation = !newDay && post.Roll is null
-                && previous!.AuthorId == post.AuthorId && post.CreatedAt - previous.CreatedAt < GroupingWindow;
+                && previous!.AuthorId == post.AuthorId && previous.Character?.Id == character?.Id
+                && post.CreatedAt - previous.CreatedAt < GroupingWindow;
 
             <div @key="post.Id">
                 @if (newDay)
@@ -55,14 +59,31 @@
                     }
                     else
                     {
-                        <div class="chat-avatar" style="background-color: @AvatarColor(post.AuthorId)" aria-hidden="true">@Initials(post.AuthorName)</div>
+                        <div class="chat-avatar">
+                            @if (character is not null)
+                            {
+                                <Avatar Name="@character.Name" ImageUrl="@character.AvatarUrl" ColorKey="@($"character-{character.Id}")" />
+                            }
+                            else
+                            {
+                                <Avatar Name="@post.AuthorName" ColorKey="@post.AuthorId" />
+                            }
+                        </div>
                     }
                     <div class="chat-body">
                         @if (!continuation)
                         {
                             <header class="chat-header">
-                                <strong class="chat-author">@post.AuthorName</strong>
-                                @if (post.AuthorIsGameMaster)
+                                <strong class="chat-author">@(character?.Name ?? post.AuthorName)</strong>
+                                @if (character is { IsNpc: true })
+                                {
+                                    <span class="badge text-bg-secondary">NPC</span>
+                                }
+                                else if (character is not null)
+                                {
+                                    <span class="small text-secondary chat-player">@post.AuthorName</span>
+                                }
+                                else if (post.AuthorIsGameMaster)
                                 {
                                     <span class="badge text-bg-dark">GM</span>
                                 }
@@ -120,6 +141,36 @@
             }
         }
 
+        @if (Thread.CanWrite && Thread.Kind == ThreadKind.Rpg)
+        {
+            @if (PostingOptions.Count > 0)
+            {
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <label for="post-as" class="small text-secondary">Skriv som</label>
+                    <select id="post-as" class="form-select form-select-sm w-auto" @bind="SelectedCharacter">
+                        @if (ViewerRole == CampaignRole.GameMaster)
+                        {
+                            <option value="">GM (berättare)</option>
+                        }
+                        @foreach (var option in PostingOptions)
+                        {
+                            <option value="@option.Id">@option.Name@(option.IsNpc ? " (NPC)" : "")</option>
+                        }
+                        @if (ViewerRole != CampaignRole.GameMaster)
+                        {
+                            <option value="">Mig själv, utan karaktär</option>
+                        }
+                    </select>
+                </div>
+            }
+            else if (ViewerRole == CampaignRole.Player)
+            {
+                <p class="small text-secondary mb-2">
+                    Skapa en karaktär under <a href="campaigns/@CampaignId/characters">Karaktärer</a> för att skriva som den.
+                </p>
+            }
+        }
+
         @if (Thread.CanWrite)
         {
             <MarkdownEditor MaxLength="ThreadLimits.PostMaxLength" DraftKey="@($"thread-{Thread.Id}")" OnSubmit="SubmitAsync"
@@ -160,6 +211,25 @@
     [Parameter]
     public bool SendOnEnter { get; set; }
 
+    [Parameter, EditorRequired]
+    public int CampaignId { get; set; }
+
+    [Parameter, EditorRequired]
+    public CampaignRole ViewerRole { get; set; }
+
+    /// <summary>Karaktärerna användaren kan skriva som (RPG). Tom för OOC.</summary>
+    [Parameter]
+    public IReadOnlyList<CharacterOption> PostingOptions { get; set; } = [];
+
+    // Vald karaktär i "Skriv som". Null = som användaren själv (GM: som berättare).
+    private int? selectedCharacterId;
+
+    private string SelectedCharacter
+    {
+        get => selectedCharacterId?.ToString() ?? "";
+        set => selectedCharacterId = int.TryParse(value, out var id) ? id : null;
+    }
+
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
 
@@ -170,6 +240,10 @@
     protected override async Task OnInitializedAsync()
     {
         userId = (await AuthenticationState).User.GetUserId() ?? "";
+
+        // Spelare skriver som sin (första) karaktär som standard, GM som berättare.
+        if (ViewerRole == CampaignRole.Player && PostingOptions.Count > 0)
+            selectedCharacterId = PostingOptions[0].Id;
 
         InitialPage ??= await ThreadService.GetInitialPostsAsync(Thread.Id);
         hasOlder = InitialPage.HasOlder;
@@ -283,7 +357,8 @@
             return commandError ?? await RollAsync(notation, label);
         }
 
-        return await PostAsync(() => ThreadService.CreatePostAsync(Thread.CampaignId, Thread.Id, userId, content));
+        var characterId = Thread.Kind == ThreadKind.Rpg ? selectedCharacterId : null;
+        return await PostAsync(() => ThreadService.CreatePostAsync(Thread.CampaignId, Thread.Id, userId, content, characterId));
     }
 
     private Task<string?> RollAsync(DiceNotation notation, string? label) =>
@@ -373,21 +448,6 @@
     // Tärningskast visas med egen layout och behöver ingen Markdown-rendering.
     private DisplayPost ToDisplay(PostItem post) =>
         new(post, post.Roll is null ? (MarkupString)Markdown.ToSafeHtml(post.Content) : default);
-
-    private static string Initials(string name)
-    {
-        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return string.Concat(words.Take(2).Select(w => char.ToUpperInvariant(w[0])));
-    }
-
-    // Stabil färg per användare (string.GetHashCode varierar mellan körningar).
-    private static string AvatarColor(string userId)
-    {
-        var hash = 0;
-        foreach (var c in userId)
-            hash = unchecked(hash * 31 + c);
-        return $"hsl({(hash & 0x7fffffff) % 360} 45% 42%)";
-    }
 
     public async ValueTask DisposeAsync()
     {

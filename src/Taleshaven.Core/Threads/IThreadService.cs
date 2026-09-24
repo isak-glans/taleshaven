@@ -18,7 +18,8 @@ public interface IThreadService
     /// <summary>Alla inlägg som är nyare än <paramref name="afterPostId"/>, äldst först.</summary>
     Task<IReadOnlyList<PostItem>> GetPostsAfterAsync(int threadId, long afterPostId, CancellationToken cancellationToken = default);
 
-    Task<PostItem> CreatePostAsync(int campaignId, int threadId, string userId, string? content, CancellationToken cancellationToken = default);
+    /// <summary>Skriver ett inlägg, i RPG valfritt som en karaktär (<paramref name="characterId"/>).</summary>
+    Task<PostItem> CreatePostAsync(int campaignId, int threadId, string userId, string? content, int? characterId = null, CancellationToken cancellationToken = default);
 
     /// <summary>Slår tärningar på servern och sparar kastet som ett inlägg. Tillåtet endast i OOC (beslut B3).</summary>
     Task<PostItem> RollDiceAsync(int campaignId, int threadId, string userId, DiceNotation notation, string? label, CancellationToken cancellationToken = default);
@@ -41,7 +42,11 @@ public sealed record PostItem(
     bool AuthorIsGameMaster,
     string Content,
     DateTimeOffset CreatedAt,
-    DiceRollView? Roll = null);
+    DiceRollView? Roll = null,
+    PostCharacter? Character = null);
+
+/// <summary>Karaktären ett RPG-inlägg är skrivet som.</summary>
+public sealed record PostCharacter(int Id, string Name, bool IsNpc, string? AvatarUrl);
 
 public sealed record DiceRollView(string Notation, string? Label, IReadOnlyList<int> Results, int Sides, int Modifier, int Total)
 {

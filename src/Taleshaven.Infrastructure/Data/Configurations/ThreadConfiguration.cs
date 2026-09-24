@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Taleshaven.Core.Campaigns;
+using Taleshaven.Core.Characters;
 using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Identity;
 
@@ -47,6 +48,12 @@ internal sealed class PostConfiguration : IEntityTypeConfiguration<Post>
         builder.Property(p => p.Content)
             .IsRequired()
             .HasMaxLength(ThreadLimits.PostMaxLength);
+
+        // En karaktär som har skrivit inlägg kan inte tas bort, så att gamla inlägg behåller sin karaktär.
+        builder.HasOne<Character>()
+            .WithMany()
+            .HasForeignKey(p => p.CharacterId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // Tärningskastet lagras som jsonb i samma rad som inlägget (null för vanliga inlägg).
         builder.OwnsOne(p => p.Roll, roll => roll.ToJson());

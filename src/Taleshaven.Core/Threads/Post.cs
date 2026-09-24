@@ -13,12 +13,15 @@ public class Post
     /// <summary>Inläggets text i Markdown. Renderas och saneras vid visning. För tärningskast en läsbar sammanfattning.</summary>
     public string Content { get; private set; } = "";
 
+    /// <summary>Karaktären inlägget är skrivet som (RPG), eller null om det är skrivet som användaren själv.</summary>
+    public int? CharacterId { get; private set; }
+
     /// <summary>Tärningskastet om inlägget är ett kast. Sådana inlägg får aldrig redigeras (T-5).</summary>
     public DiceRoll? Roll { get; private set; }
 
     public DateTimeOffset CreatedAt { get; private set; }
 
-    public static Post Create(int threadId, string authorId, string? content, DateTimeOffset now)
+    public static Post Create(int threadId, string authorId, string? content, DateTimeOffset now, int? characterId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(authorId);
 
@@ -33,6 +36,7 @@ public class Post
             ThreadId = threadId,
             AuthorId = authorId,
             Content = content,
+            CharacterId = characterId,
             CreatedAt = now,
         };
     }

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Taleshaven.Core;
 using Taleshaven.Core.Campaigns;
 using Taleshaven.Core.Dice;
+using Taleshaven.Core.Media;
 using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Campaigns;
 using Taleshaven.Infrastructure.Data;
@@ -68,13 +69,26 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         return await ToPostItemsAsync(db, db.Posts.Where(p => p.ThreadId == threadId && p.Id > afterPostId), cancellationToken);
     }
 
-    public async Task<PostItem> CreatePostAsync(int campaignId, int threadId, string userId, string? content, CancellationToken cancellationToken = default)
+    public async Task<PostItem> CreatePostAsync(int campaignId, int threadId, string userId, string? content, int? characterId = null, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-        await GetWritableThreadAsync(db, campaignId, threadId, userId, cancellationToken);
+        var (thread, access) = await GetWritableThreadAsync(db, campaignId, threadId, userId, cancellationToken);
 
-        var post = Post.Create(threadId, userId, content, timeProvider.GetUtcNow());
+        if (characterId is not null)
+        {
+            if (thread.Kind != ThreadKind.Rpg)
+                throw new CampaignRuleException("Karaktärer används bara i RPG.");
+
+            var character = await db.Characters.AsNoTracking()
+                .SingleOrDefaultAsync(c => c.Id == characterId && c.CampaignId == campaignId, cancellationToken)
+                ?? throw new CampaignRuleException("Karaktären finns inte.");
+
+            if (!CampaignPermissions.CanPostAsCharacter(access.Role, userId, character.OwnerId, character.IsNpc))
+                throw new CampaignRuleException("Du kan inte skriva som den karaktären.");
+        }
+
+        var post = Post.Create(threadId, userId, content, timeProvider.GetUtcNow(), characterId);
         return await SavePostAsync(db, post, cancellationToken);
     }
 
@@ -82,7 +96,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-        var thread = await GetWritableThreadAsync(db, campaignId, threadId, userId, cancellationToken);
+        var (thread, _) = await GetWritableThreadAsync(db, campaignId, threadId, userId, cancellationToken);
         if (thread.Kind != ThreadKind.Ooc)
             throw new CampaignRuleException("Tärningar kan bara slås i OOC.");
 
@@ -92,7 +106,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         return await SavePostAsync(db, post, cancellationToken);
     }
 
-    private static async Task<CampaignThread> GetWritableThreadAsync(
+    private static async Task<(CampaignThread Thread, (CampaignRole Role, CampaignStatus CampaignStatus) Access)> GetWritableThreadAsync(
         TaleshavenDbContext db, int campaignId, int threadId, string userId, CancellationToken cancellationToken)
     {
         var thread = await db.Threads.AsNoTracking().SingleOrDefaultAsync(t => t.Id == threadId && t.CampaignId == campaignId, cancellationToken)
@@ -102,7 +116,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         if (!CampaignPermissions.CanWritePost(access.Role, access.CampaignStatus, thread.Status))
             throw new CampaignRuleException("Du har inte behörighet att skriva här.");
 
-        return thread;
+        return (thread, access);
     }
 
     private static async Task<PostItem> SavePostAsync(TaleshavenDbContext db, Post post, CancellationToken cancellationToken)
@@ -121,6 +135,8 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                 join u in db.Users on p.AuthorId equals u.Id
                 join t in db.Threads on p.ThreadId equals t.Id
                 join c in db.Campaigns on t.CampaignId equals c.Id
+                join ch in db.Characters on p.CharacterId equals (int?)ch.Id into characters
+                from ch in characters.DefaultIfEmpty()
                 select new
                 {
                     p.Id,
@@ -130,6 +146,10 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                     p.Content,
                     p.CreatedAt,
                     p.Roll,
+                    CharacterId = (int?)ch.Id,
+                    CharacterName = ch.Name,
+                    CharacterIsNpc = (bool?)ch.IsNpc,
+                    CharacterAvatarKey = ch.AvatarKey,
                 })
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -138,7 +158,10 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             .OrderBy(r => r.Id)
             .Select(r => new PostItem(
                 r.Id, r.AuthorId, r.DisplayName, r.IsGameMaster, r.Content, r.CreatedAt,
-                r.Roll is null ? null : DiceRollView.From(r.Roll)))
+                r.Roll is null ? null : DiceRollView.From(r.Roll),
+                r.CharacterId is not { } characterId ? null : new PostCharacter(
+                    characterId, r.CharacterName!, r.CharacterIsNpc ?? false,
+                    r.CharacterAvatarKey is null ? null : IImageStore.AvatarUrl(r.CharacterAvatarKey))))
             .ToList();
     }
 }

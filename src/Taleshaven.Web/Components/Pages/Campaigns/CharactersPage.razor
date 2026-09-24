@@ -1,0 +1,69 @@
+@page "/campaigns/{CampaignId:int}/characters"
+@attribute [Authorize]
+
+@using Taleshaven.Core.Characters
+
+@inject ICampaignService CampaignService
+@inject ICharacterService CharacterService
+@inject NavigationManager NavigationManager
+
+@if (campaign is null || characters is null)
+{
+    return;
+}
+
+<PageTitle>Karaktärer · @campaign.Name</PageTitle>
+
+<CampaignHeader Campaign="campaign" Active="CampaignTab.Characters" />
+
+@if (characters.CanCreate)
+{
+    <a class="btn btn-primary btn-sm mb-3" href="campaigns/@CampaignId/characters/new">
+        @(campaign.ViewerRole == CampaignRole.GameMaster ? "Ny NPC" : "Ny karaktär")
+    </a>
+}
+
+<h2 class="h5">Spelarnas karaktärer</h2>
+@if (characters.PlayerCharacters.Count == 0)
+{
+    <p class="text-secondary">Inga karaktärer ännu.</p>
+}
+else
+{
+    <CharacterGrid CampaignId="CampaignId" Characters="characters.PlayerCharacters" />
+}
+
+<h2 class="h5 mt-4">NPC:er</h2>
+@if (characters.Npcs.Count == 0)
+{
+    <p class="text-secondary">GM har inte lagt till några NPC:er.</p>
+}
+else
+{
+    <CharacterGrid CampaignId="CampaignId" Characters="characters.Npcs" />
+}
+
+@code {
+    [Parameter]
+    public int CampaignId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private CampaignDetails? campaign;
+    private CharacterList? characters;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = (await AuthenticationState).User.GetUserId() ?? "";
+
+        campaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
+        if (campaign is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        characters = await CharacterService.GetCharactersAsync(CampaignId, userId);
+    }
+}

@@ -1,0 +1,101 @@
+namespace Taleshaven.Core.Characters;
+
+/// <summary>
+/// En karaktär i en kampanj (krav H-1–H-6). Spelare äger sina egna karaktärer; GM:s karaktärer är NPC:er (F3).
+/// Det fullständiga rollformuläret kan ligga på en extern sida; här finns ett formaterat dokument med det som behövs under spel.
+/// </summary>
+public class Character
+{
+    private Character() { }
+
+    public int Id { get; private set; }
+    public int CampaignId { get; private set; }
+    public string OwnerId { get; private set; } = "";
+    public bool IsNpc { get; private set; }
+    public string Name { get; private set; } = "";
+
+    /// <summary>Beskrivning, HP, resurser, utrustning m.m. i Markdown.</summary>
+    public string Sheet { get; private set; } = "";
+
+    /// <summary>Länk till ett fullständigt rollformulär på en annan webbplats (H-4).</summary>
+    public string? SheetUrl { get; private set; }
+
+    public string? RuleSystem { get; private set; }
+
+    /// <summary>Nyckel till den uppladdade bilden i bildlagringen, eller null.</summary>
+    public string? AvatarKey { get; private set; }
+
+    public DateTimeOffset CreatedAt { get; private set; }
+    public DateTimeOffset UpdatedAt { get; private set; }
+
+    public static Character Create(int campaignId, string ownerId, bool isNpc, CharacterInput input, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+
+        var character = new Character
+        {
+            CampaignId = campaignId,
+            OwnerId = ownerId,
+            IsNpc = isNpc,
+            CreatedAt = now,
+        };
+        character.Update(input, now);
+        return character;
+    }
+
+    public void Update(CharacterInput input, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+
+        var name = input.Name?.Trim() ?? "";
+        if (name.Length == 0)
+            throw new CampaignRuleException("Karaktären måste ha ett namn.");
+        if (name.Length > CharacterLimits.NameMaxLength)
+            throw new CampaignRuleException($"Namnet får vara högst {CharacterLimits.NameMaxLength} tecken.");
+
+        var sheet = input.Sheet?.Trim() ?? "";
+        if (sheet.Length > CharacterLimits.SheetMaxLength)
+            throw new CampaignRuleException($"Karaktärsdokumentet får vara högst {CharacterLimits.SheetMaxLength} tecken.");
+
+        var ruleSystem = string.IsNullOrWhiteSpace(input.RuleSystem) ? null : input.RuleSystem.Trim();
+        if (ruleSystem?.Length > CharacterLimits.RuleSystemMaxLength)
+            throw new CampaignRuleException($"Regelsystemet får vara högst {CharacterLimits.RuleSystemMaxLength} tecken.");
+
+        Name = name;
+        Sheet = sheet;
+        SheetUrl = ValidateUrl(input.SheetUrl);
+        RuleSystem = ruleSystem;
+        UpdatedAt = now;
+    }
+
+    public void SetAvatar(string? avatarKey, DateTimeOffset now)
+    {
+        AvatarKey = avatarKey;
+        UpdatedAt = now;
+    }
+
+    // Bara absoluta http(s)-adresser, så att länken aldrig kan bli t.ex. javascript:.
+    private static string? ValidateUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return null;
+
+        url = url.Trim();
+        if (url.Length > CharacterLimits.SheetUrlMaxLength)
+            throw new CampaignRuleException($"Länken får vara högst {CharacterLimits.SheetUrlMaxLength} tecken.");
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+            throw new CampaignRuleException("Länken till rollformuläret måste börja med https:// eller http://.");
+
+        return uri.ToString();
+    }
+}
+
+public sealed record CharacterInput(string? Name, string? Sheet, string? SheetUrl, string? RuleSystem);
+
+public static class CharacterLimits
+{
+    public const int NameMaxLength = 60;
+    public const int SheetMaxLength = 10_000;
+    public const int SheetUrlMaxLength = 500;
+    public const int RuleSystemMaxLength = 60;
+}

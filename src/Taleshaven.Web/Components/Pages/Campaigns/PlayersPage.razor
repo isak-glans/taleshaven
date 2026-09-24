@@ -4,9 +4,11 @@
 @using System.ComponentModel.DataAnnotations
 @using Taleshaven.Web.Components.Account
 @using Taleshaven.Web.Components.Account.Shared
+@using Taleshaven.Core.Characters
 
 @inject ICampaignService CampaignService
 @inject ICampaignApplicationService ApplicationService
+@inject ICharacterService CharacterService
 @inject IdentityRedirectManager RedirectManager
 @inject NavigationManager NavigationManager
 
@@ -113,9 +115,20 @@
             <ul class="list-group">
                 @foreach (var player in campaign.Players)
                 {
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>@player.DisplayName</span>
-                        <span class="text-secondary small">sedan @Dates.Date(player.JoinedAt)</span>
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>@player.DisplayName</span>
+                            <span class="text-secondary small">sedan @Dates.Date(player.JoinedAt)</span>
+                        </div>
+                        @if (CharactersOf(player.UserId) is { Count: > 0 } ownCharacters)
+                        {
+                            <div class="small mt-1">
+                                @foreach (var character in ownCharacters)
+                                {
+                                    <a class="me-2" href="campaigns/@CampaignId/characters/@character.Id">@character.Name</a>
+                                }
+                            </div>
+                        }
                     </li>
                 }
             </ul>
@@ -146,6 +159,9 @@
     private string userId = "";
     private CampaignDetails? campaign;
     private IReadOnlyList<PendingApplication> pendingApplications = [];
+    private IReadOnlyList<CharacterSummary> playerCharacters = [];
+
+    private List<CharacterSummary> CharactersOf(string userId) => playerCharacters.Where(c => c.OwnerId == userId).ToList();
     private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
@@ -161,6 +177,8 @@
             NavigationManager.NotFound();
             return;
         }
+
+        playerCharacters = (await CharacterService.GetCharactersAsync(CampaignId, userId)).PlayerCharacters;
 
         if (campaign.ViewerRole == CampaignRole.GameMaster)
         {

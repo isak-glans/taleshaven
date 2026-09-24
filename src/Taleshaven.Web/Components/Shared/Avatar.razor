@@ -1,0 +1,43 @@
+@* Rund bild för en användare eller karaktär. Utan uppladdad bild visas initialer på en färg som är stabil per nyckel. *@
+
+@if (ImageUrl is not null)
+{
+    <img class="avatar" src="@ImageUrl" alt="" width="@Size" height="@Size" style="width: @(Size)px; height: @(Size)px" loading="lazy" />
+}
+else
+{
+    <span class="avatar avatar-initials" aria-hidden="true"
+          style="width: @(Size)px; height: @(Size)px; font-size: @(Size * 0.36)px; background-color: @Color">@Initials</span>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = "";
+
+    [Parameter]
+    public string? ImageUrl { get; set; }
+
+    /// <summary>Bestämmer färgen när bild saknas, t.ex. användar- eller karaktärs-id.</summary>
+    [Parameter, EditorRequired]
+    public string ColorKey { get; set; } = "";
+
+    [Parameter]
+    public int Size { get; set; } = 40;
+
+    private string Initials => string.Concat(Name
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        .Take(2)
+        .Select(word => char.ToUpperInvariant(word[0])));
+
+    // Stabil färg (string.GetHashCode varierar mellan körningar).
+    private string Color
+    {
+        get
+        {
+            var hash = 0;
+            foreach (var c in ColorKey)
+                hash = unchecked(hash * 31 + c);
+            return $"hsl({(hash & 0x7fffffff) % 360} 45% 42%)";
+        }
+    }
+}

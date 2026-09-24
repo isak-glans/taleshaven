@@ -46,6 +46,9 @@ skissen, tillsammans med de beslut som fattats hittills.
 | F12 | Skrivskydd | Stängda och arkiverade kampanjer är skrivskyddade för alla utom GM. |
 | F13 | Tärningskommando | I OOC slår man med `/slå 2d6+3` (eller `/roll`) eller via en tärningsknapp bredvid skrivfältet. |
 | F14 | Krönikans numrering | Kapitelnumret följer ordningen i boken. Flyttar GM ett kapitel numreras de övriga om. |
+| F15 | Karaktärsbilder | Laddas upp (JPG, PNG eller WebP, högst 5 MB). Bilden beskärs till en kvadrat, skalas till 256×256, metadata tas bort och den sparas som WebP utanför wwwroot. |
+| F16 | GM:s karaktärer | Allt GM skapar är NPC:er. Spelare skriver som egna karaktärer eller som sig själva; GM som NPC eller som berättare. |
+| F17 | Ta bort karaktär | Går bara om karaktären inte har skrivit några inlägg, så att gamla inlägg behåller sin karaktär. |
 
 ---
 
@@ -279,7 +282,8 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
 7. ✅ Krönika som bok: innehållsförteckning, 5 kapitel per sida, "Läs från början"
    och "Senaste kapitlet", länkbara kapitel, GM skriver, redigerar, flyttar och
    tar bort kapitel.
-8. Karaktärer med bild och textdokument, val av karaktär vid RPG-inlägg.
+8. ✅ Karaktärer med bild och textdokument, NPC:er för GM, val av karaktär
+   ("Skriv som") i RPG-chatten och karaktärerna under fliken Spelare.
 
 ### Fas 3 – Komplettering
 9. Redigering av egna inlägg (B12).
@@ -316,7 +320,7 @@ Post ──< PostRevision
 | Thread | Id, CampaignId, typ, titel, beskrivning, status, skapare, skapad |
 | Post | Id, ThreadId, författare, CharacterId?, innehåll, skapad, redigerad |
 | PostRevision | PostId, tidigare innehåll, tidpunkt |
-| Character | Id, CampaignId, ägare, namn, bild, dokument, extern länk, regelsystem, IsNpc |
+| Character | Id, CampaignId, ägare, namn, bildnyckel, dokument, extern länk, regelsystem, IsNpc, skapad, ändrad |
 | ChronicleChapter | Id, CampaignId, nummer, titel, innehåll, författare, skapad, ändrad |
 | DiceRoll | Notation, beskrivning, antal, sidor, modifierare, resultat, total. Lagras som jsonb-kolumnen `Roll` på inlägget; användare och tidpunkt kommer från inlägget. |
 | ReadMarker | UserId, ThreadId, LastReadPostId |
@@ -337,7 +341,7 @@ datamodellen.
 | Autentisering | ASP.NET Core Identity (e-post/lösenord), externa leverantörer senare |
 | Databas | PostgreSQL via Entity Framework Core (Npgsql). Lokalt i Docker (`postgres:18`). |
 | Formaterad text | Markdown, renderat med Markdig och sanerat med HtmlSanitizer |
-| Bilder | Omskalas, EXIF rensas och bilden kodas om vid uppladdning. Lagras på disk eller i blob-lagring. |
+| Bilder | SkiaSharp: beskärs, skalas om, EXIF rensas och kodas om till WebP. Lagras på disk (`App_Data/media`) och serveras via `/media/avatars/{nyckel}` för inloggade. Drift på Linux kräver paketet SkiaSharp.NativeAssets.Linux. |
 | Realtid | Nya inlägg pushas till öppna sessioner via Blazor Servers anslutning (fungerar inom en serverinstans) |
 | Tärningar | `RandomNumberGenerator` på servern |
 
@@ -388,9 +392,8 @@ Beroenden: `Web → Core, Infrastructure` och `Infrastructure → Core`.
 
 1. Behövs flera RPG-kanaler (t.ex. när gruppen delar på sig)?
 2. Ska spelare kunna föreslå krönikekapitel, eller skriver bara GM?
-3. Ska karaktärsbilder laddas upp eller anges som extern länk (eller både och)?
-4. Ska GM kunna dölja tärningskast (privata kast)?
-5. Hur hanteras borttagning av ett användarkonto: anonymiseras inläggen?
-6. Ska GM kunna exportera kampanjen?
-7. Ska arkiverade kampanjer kunna återställas?
-8. Ska den som ansöker kunna dra tillbaka sin ansökan?
+3. Ska GM kunna dölja tärningskast (privata kast)?
+4. Hur hanteras borttagning av ett användarkonto: anonymiseras inläggen?
+5. Ska GM kunna exportera kampanjen?
+6. Ska arkiverade kampanjer kunna återställas?
+7. Ska den som ansöker kunna dra tillbaka sin ansökan?

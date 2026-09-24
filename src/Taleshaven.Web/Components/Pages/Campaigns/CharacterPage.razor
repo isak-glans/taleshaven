@@ -1,0 +1,82 @@
+@page "/campaigns/{CampaignId:int}/characters/{CharacterId:int}"
+@attribute [Authorize]
+
+@using Taleshaven.Core.Characters
+
+@inject ICampaignService CampaignService
+@inject ICharacterService CharacterService
+@inject IMarkdownRenderer Markdown
+@inject NavigationManager NavigationManager
+
+@if (campaign is null || character is null)
+{
+    return;
+}
+
+<PageTitle>@character.Name · @campaign.Name</PageTitle>
+
+<CampaignHeader Campaign="campaign" Active="CampaignTab.Characters" />
+
+<p class="small mb-2"><a href="campaigns/@CampaignId/characters">Karaktärer</a> ›</p>
+
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+    <Avatar Name="@character.Name" ImageUrl="@character.AvatarUrl" ColorKey="@($"character-{character.Id}")" Size="96" />
+    <div>
+        <h2 class="h3 mb-1">
+            @character.Name
+            @if (character.IsNpc)
+            {
+                <span class="badge text-bg-secondary align-middle">NPC</span>
+            }
+        </h2>
+        <div class="text-secondary small">
+            @(character.IsNpc ? "NPC hos GM" : $"Spelas av {character.OwnerName}")
+            @if (character.RuleSystem is not null)
+            {
+                <text> · @character.RuleSystem</text>
+            }
+            · uppdaterad @Dates.DateTime(character.UpdatedAt)
+        </div>
+        @if (character.SheetUrl is not null)
+        {
+            <a class="small" href="@character.SheetUrl" target="_blank" rel="nofollow noopener noreferrer">Fullständigt rollformulär ↗</a>
+        }
+    </div>
+    @if (character.CanEdit)
+    {
+        <a class="btn btn-outline-secondary btn-sm ms-auto" href="campaigns/@CampaignId/characters/@character.Id/edit">Redigera</a>
+    }
+</div>
+
+@if (character.Sheet.Length == 0)
+{
+    <p class="text-secondary">Karaktärsdokumentet är inte ifyllt än.</p>
+}
+else
+{
+    <div class="post-content character-sheet card card-body">@((MarkupString)Markdown.ToSafeHtml(character.Sheet))</div>
+}
+
+@code {
+    [Parameter]
+    public int CampaignId { get; set; }
+
+    [Parameter]
+    public int CharacterId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private CampaignDetails? campaign;
+    private CharacterDetails? character;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = (await AuthenticationState).User.GetUserId() ?? "";
+
+        campaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
+        character = campaign is null ? null : await CharacterService.GetCharacterAsync(CampaignId, CharacterId, userId);
+        if (character is null)
+            NavigationManager.NotFound();
+    }
+}

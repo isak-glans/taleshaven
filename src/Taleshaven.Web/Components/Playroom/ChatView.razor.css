@@ -51,14 +51,8 @@
 }
 
 .chat-avatar {
-    align-items: center;
-    border-radius: 50%;
-    color: #fff;
     display: flex;
-    font-size: 0.9rem;
-    font-weight: 600;
     height: 2.5rem;
-    justify-content: center;
     width: 2.5rem;
 }
 

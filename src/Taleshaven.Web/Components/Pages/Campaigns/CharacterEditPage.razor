@@ -1,0 +1,258 @@
+@page "/campaigns/{CampaignId:int}/characters/new"
+@page "/campaigns/{CampaignId:int}/characters/{CharacterId:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Taleshaven.Core.Characters
+@using Taleshaven.Core.Media
+
+@* Skapa eller redigera en karaktär. Spelare skapar egna karaktärer, GM skapar NPC:er. *@
+
+@inject ICampaignService CampaignService
+@inject ICharacterService CharacterService
+@inject IImageProcessor ImageProcessor
+@inject NavigationManager NavigationManager
+
+@if (!loaded || LoadedCampaign is null)
+{
+    return;
+}
+
+<PageTitle>@Heading · @LoadedCampaign.Name</PageTitle>
+
+<CampaignHeader Campaign="LoadedCampaign" Active="CampaignTab.Characters" />
+
+@if (!CanEdit)
+{
+    <div class="alert alert-warning">
+        @(LoadedCharacter is null ? "Endast kampanjens deltagare kan skapa karaktärer." : "Du kan inte ändra den här karaktären.")
+    </div>
+    return;
+}
+
+<div class="character-editor">
+    <h2 class="h4 mb-3">@Heading</h2>
+
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+        <Avatar Name="@(string.IsNullOrWhiteSpace(name) ? "?" : name)" ImageUrl="@CurrentImageUrl"
+                ColorKey="@($"character-{CharacterId}")" Size="96" />
+        <div>
+            <label for="character-image" class="form-label mb-1">Bild</label>
+            <InputFile id="character-image" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp" OnChange="OnImageSelectedAsync" />
+            <div class="form-text">JPG, PNG eller WebP, högst 5 MB. Bilden beskärs till en kvadrat.</div>
+            @if (CurrentImageUrl is not null)
+            {
+                <button type="button" class="btn btn-link btn-sm px-0 text-danger" @onclick="RemoveImage">Ta bort bild</button>
+            }
+            @if (imageError is not null)
+            {
+                <div class="text-danger small" role="alert">@imageError</div>
+            }
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <label for="character-name" class="form-label">Namn</label>
+            <input id="character-name" class="form-control" maxlength="@CharacterLimits.NameMaxLength" @bind="name" />
+        </div>
+        <div class="col-md-6">
+            <label for="character-rules" class="form-label">Regelsystem <span class="text-secondary">(valfritt)</span></label>
+            <input id="character-rules" class="form-control" maxlength="@CharacterLimits.RuleSystemMaxLength"
+                   placeholder="T.ex. D&D 5e" @bind="ruleSystem" />
+        </div>
+        <div class="col-12">
+            <label for="character-url" class="form-label">Länk till fullständigt rollformulär <span class="text-secondary">(valfritt)</span></label>
+            <input id="character-url" type="url" class="form-control" maxlength="@CharacterLimits.SheetUrlMaxLength"
+                   placeholder="https://…" @bind="sheetUrl" />
+        </div>
+    </div>
+
+    <label class="form-label">Karaktärsdokument</label>
+    <MarkdownEditor @key="CharacterId" MaxLength="CharacterLimits.SheetMaxLength" DraftKey="@DraftKey"
+                    InitialText="@LoadedCharacter?.Sheet" OnSubmit="SaveAsync" AllowEmpty="true"
+                    SubmitText="Spara karaktär" ShortcutHint="Ctrl+Enter sparar" Label="Karaktärsdokument" Rows="12"
+                    Placeholder="Beskrivning, aktuell HP, resurser, utrustning, tillstånd och anteckningar…" />
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+        <a class="btn btn-link px-0" href="@BackLink">Avbryt</a>
+
+        @if (LoadedCharacter is not null)
+        {
+            @if (!confirmDelete)
+            {
+                <button type="button" class="btn btn-outline-danger ms-auto" @onclick="() => confirmDelete = true">Ta bort karaktär</button>
+            }
+            else
+            {
+                <span class="ms-auto">Ta bort @LoadedCharacter.Name för gott?</span>
+                <button type="button" class="btn btn-danger" @onclick="DeleteAsync">Ja, ta bort</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="() => confirmDelete = false">Avbryt</button>
+            }
+        }
+    </div>
+
+    @if (deleteError is not null)
+    {
+        <div class="text-danger mt-2" role="alert">@deleteError</div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int CampaignId { get; set; }
+
+    [Parameter]
+    public int? CharacterId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    // Förs över från förrenderingen så att sidan inte blinkar tom och editorn får dokumentet direkt.
+    [PersistentState]
+    public CampaignDetails? LoadedCampaign { get; set; }
+
+    [PersistentState]
+    public CharacterDetails? LoadedCharacter { get; set; }
+
+    private string userId = "";
+    private bool loaded;
+    private string? name;
+    private string? ruleSystem;
+    private string? sheetUrl;
+    private byte[]? newAvatar;
+    private string? previewUrl;
+    private bool removeAvatar;
+    private string? imageError;
+    private bool confirmDelete;
+    private string? deleteError;
+
+    private bool IsGameMaster => LoadedCampaign?.ViewerRole == CampaignRole.GameMaster;
+
+    private bool CanEdit => LoadedCharacter?.CanEdit
+        ?? CampaignPermissions.CanCreateCharacter(LoadedCampaign?.ViewerRole ?? CampaignRole.None);
+
+    private string Heading => LoadedCharacter is not null ? $"Redigera {LoadedCharacter.Name}"
+        : IsGameMaster ? "Ny NPC" : "Ny karaktär";
+
+    private string DraftKey => CharacterId is null ? $"character-new-{CampaignId}" : $"character-{CharacterId}";
+
+    private string BackLink => LoadedCharacter is null
+        ? $"campaigns/{CampaignId}/characters"
+        : $"campaigns/{CampaignId}/characters/{LoadedCharacter.Id}";
+
+    private string? CurrentImageUrl => previewUrl ?? (removeAvatar ? null : LoadedCharacter?.AvatarUrl);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+
+        if (LoadedCampaign?.Id != CampaignId)
+            LoadedCampaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
+
+        if (LoadedCampaign is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        if (CharacterId is null)
+        {
+            LoadedCharacter = null;
+        }
+        else if (LoadedCharacter?.Id != CharacterId)
+        {
+            LoadedCharacter = await CharacterService.GetCharacterAsync(CampaignId, CharacterId.Value, userId);
+            if (LoadedCharacter is null)
+            {
+                NavigationManager.NotFound();
+                return;
+            }
+        }
+
+        name ??= LoadedCharacter?.Name;
+        ruleSystem ??= LoadedCharacter?.RuleSystem;
+        sheetUrl ??= LoadedCharacter?.SheetUrl;
+        loaded = true;
+    }
+
+    // Bilden behandlas direkt när den väljs, så att förhandsvisningen visar exakt det som sparas.
+    private async Task OnImageSelectedAsync(InputFileChangeEventArgs e)
+    {
+        imageError = null;
+        if (e.File.Size > ImageLimits.MaxUploadBytes)
+        {
+            imageError = "Bilden får vara högst 5 MB.";
+            return;
+        }
+
+        try
+        {
+            await using var upload = e.File.OpenReadStream(ImageLimits.MaxUploadBytes);
+            using var buffer = new MemoryStream();
+            await upload.CopyToAsync(buffer);
+            buffer.Position = 0;
+
+            newAvatar = ImageProcessor.CreateAvatar(buffer);
+            previewUrl = $"data:{IImageStore.AvatarContentType};base64,{Convert.ToBase64String(newAvatar)}";
+            removeAvatar = false;
+        }
+        catch (CampaignRuleException ex)
+        {
+            imageError = ex.Message;
+        }
+        catch (IOException)
+        {
+            imageError = "Bilden kunde inte läsas.";
+        }
+    }
+
+    private void RemoveImage()
+    {
+        newAvatar = null;
+        previewUrl = null;
+        removeAvatar = true;
+    }
+
+    private async Task<string?> SaveAsync(string sheet)
+    {
+        var input = new CharacterInput(name, sheet, sheetUrl, ruleSystem);
+        try
+        {
+            int id;
+            if (LoadedCharacter is null)
+            {
+                id = await CharacterService.CreateAsync(CampaignId, userId, input, newAvatar);
+            }
+            else
+            {
+                await CharacterService.UpdateAsync(CampaignId, LoadedCharacter.Id, userId, input, newAvatar, removeAvatar);
+                id = LoadedCharacter.Id;
+            }
+
+            NavigationManager.NavigateTo($"campaigns/{CampaignId}/characters/{id}");
+            return null;
+        }
+        catch (CampaignRuleException ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (LoadedCharacter is null)
+            return;
+
+        try
+        {
+            await CharacterService.DeleteAsync(CampaignId, LoadedCharacter.Id, userId);
+            NavigationManager.NavigateTo($"campaigns/{CampaignId}/characters");
+        }
+        catch (CampaignRuleException ex)
+        {
+            deleteError = ex.Message;
+            confirmDelete = false;
+        }
+    }
+}
