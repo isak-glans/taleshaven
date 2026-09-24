@@ -40,6 +40,39 @@
     background: var(--bs-tertiary-bg);
 }
 
+.chat-message {
+    position: relative;
+}
+
+/* "Redigera" syns när man håller över sitt inlägg; på pekskärmar alltid. */
+.chat-edit {
+    font-size: 0.8rem;
+    opacity: 0;
+    padding: 0 0.25rem;
+    position: absolute;
+    right: 0.25rem;
+    top: 0.1rem;
+}
+
+.chat-message:hover .chat-edit,
+.chat-edit:focus {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .chat-edit {
+        opacity: 1;
+    }
+}
+
+.chat-edited {
+    font-size: 0.75rem;
+}
+
+.chat-editing {
+    padding: 0.25rem 0;
+}
+
 .chat-continuation {
     margin-top: 0;
 }

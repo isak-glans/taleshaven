@@ -59,12 +59,13 @@
     private bool interactive;
     private bool initialized;
     private bool refocus;
+    private bool disposed;
     private string? error;
 
     [Parameter, EditorRequired]
     public int MaxLength { get; set; }
 
-    /// <summary>Nyckel för utkastet i webbläsarens localStorage, t.ex. "thread-12".</summary>
+    /// <summary>Nyckel för utkastet i webbläsarens localStorage, t.ex. "thread-12". Tom sträng: inga utkast.</summary>
     [Parameter, EditorRequired]
     public string DraftKey { get; set; } = "";
 
@@ -107,6 +108,9 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (disposed)
+            return;
+
         if (firstRender)
         {
             // Aktivera fälten först; init körs efter nästa rendering när textfältet inte längre är disabled.
@@ -145,7 +149,10 @@
         try
         {
             error = await OnSubmit(text);
-            if (error is null)
+
+            // Föräldern kan ta bort editorn när texten är sparad (t.ex. vid redigering av ett inlägg).
+            // Då är JS-modulen redan borta och inget mer ska göras här.
+            if (error is null && !disposed)
             {
                 text = "";
                 preview = false;
@@ -162,6 +169,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        disposed = true;
         if (module is null)
             return;
 

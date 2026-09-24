@@ -37,7 +37,7 @@ skissen, tillsammans med de beslut som fattats hittills.
 | F3 | NPC:er | GM kan skapa NPC-karaktärer och skriva som dem i RPG-chatten. |
 | F4 | Karaktär och kampanj | En karaktär tillhör en kampanj. En spelare kan ha flera karaktärer i samma kampanj. |
 | F5 | Textformat | Text lagras som Markdown, renderas server-side och saneras före visning. |
-| F6 | Redigeringshistorik | Tidigare versioner av redigerade inlägg sparas (se B12). |
+| F6 | Redigeringshistorik | Tidigare versioner av redigerade inlägg sparas (se B12). Historiken visas inte i gränssnittet än. |
 | F7 | Ny ansökan efter avslag | Tillåten. Den avslagna ansökan finns kvar som historik. |
 | F8 | Meddelande i ansökan | Valfritt, högst 1 000 tecken. |
 | F9 | Full kampanj | Väntande ansökningar ligger kvar men kan inte godkännas förrän det finns plats. |
@@ -139,8 +139,8 @@ RPG | OOC (2) | Krönika | Karaktärer | Spelare
   längst ner följer med; den som läser längre upp får knappen "Nya inlägg ↓".
 - CH-7: Inlägg stödjer formaterad text (se 3.13).
 - CH-8: GM:s inlägg är tydligt märkta.
-- CH-9 (efter chattbygget): Egna inlägg kan redigeras och markeras som
-  "redigerad" (B12). Tärningskast kan aldrig redigeras (T-5).
+- CH-9: Egna inlägg kan redigeras och markeras som "(redigerad)" (B12).
+  Det går så länge man får skriva i kanalen. Tärningskast kan aldrig redigeras (T-5).
 
 ### 3.7 RPG-flik
 
@@ -286,7 +286,7 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
    ("Skriv som") i RPG-chatten och karaktärerna under fliken Spelare.
 
 ### Fas 3 – Komplettering
-9. Redigering av egna inlägg (B12).
+9. ✅ Redigering av egna inlägg (B12): "(redigerad)", liveuppdatering och sparad historik.
 10. Olästmarkeringar.
 11. Kampanjredigering för GM (A-2 till A-4).
 

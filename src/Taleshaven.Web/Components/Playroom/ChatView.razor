@@ -53,6 +53,12 @@
                     <div class="chat-day" role="separator"><span>@Dates.DayHeading(post.CreatedAt, now)</span></div>
                 }
                 <article id="post-@post.Id" class="chat-message @(continuation ? "chat-continuation" : "") @(post.AuthorIsGameMaster ? "chat-gm" : "")">
+                    @if (CanEdit(post) && editingPostId != post.Id)
+                    {
+                        <button type="button" class="btn btn-sm btn-link chat-edit" aria-label="Redigera inlägget" @onclick="() => editingPostId = post.Id">
+                            Redigera
+                        </button>
+                    }
                     @if (continuation)
                     {
                         <time class="chat-side-time" datetime="@post.CreatedAt.ToString("o")" title="@Dates.DateTime(post.CreatedAt)">@Dates.Time(post.CreatedAt)</time>
@@ -113,9 +119,22 @@
                                 <strong class="dice-total">@roll.Total</strong>
                             </div>
                         }
+                        else if (editingPostId == post.Id)
+                        {
+                            <div class="chat-editing">
+                                <MarkdownEditor @key="post.Id" MaxLength="ThreadLimits.PostMaxLength" DraftKey="" InitialText="@post.Content"
+                                                OnSubmit="@(content => SaveEditAsync(post.Id, content))" SubmitText="Spara"
+                                                ShortcutHint="Ctrl+Enter sparar" Label="Redigera inlägget" Rows="4" />
+                                <button type="button" class="btn btn-sm btn-link px-0" @onclick="() => editingPostId = null">Avbryt</button>
+                            </div>
+                        }
                         else
                         {
                             <div class="post-content">@html</div>
+                            @if (post.EditedAt is { } editedAt)
+                            {
+                                <div class="chat-edited small text-secondary" title="Redigerad @Dates.DateTime(editedAt)">(redigerad)</div>
+                            }
                         }
                     </div>
                 </article>
@@ -199,6 +218,7 @@
     private bool scrollToBottom;
     private bool newBelow;
     private bool showDice;
+    private long? editingPostId;
     private (string ElementId, double? Top)? anchorBeforePrepend;
 
     [Parameter, EditorRequired]
@@ -258,6 +278,7 @@
             module = await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Playroom/ChatView.razor.js");
             selfReference = DotNetObjectReference.Create(this);
             Notifier.PostCreated += OnPostCreated;
+            Notifier.PostEdited += OnPostEdited;
 
             // Inlägg som skrevs mellan förrenderingen och att kretsen startade.
             Append(await ThreadService.GetPostsAfterAsync(Thread.Id, LastPostId));
@@ -422,6 +443,56 @@
         });
     }
 
+    // Egna inlägg kan redigeras så länge man får skriva i kanalen; tärningskast aldrig (B12, T-5).
+    private bool CanEdit(PostItem post) => Thread.CanWrite && post.AuthorId == userId && post.Roll is null;
+
+    private async Task<string?> SaveEditAsync(long postId, string content)
+    {
+        try
+        {
+            Replace(await ThreadService.EditPostAsync(Thread.CampaignId, postId, userId, content));
+            editingPostId = null;
+            Notifier.NotifyPostEdited(Thread.Id, postId);
+
+            // Anropet kommer från editorn (en Func, inte EventCallback), så den här komponenten renderas inte om automatiskt.
+            StateHasChanged();
+            return null;
+        }
+        catch (CampaignRuleException ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    private void OnPostEdited(int threadId, long postId)
+    {
+        if (threadId != Thread.Id || !posts.Any(p => p.Item.Id == postId))
+            return;
+
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                if (await ThreadService.GetPostAsync(Thread.Id, postId) is { } updated && Replace(updated))
+                    StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Kunde inte hämta redigerat inlägg {PostId}", postId);
+            }
+        });
+    }
+
+    private bool Replace(PostItem updated)
+    {
+        var index = posts.FindIndex(p => p.Item.Id == updated.Id);
+        if (index < 0)
+            return false;
+
+        posts[index] = ToDisplay(updated);
+        return true;
+    }
+
     private void JumpToNewest()
     {
         newBelow = false;
@@ -452,6 +523,7 @@
     public async ValueTask DisposeAsync()
     {
         Notifier.PostCreated -= OnPostCreated;
+        Notifier.PostEdited -= OnPostEdited;
 
         try
         {

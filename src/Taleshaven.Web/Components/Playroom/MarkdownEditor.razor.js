@@ -60,15 +60,19 @@ export function focus(container) {
     container.querySelector('textarea')?.focus();
 }
 
+// En tom nyckel betyder att inga utkast sparas (t.ex. vid redigering av ett befintligt inlägg).
 export function clearDraft(draftKey) {
+    if (!draftKey) return;
     try { localStorage.removeItem(DRAFT_PREFIX + draftKey); } catch { /* localStorage kan vara blockerat */ }
 }
 
 function readDraft(draftKey) {
+    if (!draftKey) return null;
     try { return localStorage.getItem(DRAFT_PREFIX + draftKey); } catch { return null; }
 }
 
 function saveDraft(draftKey, value) {
+    if (!draftKey) return;
     try {
         if (value) localStorage.setItem(DRAFT_PREFIX + draftKey, value);
         else localStorage.removeItem(DRAFT_PREFIX + draftKey);

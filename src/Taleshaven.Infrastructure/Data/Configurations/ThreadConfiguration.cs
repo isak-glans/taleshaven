@@ -72,3 +72,18 @@ internal sealed class PostConfiguration : IEntityTypeConfiguration<Post>
         builder.HasIndex(p => new { p.ThreadId, p.Id });
     }
 }
+
+internal sealed class PostRevisionConfiguration : IEntityTypeConfiguration<PostRevision>
+{
+    public void Configure(EntityTypeBuilder<PostRevision> builder)
+    {
+        builder.Property(r => r.Content)
+            .IsRequired()
+            .HasMaxLength(ThreadLimits.PostMaxLength);
+
+        builder.HasOne<Post>()
+            .WithMany()
+            .HasForeignKey(r => r.PostId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}

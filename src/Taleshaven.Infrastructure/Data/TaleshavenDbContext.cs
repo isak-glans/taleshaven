@@ -15,6 +15,7 @@ public class TaleshavenDbContext(DbContextOptions<TaleshavenDbContext> options) 
     public DbSet<CampaignApplication> CampaignApplications => Set<CampaignApplication>();
     public DbSet<CampaignThread> Threads => Set<CampaignThread>();
     public DbSet<Post> Posts => Set<Post>();
+    public DbSet<PostRevision> PostRevisions => Set<PostRevision>();
     public DbSet<ChronicleChapter> ChronicleChapters => Set<ChronicleChapter>();
     public DbSet<Character> Characters => Set<Character>();
 

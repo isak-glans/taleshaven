@@ -18,6 +18,13 @@ public static class CampaignPermissions
         _ => false,
     };
 
+    /// <summary>
+    /// Man redigerar bara sina egna inlägg, och bara så länge man får skriva i kanalen (B12).
+    /// En spelare som lämnat kampanjen, eller en arkiverad kampanj, stänger alltså även redigering.
+    /// </summary>
+    public static bool CanEditPost(CampaignRole role, CampaignStatus campaignStatus, ThreadStatus threadStatus, string userId, string authorId) =>
+        userId == authorId && CanWritePost(role, campaignStatus, threadStatus);
+
     /// <summary>Endast GM skriver krönikan (C-7). Gäller även stängda och arkiverade kampanjer.</summary>
     public static bool CanEditChronicle(CampaignRole role) => role == CampaignRole.GameMaster;
 

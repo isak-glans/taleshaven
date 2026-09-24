@@ -92,6 +92,37 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         return await SavePostAsync(db, post, cancellationToken);
     }
 
+    public async Task<PostItem> EditPostAsync(int campaignId, long postId, string userId, string? content, CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+
+        var post = await (
+                from p in db.Posts
+                join t in db.Threads on p.ThreadId equals t.Id
+                where p.Id == postId && t.CampaignId == campaignId
+                select p)
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new CampaignRuleException("Inlägget finns inte.");
+
+        var thread = await db.Threads.AsNoTracking().SingleAsync(t => t.Id == post.ThreadId, cancellationToken);
+        var access = await CampaignAccess.GetAsync(db, campaignId, userId, cancellationToken);
+        if (!CampaignPermissions.CanEditPost(access.Role, access.CampaignStatus, thread.Status, userId, post.AuthorId))
+            throw new CampaignRuleException("Du kan bara redigera dina egna inlägg.");
+
+        db.PostRevisions.Add(post.Edit(content, timeProvider.GetUtcNow()));
+        await db.SaveChangesAsync(cancellationToken);
+
+        return (await ToPostItemsAsync(db, db.Posts.Where(p => p.Id == postId), cancellationToken)).Single();
+    }
+
+    public async Task<PostItem?> GetPostAsync(int threadId, long postId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+
+        return (await ToPostItemsAsync(db, db.Posts.Where(p => p.Id == postId && p.ThreadId == threadId), cancellationToken))
+            .SingleOrDefault();
+    }
+
     public async Task<PostItem> RollDiceAsync(int campaignId, int threadId, string userId, DiceNotation notation, string? label, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
@@ -145,6 +176,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                     IsGameMaster = p.AuthorId == c.GameMasterId,
                     p.Content,
                     p.CreatedAt,
+                    p.EditedAt,
                     p.Roll,
                     CharacterId = (int?)ch.Id,
                     CharacterName = ch.Name,
@@ -161,7 +193,8 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                 r.Roll is null ? null : DiceRollView.From(r.Roll),
                 r.CharacterId is not { } characterId ? null : new PostCharacter(
                     characterId, r.CharacterName!, r.CharacterIsNpc ?? false,
-                    r.CharacterAvatarKey is null ? null : IImageStore.AvatarUrl(r.CharacterAvatarKey))))
+                    r.CharacterAvatarKey is null ? null : IImageStore.AvatarUrl(r.CharacterAvatarKey)),
+                r.EditedAt))
             .ToList();
     }
 }

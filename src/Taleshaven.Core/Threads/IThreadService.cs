@@ -21,6 +21,12 @@ public interface IThreadService
     /// <summary>Skriver ett inlägg, i RPG valfritt som en karaktär (<paramref name="characterId"/>).</summary>
     Task<PostItem> CreatePostAsync(int campaignId, int threadId, string userId, string? content, int? characterId = null, CancellationToken cancellationToken = default);
 
+    /// <summary>Byter texten i ett eget inlägg. Den tidigare versionen sparas som historik. Tärningskast kan inte redigeras.</summary>
+    Task<PostItem> EditPostAsync(int campaignId, long postId, string userId, string? content, CancellationToken cancellationToken = default);
+
+    /// <summary>Ett enskilt inlägg, t.ex. för att uppdatera vyn när någon annan har redigerat det.</summary>
+    Task<PostItem?> GetPostAsync(int threadId, long postId, CancellationToken cancellationToken = default);
+
     /// <summary>Slår tärningar på servern och sparar kastet som ett inlägg. Tillåtet endast i OOC (beslut B3).</summary>
     Task<PostItem> RollDiceAsync(int campaignId, int threadId, string userId, DiceNotation notation, string? label, CancellationToken cancellationToken = default);
 }
@@ -43,7 +49,8 @@ public sealed record PostItem(
     string Content,
     DateTimeOffset CreatedAt,
     DiceRollView? Roll = null,
-    PostCharacter? Character = null);
+    PostCharacter? Character = null,
+    DateTimeOffset? EditedAt = null);
 
 /// <summary>Karaktären ett RPG-inlägg är skrivet som.</summary>
 public sealed record PostCharacter(int Id, string Name, bool IsNpc, string? AvatarUrl);
