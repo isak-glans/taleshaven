@@ -1,4 +1,10 @@
-@* Kampanjens rubrik och flikar, gemensamt för alla delar av spelrummet. *@
+﻿@* Kampanjens rubrik och flikar, gemensamt för alla delar av spelrummet. Flikarna RPG och OOC visar antal olästa
+   för deltagare; i interaktiva sidor uppdateras antalet när någon skriver. *@
+
+@implements IDisposable
+
+@inject IUnreadService Unread
+@inject PostNotifier Notifier
 
 <p class="mb-2 small"><a href="">← Kampanjer</a></p>
 
@@ -36,7 +42,14 @@
         {
             <li class="nav-item">
                 <a class="nav-link @(tab == Active ? "active" : "")" aria-current="@(tab == Active ? "page" : null)"
-                   href="@($"campaigns/{Campaign.Id}{path}")">@label</a>
+                   href="@($"campaigns/{Campaign.Id}{path}")">
+                    @label
+                    @* Den aktiva fliken läses just nu, så dess antal visas inte. *@
+                    @if (tab != Active && UnreadFor(tab) is > 0 and var count)
+                    {
+                        <span class="badge rounded-pill text-bg-primary ms-1 unread-count" title="@count olästa">@UnreadDisplay.Format(count)</span>
+                    }
+                </a>
             </li>
         }
     </ul>
@@ -57,4 +70,64 @@
 
     [Parameter, EditorRequired]
     public CampaignTab Active { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private UnreadCounts unread = UnreadCounts.None;
+    private int unreadLoadedFor;
+    private string userId = "";
+    private bool subscribed;
+
+    private int UnreadFor(CampaignTab tab) => tab switch
+    {
+        CampaignTab.Rpg => unread.Rpg,
+        CampaignTab.Ooc => unread.Ooc,
+        _ => 0,
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Campaign.ViewerRole == CampaignRole.None || unreadLoadedFor == Campaign.Id)
+            return;
+
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+        unread = await Unread.GetUnreadCountsAsync(Campaign.Id, userId);
+        unreadLoadedFor = Campaign.Id;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // Körs bara i interaktiva sidor; statiska sidor visar antalet vid sidladdning.
+        if (firstRender && Campaign.ViewerRole != CampaignRole.None)
+        {
+            Notifier.PostCreated += OnPostCreated;
+            subscribed = true;
+        }
+    }
+
+    private void OnPostCreated(int threadId)
+    {
+        if (!unread.Concerns(threadId))
+            return;
+
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                unread = await Unread.GetUnreadCountsAsync(Campaign.Id, userId);
+                StateHasChanged();
+            }
+            catch (Exception)
+            {
+                // Antalet är bara en hjälp; nästa sidladdning visar rätt värde.
+            }
+        });
+    }
+
+    public void Dispose()
+    {
+        if (subscribed)
+            Notifier.PostCreated -= OnPostCreated;
+    }
 }

@@ -29,4 +29,15 @@ public static class ChatWindow
 
         return Math.Min(Math.Max(recent, InitialMinPosts), Math.Min(InitialMaxPosts, newestFirst.Count));
     }
+
+    /// <summary>
+    /// Som <see cref="InitialCount(IReadOnlyList{DateTimeOffset}, DateTimeOffset)"/>, men tar även med alla olästa
+    /// plus ett läst inlägg ovanför för sammanhang, så att chatten kan öppnas vid första olästa (högst <see cref="InitialMaxPosts"/>).
+    /// </summary>
+    /// <param name="unreadCount">Antal inlägg bland <paramref name="newestFirst"/> som är nyare än läspositionen.</param>
+    public static int InitialCount(IReadOnlyList<DateTimeOffset> newestFirst, DateTimeOffset now, int unreadCount)
+    {
+        var withUnread = Math.Min(unreadCount + 1, InitialMaxPosts);
+        return Math.Min(Math.Max(InitialCount(newestFirst, now), withUnread), newestFirst.Count);
+    }
 }

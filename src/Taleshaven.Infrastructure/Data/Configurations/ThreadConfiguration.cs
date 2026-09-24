@@ -73,6 +73,24 @@ internal sealed class PostConfiguration : IEntityTypeConfiguration<Post>
     }
 }
 
+internal sealed class ReadMarkerConfiguration : IEntityTypeConfiguration<ReadMarker>
+{
+    public void Configure(EntityTypeBuilder<ReadMarker> builder)
+    {
+        builder.HasKey(m => new { m.UserId, m.ThreadId });
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(m => m.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<CampaignThread>()
+            .WithMany()
+            .HasForeignKey(m => m.ThreadId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class PostRevisionConfiguration : IEntityTypeConfiguration<PostRevision>
 {
     public void Configure(EntityTypeBuilder<PostRevision> builder)

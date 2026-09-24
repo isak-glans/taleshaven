@@ -38,6 +38,14 @@ export function restoreAnchor(elementId, previousTop) {
     }
 }
 
+// Scrollar så att elementet hamnar en bit under fönstrets överkant (t.ex. "Nya inlägg").
+export function scrollToElement(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        window.scrollTo({ top: element.getBoundingClientRect().top + window.scrollY - 80, behavior: 'instant' });
+    }
+}
+
 export function scrollToBottom() {
     window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
 }

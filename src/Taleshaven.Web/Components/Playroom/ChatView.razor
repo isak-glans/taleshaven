@@ -7,6 +7,7 @@
 @using Taleshaven.Core.Dice
 
 @inject IThreadService ThreadService
+@inject IUnreadService Unread
 @inject IMarkdownRenderer Markdown
 @inject PostNotifier Notifier
 @inject TimeProvider TimeProvider
@@ -51,6 +52,10 @@
                 @if (newDay)
                 {
                     <div class="chat-day" role="separator"><span>@Dates.DayHeading(post.CreatedAt, now)</span></div>
+                }
+                @if (post.Id == firstUnreadId)
+                {
+                    <div class="chat-unread" id="first-unread" role="separator"><span>Nya inlägg</span></div>
                 }
                 <article id="post-@post.Id" class="chat-message @(continuation ? "chat-continuation" : "") @(post.AuthorIsGameMaster ? "chat-gm" : "")">
                     @if (CanEdit(post) && editingPostId != post.Id)
@@ -219,6 +224,9 @@
     private bool newBelow;
     private bool showDice;
     private long? editingPostId;
+    private long? firstUnreadId;
+    private bool scrollToFirstUnread;
+    private long markedReadUpTo;
     private (string ElementId, double? Top)? anchorBeforePrepend;
 
     [Parameter, EditorRequired]
@@ -257,6 +265,13 @@
     [PersistentState]
     public PostPage? InitialPage { get; set; }
 
+    /// <summary>Läspositionen när chatten öppnades. Förs över från förrenderingen tillsammans med inläggen.</summary>
+    [PersistentState]
+    public ReadState? InitialReadState { get; set; }
+
+    // Bara deltagare har läsposition (F2).
+    private bool TracksReading => ViewerRole != CampaignRole.None;
+
     protected override async Task OnInitializedAsync()
     {
         userId = (await AuthenticationState).User.GetUserId() ?? "";
@@ -265,10 +280,38 @@
         if (ViewerRole == CampaignRole.Player && PostingOptions.Count > 0)
             selectedCharacterId = PostingOptions[0].Id;
 
-        InitialPage ??= await ThreadService.GetInitialPostsAsync(Thread.Id);
+        InitialReadState ??= new ReadState(TracksReading ? await Unread.GetLastReadPostIdAsync(Thread.Id, userId) : null);
+        InitialPage ??= await ThreadService.GetInitialPostsAsync(Thread.Id, InitialReadState.LastReadPostId);
         hasOlder = InitialPage.HasOlder;
         posts.AddRange(InitialPage.Posts.Select(ToDisplay));
+
+        // "Nya inlägg" markeras vid det första inlägget som någon annan skrivit efter läspositionen.
+        // Markeringen ligger kvar på samma ställe så länge chatten är öppen.
+        if (TracksReading)
+        {
+            var lastRead = InitialReadState.LastReadPostId ?? 0;
+            firstUnreadId = posts.FirstOrDefault(p => p.Item.Id > lastRead && p.Item.AuthorId != userId)?.Item.Id;
+        }
     }
+
+    // Allt som visas i en öppen chatt räknas som läst.
+    private async Task MarkReadAsync()
+    {
+        if (!TracksReading || LastPostId <= markedReadUpTo)
+            return;
+
+        markedReadUpTo = LastPostId;
+        try
+        {
+            await Unread.MarkReadAsync(Thread.Id, userId, markedReadUpTo);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Kunde inte markera kanal {ThreadId} som läst", Thread.Id);
+        }
+    }
+
+    public sealed record ReadState(long? LastReadPostId);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -283,9 +326,14 @@
             // Inlägg som skrevs mellan förrenderingen och att kretsen startade.
             Append(await ThreadService.GetPostsAfterAsync(Thread.Id, LastPostId));
 
-            scrollToBottom = true;
+            // Öppna vid första olästa om det finns, annars längst ner.
+            if (firstUnreadId is null)
+                scrollToBottom = true;
+            else
+                scrollToFirstUnread = true;
             startObserving = true;
             StateHasChanged();
+            await MarkReadAsync();
             return;
         }
 
@@ -311,6 +359,12 @@
         {
             scrollToBottom = false;
             await module.InvokeVoidAsync("scrollToBottom");
+        }
+
+        if (scrollToFirstUnread)
+        {
+            scrollToFirstUnread = false;
+            await module.InvokeVoidAsync("scrollToElement", "first-unread");
         }
 
         // Börja lyssna på toppen först när vi har scrollat ner, annars laddas äldre inlägg direkt.
@@ -396,6 +450,7 @@
 
             // Anropet kommer från en barnkomponent (en Func, inte EventCallback), så den här komponenten renderas inte om automatiskt.
             StateHasChanged();
+            await MarkReadAsync();
             return null;
         }
         catch (CampaignRuleException ex)
@@ -435,6 +490,7 @@
                     newBelow = true;
 
                 StateHasChanged();
+                await MarkReadAsync();
             }
             catch (Exception ex)
             {

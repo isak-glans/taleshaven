@@ -33,7 +33,7 @@ skissen, tillsammans med de beslut som fattats hittills.
 | # | Fråga | Förslag |
 |---|-------|---------|
 | F1 | Läsbarhet för utomstående | Kampanjinnehåll är läsbart för alla inloggade som standard (enligt skissen). En kampanj kan markeras som privat. |
-| F2 | Olästa inlägg | Enkel olästmarkering per kanal (skissen visar t.ex. "OOC (2)"). Chatten kan då öppnas vid första olästa inlägget med en markering "Nya inlägg". |
+| F2 | Olästa inlägg | Läsposition per kanal för deltagare. Andras inlägg efter läspositionen är olästa (egna räknas inte). Antalet visas på flikarna RPG/OOC och som "N nya" i kampanjlistan (över 99 visas "99+"). Chatten öppnas vid första olästa med en linje "Nya inlägg", och allt i en öppen chatt räknas som läst. |
 | F3 | NPC:er | GM kan skapa NPC-karaktärer och skriva som dem i RPG-chatten. |
 | F4 | Karaktär och kampanj | En karaktär tillhör en kampanj. En spelare kan ha flera karaktärer i samma kampanj. |
 | F5 | Textformat | Text lagras som Markdown, renderas server-side och saneras före visning. |
@@ -49,6 +49,7 @@ skissen, tillsammans med de beslut som fattats hittills.
 | F15 | Karaktärsbilder | Laddas upp (JPG, PNG eller WebP, högst 5 MB). Bilden beskärs till en kvadrat, skalas till 256×256, metadata tas bort och den sparas som WebP utanför wwwroot. |
 | F16 | GM:s karaktärer | Allt GM skapar är NPC:er. Spelare skriver som egna karaktärer eller som sig själva; GM som NPC eller som berättare. |
 | F17 | Ta bort karaktär | Går bara om karaktären inte har skrivit några inlägg, så att gamla inlägg behåller sin karaktär. |
+| F18 | Ny spelare och olästa | När en spelare godkänns räknas allt som redan skrivits som läst, så att historiken inte blir hundratals olästa. |
 
 ---
 
@@ -287,7 +288,7 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
 
 ### Fas 3 – Komplettering
 9. ✅ Redigering av egna inlägg (B12): "(redigerad)", liveuppdatering och sparad historik.
-10. Olästmarkeringar.
+10. ✅ Olästmarkeringar: antal på flikarna RPG/OOC och i kampanjlistan, "Nya inlägg" i chatten.
 11. Kampanjredigering för GM (A-2 till A-4).
 
 ### Senare

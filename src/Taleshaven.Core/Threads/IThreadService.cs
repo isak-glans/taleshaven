@@ -9,8 +9,9 @@ public interface IThreadService
 {
     Task<ThreadDetails?> GetChannelAsync(int campaignId, ThreadKind kind, string viewerId, CancellationToken cancellationToken = default);
 
-    /// <summary>Inläggen som visas när chatten öppnas (<see cref="ChatWindow"/>), äldst först.</summary>
-    Task<PostPage> GetInitialPostsAsync(int threadId, CancellationToken cancellationToken = default);
+    /// <summary>Inläggen som visas när chatten öppnas (<see cref="ChatWindow"/>), äldst först. Med <paramref name="lastReadPostId"/>
+    /// kommer även olästa inlägg med, så att chatten kan öppnas vid det första olästa.</summary>
+    Task<PostPage> GetInitialPostsAsync(int threadId, long? lastReadPostId = null, CancellationToken cancellationToken = default);
 
     /// <summary>Nästa omgång inlägg som är äldre än <paramref name="beforePostId"/>, äldst först.</summary>
     Task<PostPage> GetPostsBeforeAsync(int threadId, long beforePostId, CancellationToken cancellationToken = default);

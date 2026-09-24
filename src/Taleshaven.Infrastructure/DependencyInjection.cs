@@ -32,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<ICampaignService, CampaignService>();
         services.AddScoped<ICampaignApplicationService, CampaignApplicationService>();
         services.AddScoped<IThreadService, ThreadService>();
+        services.AddScoped<IUnreadService, UnreadService>();
         services.AddScoped<IChronicleService, ChronicleService>();
         services.AddScoped<ICharacterService, CharacterService>();
         services.AddSingleton<IMarkdownRenderer, MarkdownRenderer>();

@@ -113,6 +113,41 @@ public class ChatWindowTests
     }
 
     [Fact]
+    public void UnreadPostsAreIncludedWithOneReadPostAbove()
+    {
+        // 5 inlägg inom 7 dagar ger normalt 20, men 40 olästa kräver 41 (ett läst ovanför för sammanhang).
+        Assert.Equal(41, ChatWindow.InitialCount(Posts(recent: 5, old: 95), Now, unreadCount: 40));
+    }
+
+    [Fact]
+    public void FewUnreadDoNotShrinkTheNormalWindow()
+    {
+        Assert.Equal(45, ChatWindow.InitialCount(Posts(recent: 45, old: 55), Now, unreadCount: 2));
+    }
+
+    [Fact]
+    public void UnreadWindowIsCappedAtMaximum()
+    {
+        Assert.Equal(ChatWindow.InitialMaxPosts, ChatWindow.InitialCount(Posts(recent: 0, old: 101), Now, unreadCount: 101));
+    }
+
+    [Fact]
+    public void UnreadWindowNeverExceedsAvailablePosts()
+    {
+        Assert.Equal(3, ChatWindow.InitialCount(Posts(recent: 0, old: 3), Now, unreadCount: 3));
+    }
+
+    [Theory]
+    [InlineData(1, "1")]
+    [InlineData(99, "99")]
+    [InlineData(100, "99+")]
+    [InlineData(5000, "99+")]
+    public void UnreadCountIsCappedForDisplay(int count, string expected)
+    {
+        Assert.Equal(expected, UnreadDisplay.Format(count));
+    }
+
+    [Fact]
     public void SevenDayBoundaryIsInclusive()
     {
         List<DateTimeOffset> posts =

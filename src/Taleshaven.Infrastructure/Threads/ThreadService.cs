@@ -33,7 +33,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             CanWrite: CampaignPermissions.CanWritePost(access.Role, access.CampaignStatus, thread.Status));
     }
 
-    public async Task<PostPage> GetInitialPostsAsync(int threadId, CancellationToken cancellationToken = default)
+    public async Task<PostPage> GetInitialPostsAsync(int threadId, long? lastReadPostId = null, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
@@ -44,7 +44,10 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             .Take(ChatWindow.InitialMaxPosts + 1), cancellationToken);
 
         var newestFirst = newest.Reverse().ToList();
-        var count = ChatWindow.InitialCount(newestFirst.Select(p => p.CreatedAt).ToList(), timeProvider.GetUtcNow());
+        var times = newestFirst.Select(p => p.CreatedAt).ToList();
+        var count = lastReadPostId is { } lastRead
+            ? ChatWindow.InitialCount(times, timeProvider.GetUtcNow(), unreadCount: newest.Count(p => p.Id > lastRead))
+            : ChatWindow.InitialCount(times, timeProvider.GetUtcNow());
 
         return new PostPage(newest.Skip(newest.Count - count).ToList(), HasOlder: newest.Count > count);
     }

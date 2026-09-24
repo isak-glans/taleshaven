@@ -3,6 +3,7 @@ using Npgsql;
 using Taleshaven.Core;
 using Taleshaven.Core.Campaigns;
 using Taleshaven.Infrastructure.Data;
+using Taleshaven.Infrastructure.Threads;
 
 namespace Taleshaven.Infrastructure.Campaigns;
 
@@ -38,9 +39,14 @@ internal sealed class CampaignApplicationService(IDbContextFactory<TaleshavenDbC
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var campaign = await LoadCampaignAsync(db, campaignId, cancellationToken);
 
-        campaign.ApproveApplication(applicationId, gameMasterId, timeProvider.GetUtcNow());
+        var now = timeProvider.GetUtcNow();
+        campaign.ApproveApplication(applicationId, gameMasterId, now);
 
         await SaveAsync(db, cancellationToken);
+
+        // Den nya spelaren börjar läsa härifrån; historiken före godkännandet räknas inte som oläst.
+        var applicantId = campaign.Applications.Single(a => a.Id == applicationId).UserId;
+        await ReadMarkers.MarkAllReadAsync(db, campaignId, applicantId, now, cancellationToken);
     }
 
     public async Task RejectAsync(int campaignId, Guid applicationId, string gameMasterId, CancellationToken cancellationToken = default)
