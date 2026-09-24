@@ -1,0 +1,68 @@
+@using Taleshaven.Core.Dice
+
+@* Snabbval för tärningskast i OOC: välj antal och modifierare, klicka på en tärning (krav T-3). *@
+
+<div class="dice-panel border rounded p-2 mb-2">
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <label class="small text-secondary" for="dice-count">Antal</label>
+        <input id="dice-count" type="number" min="1" max="@DiceNotation.MaxCount" class="form-control form-control-sm dice-number" @bind="count" />
+        <label class="small text-secondary" for="dice-modifier">Modifierare</label>
+        <input id="dice-modifier" type="number" min="-@DiceNotation.MaxModifier" max="@DiceNotation.MaxModifier"
+               class="form-control form-control-sm dice-number" @bind="modifier" />
+        <input type="text" class="form-control form-control-sm dice-label" maxlength="@DiceRoll.LabelMaxLength"
+               placeholder="Vad slår du för? (valfritt)" aria-label="Beskrivning av kastet" @bind="label" />
+    </div>
+    <div class="d-flex flex-wrap gap-1 mt-2" role="group" aria-label="Slå tärning">
+        @foreach (var sides in DiceNotation.AllowedSides)
+        {
+            <button type="button" class="btn btn-sm btn-outline-primary" data-dice="@sides" disabled="@busy" @onclick="() => RollAsync(sides)">
+                d@(sides)
+            </button>
+        }
+    </div>
+    <div class="small text-secondary mt-1">Du kan också skriva <code>/slå 2d6+3 anfall</code> i chatten.</div>
+    @if (error is not null)
+    {
+        <div class="text-danger small mt-1" role="alert">@error</div>
+    }
+</div>
+
+@code {
+    private int count = 1;
+    private int modifier;
+    private string? label;
+    private bool busy;
+    private string? error;
+
+    /// <summary>Anropas med kastet som ska göras. Returnerar null vid lyckat kast, annars ett felmeddelande.</summary>
+    [Parameter, EditorRequired]
+    public Func<DiceNotation, string?, Task<string?>> OnRoll { get; set; } = default!;
+
+    private async Task RollAsync(int sides)
+    {
+        error = null;
+
+        DiceNotation notation;
+        try
+        {
+            notation = new DiceNotation(count, sides, modifier);
+        }
+        catch (CampaignRuleException ex)
+        {
+            error = ex.Message;
+            return;
+        }
+
+        busy = true;
+        try
+        {
+            error = await OnRoll(notation, label);
+            if (error is null)
+                label = null;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

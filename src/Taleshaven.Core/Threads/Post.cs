@@ -1,3 +1,5 @@
+using Taleshaven.Core.Dice;
+
 namespace Taleshaven.Core.Threads;
 
 public class Post
@@ -8,8 +10,11 @@ public class Post
     public int ThreadId { get; private set; }
     public string AuthorId { get; private set; } = "";
 
-    /// <summary>Inläggets text i Markdown. Renderas och saneras vid visning.</summary>
+    /// <summary>Inläggets text i Markdown. Renderas och saneras vid visning. För tärningskast en läsbar sammanfattning.</summary>
     public string Content { get; private set; } = "";
+
+    /// <summary>Tärningskastet om inlägget är ett kast. Sådana inlägg får aldrig redigeras (T-5).</summary>
+    public DiceRoll? Roll { get; private set; }
 
     public DateTimeOffset CreatedAt { get; private set; }
 
@@ -28,6 +33,21 @@ public class Post
             ThreadId = threadId,
             AuthorId = authorId,
             Content = content,
+            CreatedAt = now,
+        };
+    }
+
+    public static Post CreateDiceRoll(int threadId, string authorId, DiceRoll roll, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(authorId);
+        ArgumentNullException.ThrowIfNull(roll);
+
+        return new Post
+        {
+            ThreadId = threadId,
+            AuthorId = authorId,
+            Content = roll.ToText(),
+            Roll = roll,
             CreatedAt = now,
         };
     }

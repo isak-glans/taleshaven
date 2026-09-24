@@ -1,12 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Taleshaven.Core;
 using Taleshaven.Core.Campaigns;
+using Taleshaven.Core.Dice;
 using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Data;
 
 namespace Taleshaven.Infrastructure.Threads;
 
-internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFactory, TimeProvider timeProvider) : IThreadService
+internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFactory, TimeProvider timeProvider, IDiceRoller diceRoller) : IThreadService
 {
     public async Task<ThreadDetails?> GetChannelAsync(int campaignId, ThreadKind kind, string viewerId, CancellationToken cancellationToken = default)
     {
@@ -70,6 +71,29 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
+        await GetWritableThreadAsync(db, campaignId, threadId, userId, cancellationToken);
+
+        var post = Post.Create(threadId, userId, content, timeProvider.GetUtcNow());
+        return await SavePostAsync(db, post, cancellationToken);
+    }
+
+    public async Task<PostItem> RollDiceAsync(int campaignId, int threadId, string userId, DiceNotation notation, string? label, CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+
+        var thread = await GetWritableThreadAsync(db, campaignId, threadId, userId, cancellationToken);
+        if (thread.Kind != ThreadKind.Ooc)
+            throw new CampaignRuleException("Tärningar kan bara slås i OOC.");
+
+        // Kastet görs här på servern; klienten skickar bara vilken notation som ska slås.
+        var roll = DiceRoll.Roll(notation, label, diceRoller);
+        var post = Post.CreateDiceRoll(threadId, userId, roll, timeProvider.GetUtcNow());
+        return await SavePostAsync(db, post, cancellationToken);
+    }
+
+    private static async Task<CampaignThread> GetWritableThreadAsync(
+        TaleshavenDbContext db, int campaignId, int threadId, string userId, CancellationToken cancellationToken)
+    {
         var thread = await db.Threads.AsNoTracking().SingleOrDefaultAsync(t => t.Id == threadId && t.CampaignId == campaignId, cancellationToken)
             ?? throw new CampaignRuleException("Kanalen finns inte.");
 
@@ -77,7 +101,11 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         if (!CampaignPermissions.CanWritePost(access.Role, access.CampaignStatus, thread.Status))
             throw new CampaignRuleException("Du har inte behörighet att skriva här.");
 
-        var post = Post.Create(threadId, userId, content, timeProvider.GetUtcNow());
+        return thread;
+    }
+
+    private static async Task<PostItem> SavePostAsync(TaleshavenDbContext db, Post post, CancellationToken cancellationToken)
+    {
         db.Posts.Add(post);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -105,15 +133,29 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
     // Projektionen sker efter filtrering och sortering, och ordningen återställs i minnet (äldst först).
     private static async Task<IReadOnlyList<PostItem>> ToPostItemsAsync(TaleshavenDbContext db, IQueryable<Post> posts, CancellationToken cancellationToken)
     {
-        var items = await (
+        var rows = await (
                 from p in posts
                 join u in db.Users on p.AuthorId equals u.Id
                 join t in db.Threads on p.ThreadId equals t.Id
                 join c in db.Campaigns on t.CampaignId equals c.Id
-                select new PostItem(p.Id, p.AuthorId, u.DisplayName, p.AuthorId == c.GameMasterId, p.Content, p.CreatedAt))
+                select new
+                {
+                    p.Id,
+                    p.AuthorId,
+                    u.DisplayName,
+                    IsGameMaster = p.AuthorId == c.GameMasterId,
+                    p.Content,
+                    p.CreatedAt,
+                    p.Roll,
+                })
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
-        return items.OrderBy(p => p.Id).ToList();
+        return rows
+            .OrderBy(r => r.Id)
+            .Select(r => new PostItem(
+                r.Id, r.AuthorId, r.DisplayName, r.IsGameMaster, r.Content, r.CreatedAt,
+                r.Roll is null ? null : DiceRollView.From(r.Roll)))
+            .ToList();
     }
 }

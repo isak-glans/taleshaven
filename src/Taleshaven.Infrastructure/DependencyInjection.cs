@@ -2,10 +2,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Taleshaven.Core.Campaigns;
+using Taleshaven.Core.Dice;
 using Taleshaven.Core.Text;
 using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Campaigns;
 using Taleshaven.Infrastructure.Data;
+using Taleshaven.Infrastructure.Dice;
 using Taleshaven.Infrastructure.Text;
 using Taleshaven.Infrastructure.Threads;
 
@@ -24,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<ICampaignApplicationService, CampaignApplicationService>();
         services.AddScoped<IThreadService, ThreadService>();
         services.AddSingleton<IMarkdownRenderer, MarkdownRenderer>();
+        services.AddSingleton<IDiceRoller, CryptoDiceRoller>();
 
         return services;
     }

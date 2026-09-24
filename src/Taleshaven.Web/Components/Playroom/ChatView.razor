@@ -3,6 +3,8 @@
 
 @implements IAsyncDisposable
 
+@using Taleshaven.Core.Dice
+
 @inject IThreadService ThreadService
 @inject IMarkdownRenderer Markdown
 @inject PostNotifier Notifier
@@ -37,7 +39,9 @@
             var html = posts[i].Html;
             var previous = i > 0 ? posts[i - 1].Item : null;
             var newDay = previous is null || Dates.Day(previous.CreatedAt) != Dates.Day(post.CreatedAt);
-            var continuation = !newDay && previous!.AuthorId == post.AuthorId && post.CreatedAt - previous.CreatedAt < GroupingWindow;
+            // Tärningskast visar alltid vem som slog, så de grupperas aldrig in under föregående inlägg.
+            var continuation = !newDay && post.Roll is null
+                && previous!.AuthorId == post.AuthorId && post.CreatedAt - previous.CreatedAt < GroupingWindow;
 
             <div @key="post.Id">
                 @if (newDay)
@@ -65,7 +69,33 @@
                                 <time class="text-secondary small" datetime="@post.CreatedAt.ToString("o")" title="@Dates.DateTime(post.CreatedAt)">@Dates.Time(post.CreatedAt)</time>
                             </header>
                         }
-                        <div class="post-content">@html</div>
+                        @if (post.Roll is { } roll)
+                        {
+                            <div class="dice-result">
+                                <span aria-hidden="true">🎲</span>
+                                <span>slog <strong class="dice-notation">@roll.Notation</strong></span>
+                                @if (roll.Label is not null)
+                                {
+                                    <span class="text-secondary">– @roll.Label</span>
+                                }
+                                <span class="dice-values" aria-label="Tärningar">
+                                    @foreach (var value in roll.Results)
+                                    {
+                                        <span class="dice-value @CriticalClass(roll, value)">@value</span>
+                                    }
+                                </span>
+                                @if (roll.Modifier != 0)
+                                {
+                                    <span>@(roll.Modifier > 0 ? "+" : "−") @Math.Abs(roll.Modifier)</span>
+                                }
+                                <span>=</span>
+                                <strong class="dice-total">@roll.Total</strong>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="post-content">@html</div>
+                        }
                     </div>
                 </article>
             </div>
@@ -77,6 +107,17 @@
         @if (newBelow)
         {
             <button type="button" class="btn btn-sm btn-primary chat-new-below" @onclick="JumpToNewest">Nya inlägg ↓</button>
+        }
+
+        @if (Thread.CanWrite && Thread.Kind == ThreadKind.Ooc)
+        {
+            <button type="button" class="btn btn-sm btn-outline-secondary mb-2" aria-expanded="@showDice" @onclick="() => showDice = !showDice">
+                🎲 Tärningar
+            </button>
+            @if (showDice)
+            {
+                <DicePanel OnRoll="RollAsync" />
+            }
         }
 
         @if (Thread.CanWrite)
@@ -106,6 +147,7 @@
     private bool startObserving;
     private bool scrollToBottom;
     private bool newBelow;
+    private bool showDice;
     private (string ElementId, double? Top)? anchorBeforePrepend;
 
     [Parameter, EditorRequired]
@@ -233,15 +275,30 @@
 
     private async Task<string?> SubmitAsync(string content)
     {
+        // "/slå 2d6+3" i skrivfältet blir ett tärningskast i stället för ett vanligt inlägg.
+        if (DiceCommand.IsCommand(content, out var notation, out var label, out var commandError))
+        {
+            if (Thread.Kind != ThreadKind.Ooc)
+                return "Tärningar kan bara slås i OOC.";
+            return commandError ?? await RollAsync(notation, label);
+        }
+
+        return await PostAsync(() => ThreadService.CreatePostAsync(Thread.CampaignId, Thread.Id, userId, content));
+    }
+
+    private Task<string?> RollAsync(DiceNotation notation, string? label) =>
+        PostAsync(() => ThreadService.RollDiceAsync(Thread.CampaignId, Thread.Id, userId, notation, label));
+
+    private async Task<string?> PostAsync(Func<Task<PostItem>> create)
+    {
         try
         {
-            var created = await ThreadService.CreatePostAsync(Thread.CampaignId, Thread.Id, userId, content);
-            Append([created]);
+            Append([await create()]);
             scrollToBottom = true;
             newBelow = false;
             Notifier.NotifyPostCreated(Thread.Id);
 
-            // Anropet kommer från editorn (en Func, inte EventCallback), så den här komponenten renderas inte om automatiskt.
+            // Anropet kommer från en barnkomponent (en Func, inte EventCallback), så den här komponenten renderas inte om automatiskt.
             StateHasChanged();
             return null;
         }
@@ -250,6 +307,13 @@
             return ex.Message;
         }
     }
+
+    private static string CriticalClass(DiceRollView roll, int value) => roll.Sides switch
+    {
+        20 when value == 20 => "dice-max",
+        20 when value == 1 => "dice-min",
+        _ => "",
+    };
 
     private void OnPostCreated(int threadId)
     {
@@ -306,7 +370,9 @@
         return added;
     }
 
-    private DisplayPost ToDisplay(PostItem post) => new(post, (MarkupString)Markdown.ToSafeHtml(post.Content));
+    // Tärningskast visas med egen layout och behöver ingen Markdown-rendering.
+    private DisplayPost ToDisplay(PostItem post) =>
+        new(post, post.Roll is null ? (MarkupString)Markdown.ToSafeHtml(post.Content) : default);
 
     private static string Initials(string name)
     {

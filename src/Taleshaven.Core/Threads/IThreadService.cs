@@ -1,3 +1,5 @@
+using Taleshaven.Core.Dice;
+
 namespace Taleshaven.Core.Threads;
 
 /// <summary>
@@ -17,6 +19,9 @@ public interface IThreadService
     Task<IReadOnlyList<PostItem>> GetPostsAfterAsync(int threadId, long afterPostId, CancellationToken cancellationToken = default);
 
     Task<PostItem> CreatePostAsync(int campaignId, int threadId, string userId, string? content, CancellationToken cancellationToken = default);
+
+    /// <summary>Slår tärningar på servern och sparar kastet som ett inlägg. Tillåtet endast i OOC (beslut B3).</summary>
+    Task<PostItem> RollDiceAsync(int campaignId, int threadId, string userId, DiceNotation notation, string? label, CancellationToken cancellationToken = default);
 }
 
 public sealed record ThreadDetails(
@@ -35,4 +40,11 @@ public sealed record PostItem(
     string AuthorName,
     bool AuthorIsGameMaster,
     string Content,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    DiceRollView? Roll = null);
+
+public sealed record DiceRollView(string Notation, string? Label, IReadOnlyList<int> Results, int Sides, int Modifier, int Total)
+{
+    public static DiceRollView From(DiceRoll roll) =>
+        new(roll.Notation, roll.Label, roll.Results.ToList(), roll.Sides, roll.Modifier, roll.Total);
+}

@@ -48,6 +48,9 @@ internal sealed class PostConfiguration : IEntityTypeConfiguration<Post>
             .IsRequired()
             .HasMaxLength(ThreadLimits.PostMaxLength);
 
+        // Tärningskastet lagras som jsonb i samma rad som inlägget (null för vanliga inlägg).
+        builder.OwnsOne(p => p.Roll, roll => roll.ToJson());
+
         builder.HasOne<CampaignThread>()
             .WithMany()
             .HasForeignKey(p => p.ThreadId)

@@ -81,6 +81,45 @@
     gap: 0.5rem;
 }
 
+.dice-result {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.dice-values {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.dice-value {
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.25rem;
+    font-variant-numeric: tabular-nums;
+    min-width: 1.6rem;
+    padding: 0 0.3rem;
+    text-align: center;
+}
+
+.dice-max {
+    border-color: var(--bs-success);
+    color: var(--bs-success);
+    font-weight: 700;
+}
+
+.dice-min {
+    border-color: var(--bs-danger);
+    color: var(--bs-danger);
+    font-weight: 700;
+}
+
+.dice-total {
+    font-size: 1.1rem;
+}
+
 .chat-composer {
     background: var(--bs-body-bg);
     border-top: 1px solid var(--bs-border-color);

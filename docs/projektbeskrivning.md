@@ -137,7 +137,7 @@ RPG | OOC (2) | Krönika | Karaktärer | Spelare
 - CH-7: Inlägg stödjer formaterad text (se 3.13).
 - CH-8: GM:s inlägg är tydligt märkta.
 - CH-9 (efter chattbygget): Egna inlägg kan redigeras och markeras som
-  "redigerad" (B12).
+  "redigerad" (B12). Tärningskast kan aldrig redigeras (T-5).
 
 ### 3.7 RPG-flik
 
@@ -200,8 +200,11 @@ och stred mot fyra spindlar. Sedan fortsatte de till orchbyn Xrashh …"*
 - T-2: Syntax `NdX`, `NdX+M` och `NdX-M`, t.ex. `1d20`, `2d6+3`, `1d20-1`.
 - T-3: Man slår genom att skriva `/slå 2d6+3` (eller `/roll`) i OOC-chatten,
   eller via en tärningsknapp där man väljer tärning, antal och modifierare (F13).
+  Text efter notationen blir en valfri beskrivning, t.ex. `/slå 1d20+5 anfall`
+  (högst 100 tecken).
 - T-4: Kastet visas som ett eget meddelande i OOC-chatten med enskilda
-  tärningar, modifierare, total, vem som slog och när.
+  tärningar, modifierare, total, vem som slog och när. Kastet visar alltid
+  namnet på den som slog. En naturlig 20 eller 1 på d20 markeras.
 - T-5: Kasten genereras **på servern** med kryptografiskt säker slump och kan
   inte ändras eller tas bort i efterhand.
 - T-6: Rimliga gränser, t.ex. max 50 tärningar per kast.
@@ -270,7 +273,8 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
 5. ✅ RPG och OOC som chatt enligt B6–B9: en kanal av varje per kampanj,
    gruppering och datumavdelare, 7 dagar/min 20/max 100, automatisk laddning
    uppåt, "Nya inlägg ↓", Enter/Ctrl+Enter och liveuppdatering.
-6. Tärningar i OOC.
+6. ✅ Tärningar i OOC: `/slå` och `/roll` med valfri beskrivning, tärningspanel,
+   kast på servern och visning i chatten.
 7. Krönika som bok.
 8. Karaktärer med bild och textdokument, val av karaktär vid RPG-inlägg.
 
@@ -295,7 +299,7 @@ User ──< CampaignApplication >── Campaign
 Campaign ──< Thread (kanal, typ: Rpg | Ooc) ──< Post
 Campaign ──< Character (IsNpc) ──< Post (valfri karaktär)
 Campaign ──< ChronicleChapter
-Thread ──< DiceRoll (endast OOC)
+Post ── DiceRoll? (tärningskast, endast OOC)
 User ──< ReadMarker >── Thread
 Post ──< PostRevision
 ```
@@ -311,7 +315,7 @@ Post ──< PostRevision
 | PostRevision | PostId, tidigare innehåll, tidpunkt |
 | Character | Id, CampaignId, ägare, namn, bild, dokument, extern länk, regelsystem, IsNpc |
 | ChronicleChapter | Id, CampaignId, nummer, titel, innehåll, författare, skapad, ändrad |
-| DiceRoll | Id, ThreadId, användare, notation, resultat, modifierare, total, tidpunkt |
+| DiceRoll | Notation, beskrivning, antal, sidor, modifierare, resultat, total. Lagras som jsonb-kolumnen `Roll` på inlägget; användare och tidpunkt kommer från inlägget. |
 | ReadMarker | UserId, ThreadId, LastReadPostId |
 
 RPG- och OOC-chatten är var sin kanal i tabellen `Threads` (typ `Rpg` resp.
