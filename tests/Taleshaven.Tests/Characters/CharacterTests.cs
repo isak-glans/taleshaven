@@ -81,6 +81,44 @@ public class CharacterTests
     }
 
     [Fact]
+    public void Npc_HasOnlyNameAndGmNote()
+    {
+        var npc = Character.Create(7, "gm", isNpc: true,
+            new CharacterInput("  Hövdingen Grok ", "HP 40", "https://example.com", "D&D 5e", "  Vet var nyckeln finns.  "), Now);
+
+        Assert.Equal("Hövdingen Grok", npc.Name);
+        Assert.Equal("Vet var nyckeln finns.", npc.GmNote);
+        Assert.Equal("", npc.Sheet);
+        Assert.Null(npc.SheetUrl);
+        Assert.Null(npc.RuleSystem);
+    }
+
+    [Fact]
+    public void Npc_IgnoresInvalidSheetFields()
+    {
+        // Fälten används inte för NPC:er och ska därför inte heller kunna stoppa en sparning.
+        var npc = Character.Create(7, "gm", isNpc: true, new CharacterInput("Grok", null, "javascript:alert(1)", null, null), Now);
+
+        Assert.Null(npc.SheetUrl);
+        Assert.Null(npc.GmNote);
+    }
+
+    [Fact]
+    public void Npc_GmNoteHasMaxLength()
+    {
+        Assert.Throws<CampaignRuleException>(() => Character.Create(7, "gm", isNpc: true,
+            new CharacterInput("Grok", null, null, null, new string('a', CharacterLimits.GmNoteMaxLength + 1)), Now));
+    }
+
+    [Fact]
+    public void PlayerCharacter_NeverGetsGmNote()
+    {
+        var character = Character.Create(7, "anna", isNpc: false, new CharacterInput("Aldric", "HP 12", null, null, "Hemlig notering"), Now);
+
+        Assert.Null(character.GmNote);
+    }
+
+    [Fact]
     public void Post_CanBeWrittenAsCharacter()
     {
         Assert.Equal(5, Post.Create(3, "anna", "Jag drar svärdet.", Now, characterId: 5).CharacterId);

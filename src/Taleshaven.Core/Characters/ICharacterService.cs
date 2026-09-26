@@ -37,6 +37,7 @@ public sealed record CharacterSummary(
     string? RuleSystem,
     string? AvatarUrl);
 
+/// <summary>En karaktär att visa eller redigera. <see cref="GmNote"/> fylls bara i för kampanjens GM (B15).</summary>
 public sealed record CharacterDetails(
     int Id,
     string Name,
@@ -47,6 +48,7 @@ public sealed record CharacterDetails(
     string? RuleSystem,
     string? AvatarUrl,
     DateTimeOffset UpdatedAt,
-    bool CanEdit);
+    bool CanEdit,
+    string? GmNote = null);
 
 public sealed record CharacterOption(int Id, string Name, bool IsNpc, string? AvatarUrl);

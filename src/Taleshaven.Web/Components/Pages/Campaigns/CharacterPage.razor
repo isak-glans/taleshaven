@@ -31,13 +31,13 @@
         </h2>
         <div class="text-secondary small">
             @(character.IsNpc ? "NPC hos GM" : $"Spelas av {character.OwnerName}")
-            @if (character.RuleSystem is not null)
+            @if (!character.IsNpc && character.RuleSystem is not null)
             {
                 <text> · @character.RuleSystem</text>
             }
             · uppdaterad @Dates.DateTime(character.UpdatedAt)
         </div>
-        @if (character.SheetUrl is not null)
+        @if (!character.IsNpc && character.SheetUrl is not null)
         {
             <a class="small" href="@character.SheetUrl" target="_blank" rel="nofollow noopener noreferrer">Fullständigt rollformulär ↗</a>
         }
@@ -48,7 +48,18 @@
     }
 </div>
 
-@if (character.Sheet.Length == 0)
+@if (character.IsNpc)
+{
+    @* NPC:er har inget dokument (B15). Anteckningen skickas bara till GM, så för spelare är den alltid null. *@
+    @if (character.GmNote is not null)
+    {
+        <div class="card border-warning gm-note">
+            <div class="card-header small">Anteckning – bara du som GM ser den</div>
+            <div class="card-body post-content">@((MarkupString)Markdown.ToSafeHtml(character.GmNote))</div>
+        </div>
+    }
+}
+else if (character.Sheet.Length == 0)
 {
     <p class="text-secondary">Karaktärsdokumentet är inte ifyllt än.</p>
 }

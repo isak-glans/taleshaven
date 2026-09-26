@@ -2,7 +2,8 @@ namespace Taleshaven.Core.Characters;
 
 /// <summary>
 /// En karaktär i en kampanj (krav H-1–H-6). Spelare äger sina egna karaktärer; GM:s karaktärer är NPC:er (F3).
-/// Det fullständiga rollformuläret kan ligga på en extern sida; här finns ett formaterat dokument med det som behövs under spel.
+/// Spelarkaraktärer har ett formaterat dokument och kan länka till ett externt rollformulär.
+/// NPC:er har bara namn, porträtt och en anteckning som bara GM ser (B15).
 /// </summary>
 public class Character
 {
@@ -21,6 +22,9 @@ public class Character
     public string? SheetUrl { get; private set; }
 
     public string? RuleSystem { get; private set; }
+
+    /// <summary>Anteckning om en NPC som bara GM ser (B15). Alltid null för spelarkaraktärer.</summary>
+    public string? GmNote { get; private set; }
 
     /// <summary>Nyckel till den uppladdade bilden i bildlagringen, eller null.</summary>
     public string? AvatarKey { get; private set; }
@@ -52,6 +56,20 @@ public class Character
             throw new CampaignRuleException("Karaktären måste ha ett namn.");
         if (name.Length > CharacterLimits.NameMaxLength)
             throw new CampaignRuleException($"Namnet får vara högst {CharacterLimits.NameMaxLength} tecken.");
+
+        if (IsNpc)
+        {
+            // NPC:er har inget dokument, ingen länk och inget regelsystem. Äldre sådana fält lämnas orörda
+            // (de visas inte) i stället för att raderas.
+            var note = string.IsNullOrWhiteSpace(input.GmNote) ? null : input.GmNote.Trim();
+            if (note?.Length > CharacterLimits.GmNoteMaxLength)
+                throw new CampaignRuleException($"Anteckningen får vara högst {CharacterLimits.GmNoteMaxLength} tecken.");
+
+            Name = name;
+            GmNote = note;
+            UpdatedAt = now;
+            return;
+        }
 
         var sheet = input.Sheet?.Trim() ?? "";
         if (sheet.Length > CharacterLimits.SheetMaxLength)
@@ -90,7 +108,8 @@ public class Character
     }
 }
 
-public sealed record CharacterInput(string? Name, string? Sheet, string? SheetUrl, string? RuleSystem);
+/// <summary>Uppgifter för att skapa eller ändra en karaktär. För NPC:er används bara <see cref="Name"/> och <see cref="GmNote"/>.</summary>
+public sealed record CharacterInput(string? Name, string? Sheet, string? SheetUrl, string? RuleSystem, string? GmNote = null);
 
 public static class CharacterLimits
 {
@@ -98,4 +117,5 @@ public static class CharacterLimits
     public const int SheetMaxLength = 10_000;
     public const int SheetUrlMaxLength = 500;
     public const int RuleSystemMaxLength = 60;
+    public const int GmNoteMaxLength = 2_000;
 }

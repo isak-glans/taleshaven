@@ -14,6 +14,7 @@ internal sealed class CharacterConfiguration : IEntityTypeConfiguration<Characte
         builder.Property(c => c.Sheet).IsRequired().HasMaxLength(CharacterLimits.SheetMaxLength);
         builder.Property(c => c.SheetUrl).HasMaxLength(CharacterLimits.SheetUrlMaxLength);
         builder.Property(c => c.RuleSystem).HasMaxLength(CharacterLimits.RuleSystemMaxLength);
+        builder.Property(c => c.GmNote).HasMaxLength(CharacterLimits.GmNoteMaxLength);
         builder.Property(c => c.AvatarKey).HasMaxLength(64);
 
         builder.HasOne<Campaign>()

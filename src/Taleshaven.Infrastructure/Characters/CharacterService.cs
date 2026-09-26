@@ -55,7 +55,9 @@ internal sealed class CharacterService(
         return new CharacterDetails(
             character.Id, character.Name, row.OwnerName, character.IsNpc, character.Sheet, character.SheetUrl, character.RuleSystem,
             AvatarUrl(character.AvatarKey), character.UpdatedAt,
-            CampaignPermissions.CanEditCharacter(access.Role, viewerId, character.OwnerId));
+            CampaignPermissions.CanEditCharacter(access.Role, viewerId, character.OwnerId),
+            // Anteckningen lämnar aldrig servern för andra än GM.
+            GmNote: access.Role == CampaignRole.GameMaster ? character.GmNote : null);
     }
 
     public async Task<IReadOnlyList<CharacterOption>> GetPostingOptionsAsync(int campaignId, string userId, CancellationToken cancellationToken = default)

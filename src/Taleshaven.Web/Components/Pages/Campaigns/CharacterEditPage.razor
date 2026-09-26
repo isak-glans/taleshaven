@@ -1,4 +1,4 @@
-@page "/campaigns/{CampaignId:int}/characters/new"
+﻿@page "/campaigns/{CampaignId:int}/characters/new"
 @page "/campaigns/{CampaignId:int}/characters/{CharacterId:int}/edit"
 @attribute [Authorize]
 @rendermode InteractiveServer
@@ -56,23 +56,38 @@
             <label for="character-name" class="form-label">Namn</label>
             <input id="character-name" class="form-control" maxlength="@CharacterLimits.NameMaxLength" @bind="name" />
         </div>
-        <div class="col-md-6">
-            <label for="character-rules" class="form-label">Regelsystem <span class="text-secondary">(valfritt)</span></label>
-            <input id="character-rules" class="form-control" maxlength="@CharacterLimits.RuleSystemMaxLength"
-                   placeholder="T.ex. D&D 5e" @bind="ruleSystem" />
-        </div>
-        <div class="col-12">
-            <label for="character-url" class="form-label">Länk till fullständigt rollformulär <span class="text-secondary">(valfritt)</span></label>
-            <input id="character-url" type="url" class="form-control" maxlength="@CharacterLimits.SheetUrlMaxLength"
-                   placeholder="https://…" @bind="sheetUrl" />
-        </div>
+        @if (!IsNpc)
+        {
+            <div class="col-md-6">
+                <label for="character-rules" class="form-label">Regelsystem <span class="text-secondary">(valfritt)</span></label>
+                <input id="character-rules" class="form-control" maxlength="@CharacterLimits.RuleSystemMaxLength"
+                       placeholder="T.ex. D&D 5e" @bind="ruleSystem" />
+            </div>
+            <div class="col-12">
+                <label for="character-url" class="form-label">Länk till fullständigt rollformulär <span class="text-secondary">(valfritt)</span></label>
+                <input id="character-url" type="url" class="form-control" maxlength="@CharacterLimits.SheetUrlMaxLength"
+                       placeholder="https://…" @bind="sheetUrl" />
+            </div>
+        }
     </div>
 
-    <label class="form-label">Karaktärsdokument</label>
-    <MarkdownEditor @key="CharacterId" MaxLength="CharacterLimits.SheetMaxLength" DraftKey="@DraftKey"
-                    InitialText="@LoadedCharacter?.Sheet" OnSubmit="SaveAsync" AllowEmpty="true"
-                    SubmitText="Spara karaktär" ShortcutHint="Ctrl+Enter sparar" Label="Karaktärsdokument" Rows="12"
-                    Placeholder="Beskrivning, aktuell HP, resurser, utrustning, tillstånd och anteckningar…" />
+    @if (IsNpc)
+    {
+        @* NPC:er har inget karaktärsdokument, bara en anteckning som aldrig visas för spelarna (B15). *@
+        <label class="form-label">Anteckning <span class="text-secondary">(bara du som GM ser den)</span></label>
+        <MarkdownEditor @key="CharacterId" MaxLength="CharacterLimits.GmNoteMaxLength" DraftKey="@DraftKey"
+                        InitialText="@LoadedCharacter?.GmNote" OnSubmit="SaveAsync" AllowEmpty="true"
+                        SubmitText="Spara NPC" ShortcutHint="Ctrl+Enter sparar" Label="Anteckning" Rows="6"
+                        Placeholder="T.ex. vet var nyckeln till kryptan finns, ljuger om sitt namn…" />
+    }
+    else
+    {
+        <label class="form-label">Karaktärsdokument</label>
+        <MarkdownEditor @key="CharacterId" MaxLength="CharacterLimits.SheetMaxLength" DraftKey="@DraftKey"
+                        InitialText="@LoadedCharacter?.Sheet" OnSubmit="SaveAsync" AllowEmpty="true"
+                        SubmitText="Spara karaktär" ShortcutHint="Ctrl+Enter sparar" Label="Karaktärsdokument" Rows="12"
+                        Placeholder="Beskrivning, aktuell HP, resurser, utrustning, tillstånd och anteckningar…" />
+    }
 
     <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
         <a class="btn btn-link px-0" href="@BackLink">Avbryt</a>
@@ -128,6 +143,9 @@
     private string? deleteError;
 
     private bool IsGameMaster => LoadedCampaign?.ViewerRole == CampaignRole.GameMaster;
+
+    // Allt GM skapar är NPC:er (F16); vid redigering avgör karaktären själv.
+    private bool IsNpc => LoadedCharacter?.IsNpc ?? IsGameMaster;
 
     private bool CanEdit => LoadedCharacter?.CanEdit
         ?? CampaignPermissions.CanCreateCharacter(LoadedCampaign?.ViewerRole ?? CampaignRole.None);
@@ -214,9 +232,12 @@
         removeAvatar = true;
     }
 
-    private async Task<string?> SaveAsync(string sheet)
+    // Editorn innehåller karaktärsdokumentet, eller för en NPC anteckningen som bara GM ser.
+    private async Task<string?> SaveAsync(string text)
     {
-        var input = new CharacterInput(name, sheet, sheetUrl, ruleSystem);
+        var input = IsNpc
+            ? new CharacterInput(name, Sheet: null, SheetUrl: null, RuleSystem: null, GmNote: text)
+            : new CharacterInput(name, text, sheetUrl, ruleSystem);
         try
         {
             int id;
