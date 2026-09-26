@@ -1,0 +1,217 @@
+@using Taleshaven.Core.Characters
+
+@* "Skriv som" i RPG-chatten (B17): sökbar lista där de senast använda karaktärerna ligger överst.
+   Öppnas uppåt eftersom skrivfältet ligger längst ner på skärmen. Pil upp/ner, Enter och Esc fungerar. *@
+
+<div class="character-picker">
+    <button type="button" id="@Id" class="form-select form-select-sm character-picker-toggle" @ref="toggleButton"
+            aria-haspopup="listbox" aria-expanded="@(open ? "true" : "false")" @onclick="ToggleAsync">
+        @if (Selected is { } selected)
+        {
+            <Avatar Name="@selected.Name" ImageUrl="@selected.AvatarUrl" ColorKey="@($"character-{selected.Id}")" Size="20" />
+            <span class="character-picker-name">@selected.Name</span>
+        }
+        else
+        {
+            <span class="character-picker-name">@NoneLabel</span>
+        }
+    </button>
+
+    @if (open)
+    {
+        <div class="character-picker-backdrop" @onclick="CloseAsync"></div>
+        <div class="character-picker-menu border rounded shadow" @onkeydown="OnKeyDownAsync">
+            @if (ShowSearch)
+            {
+                <input type="search" class="form-control form-control-sm" placeholder="Sök…" aria-label="Sök karaktär"
+                       @ref="searchInput" @bind="query" @bind:event="oninput" @bind:after="ResetHighlight" autocomplete="off" />
+            }
+            <div class="character-picker-list" role="listbox" tabindex="-1" @ref="listElement" aria-label="Skriv som">
+                @{ var index = 0; }
+                @foreach (var group in visibleGroups)
+                {
+                    @if (group.Heading is not null)
+                    {
+                        <div class="character-picker-heading" role="presentation">@group.Heading</div>
+                    }
+                    @foreach (var entry in group.Entries)
+                    {
+                        var entryIndex = index++;
+                        <div class="character-picker-option @(entryIndex == highlighted ? "active" : "")" role="option"
+                             aria-selected="@(entry.Id == Value ? "true" : "false")"
+                             @onclick="() => SelectAsync(entry.Id)" @onmousemove="() => highlighted = entryIndex">
+                            @if (entry.Id is { } id)
+                            {
+                                <Avatar Name="@entry.Name" ImageUrl="@entry.AvatarUrl" ColorKey="@($"character-{id}")" Size="24" />
+                            }
+                            else
+                            {
+                                <span class="character-picker-none" aria-hidden="true">–</span>
+                            }
+                            <span class="character-picker-name">@entry.Name</span>
+                        </div>
+                    }
+                }
+                @if (index == 0)
+                {
+                    <div class="character-picker-empty">Ingen karaktär heter så.</div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    // Så många av de senast använda visas överst; resten kommer i bokstavsordning.
+    private const int RecentCount = 5;
+
+    // Sökrutan behövs bara när listan är lång.
+    private const int SearchThreshold = 6;
+
+    private bool open;
+    private bool focusOnRender;
+    private string query = "";
+    private int highlighted;
+    private List<Group> visibleGroups = [];
+    private ElementReference toggleButton;
+    private ElementReference searchInput;
+    private ElementReference listElement;
+
+    [Parameter]
+    public string? Id { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<CharacterOption> Options { get; set; } = [];
+
+    /// <summary>Vald karaktär, eller null för valet utan karaktär.</summary>
+    [Parameter]
+    public int? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<int?> ValueChanged { get; set; }
+
+    /// <summary>Texten för valet utan karaktär, t.ex. "GM (berättare)".</summary>
+    [Parameter, EditorRequired]
+    public string NoneLabel { get; set; } = "";
+
+    /// <summary>GM:s berättarröst ligger först; spelarens "utan karaktär" sist.</summary>
+    [Parameter]
+    public bool NoneFirst { get; set; }
+
+    private CharacterOption? Selected => Options.FirstOrDefault(o => o.Id == Value);
+
+    private bool ShowSearch => Options.Count >= SearchThreshold;
+
+    private IEnumerable<Entry> AllEntries => visibleGroups.SelectMany(g => g.Entries);
+
+    private async Task ToggleAsync()
+    {
+        if (open)
+        {
+            await CloseAsync();
+            return;
+        }
+
+        open = true;
+        query = "";
+        BuildGroups();
+        highlighted = Math.Max(0, AllEntries.ToList().FindIndex(e => e.Id == Value));
+        focusOnRender = true;
+    }
+
+    private async Task CloseAsync()
+    {
+        open = false;
+        await toggleButton.FocusAsync();
+    }
+
+    private async Task SelectAsync(int? id)
+    {
+        await ValueChanged.InvokeAsync(id);
+        await CloseAsync();
+    }
+
+    private void ResetHighlight()
+    {
+        BuildGroups();
+        highlighted = 0;
+    }
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        var count = AllEntries.Count();
+        switch (e.Key)
+        {
+            case "ArrowDown" when count > 0:
+                highlighted = (highlighted + 1) % count;
+                break;
+            case "ArrowUp" when count > 0:
+                highlighted = (highlighted - 1 + count) % count;
+                break;
+            case "Enter" when count > 0:
+                await SelectAsync(AllEntries.ElementAt(Math.Min(highlighted, count - 1)).Id);
+                break;
+            case "Escape":
+                await CloseAsync();
+                break;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (focusOnRender && open)
+        {
+            focusOnRender = false;
+            await (ShowSearch ? searchInput : listElement).FocusAsync();
+        }
+    }
+
+    // Utan sökning: senast använda överst, sedan resten i bokstavsordning. Med sökning: en lista med träffarna,
+    // senast använda först.
+    private void BuildGroups()
+    {
+        var none = new Entry(null, NoneLabel, null);
+        var recent = Options
+            .Where(o => o.LastUsedAt is not null)
+            .OrderByDescending(o => o.LastUsedAt)
+            .Take(RecentCount)
+            .ToList();
+        var rest = Options.Except(recent).OrderBy(o => o.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+
+        var term = query.Trim();
+        if (term.Length > 0)
+        {
+            var hits = recent.Concat(rest)
+                .Where(o => o.Name.Contains(term, StringComparison.CurrentCultureIgnoreCase))
+                .Select(ToEntry)
+                .ToList();
+            if (NoneLabel.Contains(term, StringComparison.CurrentCultureIgnoreCase))
+                hits.Insert(NoneFirst ? 0 : hits.Count, none);
+            visibleGroups = [new Group(null, hits)];
+            return;
+        }
+
+        var groups = new List<Group>();
+        if (NoneFirst)
+            groups.Add(new Group(null, [none]));
+        if (recent.Count > 0 && rest.Count > 0)
+        {
+            groups.Add(new Group("Senast använda", recent.Select(ToEntry).ToList()));
+            groups.Add(new Group("Alla", rest.Select(ToEntry).ToList()));
+        }
+        else
+        {
+            groups.Add(new Group(null, recent.Concat(rest).Select(ToEntry).ToList()));
+        }
+        if (!NoneFirst)
+            groups.Add(new Group(null, [none]));
+
+        visibleGroups = groups;
+    }
+
+    private static Entry ToEntry(CharacterOption option) => new(option.Id, option.Name, option.AvatarUrl);
+
+    private sealed record Entry(int? Id, string Name, string? AvatarUrl);
+
+    private sealed record Group(string? Heading, List<Entry> Entries);
+}

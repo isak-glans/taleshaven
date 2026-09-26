@@ -23,16 +23,17 @@ internal sealed class CharacterService(
                 where c.CampaignId == campaignId
                 join u in db.Users on c.OwnerId equals u.Id
                 orderby c.Name
-                select new { c.Id, c.Name, c.OwnerId, OwnerName = u.DisplayName, c.IsNpc, c.RuleSystem, c.AvatarKey })
+                select new { c.Id, c.Name, c.OwnerId, OwnerName = u.DisplayName, c.IsNpc, c.RuleSystem, c.AvatarKey, c.IsArchived })
             .ToListAsync(cancellationToken);
 
         var summaries = rows
-            .Select(r => new CharacterSummary(r.Id, r.Name, r.OwnerId, r.OwnerName, r.IsNpc, r.RuleSystem, AvatarUrl(r.AvatarKey)))
+            .Select(r => new CharacterSummary(r.Id, r.Name, r.OwnerId, r.OwnerName, r.IsNpc, r.RuleSystem, AvatarUrl(r.AvatarKey), r.IsArchived))
             .ToList();
 
         return new CharacterList(
             summaries.Where(c => !c.IsNpc).ToList(),
-            summaries.Where(c => c.IsNpc).ToList(),
+            summaries.Where(c => c.IsNpc && !c.IsArchived).ToList(),
+            summaries.Where(c => c.IsNpc && c.IsArchived).ToList(),
             CampaignPermissions.CanCreateCharacter(access.Role));
     }
 
@@ -57,7 +58,8 @@ internal sealed class CharacterService(
             AvatarUrl(character.AvatarKey), character.UpdatedAt,
             CampaignPermissions.CanEditCharacter(access.Role, viewerId, character.OwnerId),
             // Anteckningen lämnar aldrig servern för andra än GM.
-            GmNote: access.Role == CampaignRole.GameMaster ? character.GmNote : null);
+            GmNote: access.Role == CampaignRole.GameMaster ? character.GmNote : null,
+            IsArchived: character.IsArchived);
     }
 
     public async Task<IReadOnlyList<CharacterOption>> GetPostingOptionsAsync(int campaignId, string userId, CancellationToken cancellationToken = default)
@@ -67,7 +69,7 @@ internal sealed class CharacterService(
 
         var characters = access.Role switch
         {
-            CampaignRole.GameMaster => db.Characters.Where(c => c.CampaignId == campaignId && c.IsNpc),
+            CampaignRole.GameMaster => db.Characters.Where(c => c.CampaignId == campaignId && c.IsNpc && !c.IsArchived),
             CampaignRole.Player => db.Characters.Where(c => c.CampaignId == campaignId && !c.IsNpc && c.OwnerId == userId),
             _ => null,
         };
@@ -77,10 +79,17 @@ internal sealed class CharacterService(
 
         var rows = await characters.AsNoTracking()
             .OrderBy(c => c.Name)
-            .Select(c => new { c.Id, c.Name, c.IsNpc, c.AvatarKey })
+            .Select(c => new
+            {
+                c.Id,
+                c.Name,
+                c.IsNpc,
+                c.AvatarKey,
+                LastUsedAt = db.Posts.Where(p => p.CharacterId == c.Id).Max(p => (DateTimeOffset?)p.CreatedAt),
+            })
             .ToListAsync(cancellationToken);
 
-        return rows.Select(r => new CharacterOption(r.Id, r.Name, r.IsNpc, AvatarUrl(r.AvatarKey))).ToList();
+        return rows.Select(r => new CharacterOption(r.Id, r.Name, r.IsNpc, AvatarUrl(r.AvatarKey), r.LastUsedAt)).ToList();
     }
 
     public async Task<int> CreateAsync(int campaignId, string userId, CharacterInput input, byte[]? avatar, CancellationToken cancellationToken = default)
@@ -146,6 +155,15 @@ internal sealed class CharacterService(
         // Den gamla bilden tas bort först när den nya är sparad i databasen.
         if (oldAvatarKey is not null && oldAvatarKey != character.AvatarKey)
             imageStore.DeleteAvatar(oldAvatarKey);
+    }
+
+    public async Task SetArchivedAsync(int campaignId, int characterId, string userId, bool archived, CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var character = await LoadEditableAsync(db, campaignId, characterId, userId, cancellationToken);
+
+        character.SetArchived(archived);
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     public async Task DeleteAsync(int campaignId, int characterId, string userId, CancellationToken cancellationToken = default)

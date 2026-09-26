@@ -89,6 +89,8 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
 
             if (!CampaignPermissions.CanPostAsCharacter(access.Role, userId, character.OwnerId, character.IsNpc))
                 throw new CampaignRuleException("Du kan inte skriva som den karaktären.");
+            if (character.IsArchived)
+                throw new CampaignRuleException($"{character.Name} är arkiverad. Återställ NPC:n under Karaktärer för att skriva som den.");
         }
 
         var post = Post.Create(threadId, userId, content, timeProvider.GetUtcNow(), characterId);

@@ -332,7 +332,9 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
 13. ✅ NPC:er med namn, bild och GM-anteckning (B15). Bilden laddas upp tills porträttbiblioteket finns (punkt 18).
 14. ✅ Chatten fyller skärmen (B13): inläggen scrollar i en egen yta, rubrik, flikar och skrivfält står kvar
     (även på mobil).
-15. Sökbar NPC-väljare med senast använda och arkiverade NPC:er (B17).
+15. ✅ Sökbar NPC-väljare med senast använda och arkiverade NPC:er (B17): de fem senast använda överst,
+    sedan alla i bokstavsordning; sökruta när det finns sex eller fler. GM arkiverar och återställer
+    på NPC:ns sida; arkiverade ligger i en hopfälld del under Karaktärer.
 16. Dolda NPC:er med alias (B16).
 17. Roller för hela sajten: Administratör och Manager (B18).
 18. Porträttbibliotek med taggar och väljare (B19, B20).

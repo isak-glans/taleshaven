@@ -168,24 +168,13 @@
 
         @if (Thread.CanWrite && Thread.Kind == ThreadKind.Rpg)
         {
-            @if (PostingOptions.Count > 0)
+            @if (postingOptions.Count > 0)
             {
                 <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                     <label for="post-as" class="small text-secondary">Skriv som</label>
-                    <select id="post-as" class="form-select form-select-sm w-auto" @bind="SelectedCharacter">
-                        @if (ViewerRole == CampaignRole.GameMaster)
-                        {
-                            <option value="">GM (berättare)</option>
-                        }
-                        @foreach (var option in PostingOptions)
-                        {
-                            <option value="@option.Id">@option.Name@(option.IsNpc ? " (NPC)" : "")</option>
-                        }
-                        @if (ViewerRole != CampaignRole.GameMaster)
-                        {
-                            <option value="">Mig själv, utan karaktär</option>
-                        }
-                    </select>
+                    <CharacterPicker Id="post-as" Options="postingOptions" @bind-Value="selectedCharacterId"
+                                     NoneLabel="@(ViewerRole == CampaignRole.GameMaster ? "GM (berättare)" : "Mig själv, utan karaktär")"
+                                     NoneFirst="ViewerRole == CampaignRole.GameMaster" />
                 </div>
             }
             else if (ViewerRole == CampaignRole.Player)
@@ -254,11 +243,8 @@
     // Vald karaktär i "Skriv som". Null = som användaren själv (GM: som berättare).
     private int? selectedCharacterId;
 
-    private string SelectedCharacter
-    {
-        get => selectedCharacterId?.ToString() ?? "";
-        set => selectedCharacterId = int.TryParse(value, out var id) ? id : null;
-    }
+    // Egen kopia av valen, så att en karaktär flyttar upp bland "Senast använda" när man skrivit som den.
+    private List<CharacterOption> postingOptions = [];
 
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
@@ -279,8 +265,9 @@
         userId = (await AuthenticationState).User.GetUserId() ?? "";
 
         // Spelare skriver som sin (första) karaktär som standard, GM som berättare.
-        if (ViewerRole == CampaignRole.Player && PostingOptions.Count > 0)
-            selectedCharacterId = PostingOptions[0].Id;
+        postingOptions = [.. PostingOptions];
+        if (ViewerRole == CampaignRole.Player && postingOptions.Count > 0)
+            selectedCharacterId = postingOptions[0].Id;
 
         InitialReadState ??= new ReadState(TracksReading ? await Unread.GetLastReadPostIdAsync(Thread.Id, userId) : null);
         InitialPage ??= await ThreadService.GetInitialPostsAsync(Thread.Id, InitialReadState.LastReadPostId);
@@ -435,7 +422,10 @@
         }
 
         var characterId = Thread.Kind == ThreadKind.Rpg ? selectedCharacterId : null;
-        return await PostAsync(() => ThreadService.CreatePostAsync(Thread.CampaignId, Thread.Id, userId, content, characterId));
+        var error = await PostAsync(() => ThreadService.CreatePostAsync(Thread.CampaignId, Thread.Id, userId, content, characterId));
+        if (error is null && postingOptions.FindIndex(o => o.Id == characterId) is var index and >= 0)
+            postingOptions[index] = postingOptions[index] with { LastUsedAt = DateTimeOffset.UtcNow };
+        return error;
     }
 
     private Task<string?> RollAsync(DiceNotation notation, string? label) =>

@@ -7,7 +7,7 @@
 else
 {
     <span class="avatar avatar-initials" aria-hidden="true"
-          style="width: @(Size)px; height: @(Size)px; font-size: @(Size * 0.36)px; background-color: @Color">@Initials</span>
+          style="width: @(Size)px; height: @(Size)px; font-size: @FontSize; background-color: @Color">@Initials</span>
 }
 
 @code {
@@ -23,6 +23,9 @@ else
 
     [Parameter]
     public int Size { get; set; } = 40;
+
+    // Punkt som decimaltecken oavsett kultur; "14,4px" är ogiltig CSS och ignoreras av webbläsaren.
+    private string FontSize => (Size * 0.36).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "px";
 
     private string Initials => string.Concat(Name
         .Split(' ', StringSplitOptions.RemoveEmptyEntries)

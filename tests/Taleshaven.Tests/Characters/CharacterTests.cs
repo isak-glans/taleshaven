@@ -119,6 +119,28 @@ public class CharacterTests
     }
 
     [Fact]
+    public void Npc_CanBeArchivedAndRestored()
+    {
+        var npc = Character.Create(7, "gm", isNpc: true, new CharacterInput("Grok", null, null, null), Now);
+        Assert.False(npc.IsArchived);
+
+        npc.SetArchived(true);
+        Assert.True(npc.IsArchived);
+
+        npc.SetArchived(false);
+        Assert.False(npc.IsArchived);
+    }
+
+    [Fact]
+    public void PlayerCharacter_CannotBeArchived()
+    {
+        var character = Character.Create(7, "anna", isNpc: false, Input(), Now);
+
+        Assert.Throws<CampaignRuleException>(() => character.SetArchived(true));
+        Assert.False(character.IsArchived);
+    }
+
+    [Fact]
     public void Post_CanBeWrittenAsCharacter()
     {
         Assert.Equal(5, Post.Create(3, "anna", "Jag drar svärdet.", Now, characterId: 5).CharacterId);

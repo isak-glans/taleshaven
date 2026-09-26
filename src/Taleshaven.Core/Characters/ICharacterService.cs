@@ -10,7 +10,7 @@ public interface ICharacterService
 
     Task<CharacterDetails?> GetCharacterAsync(int campaignId, int characterId, string viewerId, CancellationToken cancellationToken = default);
 
-    /// <summary>Karaktärerna användaren kan skriva som i RPG-chatten (egna karaktärer, eller NPC:er för GM).</summary>
+    /// <summary>Karaktärerna användaren kan skriva som i RPG-chatten (egna karaktärer, eller NPC:er för GM). Arkiverade NPC:er ingår inte.</summary>
     Task<IReadOnlyList<CharacterOption>> GetPostingOptionsAsync(int campaignId, string userId, CancellationToken cancellationToken = default);
 
     /// <summary>Skapar en karaktär. GM:s karaktärer blir NPC:er. <paramref name="avatar"/> är en redan behandlad bild. Returnerar id.</summary>
@@ -19,6 +19,9 @@ public interface ICharacterService
     /// <summary>Uppdaterar karaktären. <paramref name="avatar"/> ersätter bilden; <paramref name="removeAvatar"/> tar bort den.</summary>
     Task UpdateAsync(int campaignId, int characterId, string userId, CharacterInput input, byte[]? avatar, bool removeAvatar, CancellationToken cancellationToken = default);
 
+    /// <summary>Arkiverar eller återställer en NPC (B17). Bara GM.</summary>
+    Task SetArchivedAsync(int campaignId, int characterId, string userId, bool archived, CancellationToken cancellationToken = default);
+
     /// <summary>Tar bort karaktären. Går inte om den har skrivit inlägg, så att gamla inlägg behåller sin karaktär.</summary>
     Task DeleteAsync(int campaignId, int characterId, string userId, CancellationToken cancellationToken = default);
 }
@@ -26,6 +29,7 @@ public interface ICharacterService
 public sealed record CharacterList(
     IReadOnlyList<CharacterSummary> PlayerCharacters,
     IReadOnlyList<CharacterSummary> Npcs,
+    IReadOnlyList<CharacterSummary> ArchivedNpcs,
     bool CanCreate);
 
 public sealed record CharacterSummary(
@@ -35,7 +39,8 @@ public sealed record CharacterSummary(
     string OwnerName,
     bool IsNpc,
     string? RuleSystem,
-    string? AvatarUrl);
+    string? AvatarUrl,
+    bool IsArchived = false);
 
 /// <summary>En karaktär att visa eller redigera. <see cref="GmNote"/> fylls bara i för kampanjens GM (B15).</summary>
 public sealed record CharacterDetails(
@@ -49,6 +54,8 @@ public sealed record CharacterDetails(
     string? AvatarUrl,
     DateTimeOffset UpdatedAt,
     bool CanEdit,
-    string? GmNote = null);
+    string? GmNote = null,
+    bool IsArchived = false);
 
-public sealed record CharacterOption(int Id, string Name, bool IsNpc, string? AvatarUrl);
+/// <summary>Ett val i "Skriv som". <see cref="LastUsedAt"/> är när karaktären senast skrev ett inlägg (B17).</summary>
+public sealed record CharacterOption(int Id, string Name, bool IsNpc, string? AvatarUrl, DateTimeOffset? LastUsedAt = null);

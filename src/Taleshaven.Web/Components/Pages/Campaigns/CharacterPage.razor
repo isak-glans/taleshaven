@@ -28,6 +28,10 @@
             {
                 <span class="badge text-bg-secondary align-middle">NPC</span>
             }
+            @if (character.IsArchived)
+            {
+                <span class="badge text-bg-light border align-middle">Arkiverad</span>
+            }
         </h2>
         <div class="text-secondary small">
             @(character.IsNpc ? "NPC hos GM" : $"Spelas av {character.OwnerName}")
@@ -44,9 +48,28 @@
     </div>
     @if (character.CanEdit)
     {
-        <a class="btn btn-outline-secondary btn-sm ms-auto" href="campaigns/@CampaignId/characters/@character.Id/edit">Redigera</a>
+        <div class="d-flex gap-2 ms-auto">
+            @if (character.IsNpc)
+            {
+                @* Arkiverade NPC:er göms i "Skriv som" men finns kvar i gamla inlägg (B17). *@
+                <form method="post" @formname="archive" @onsubmit="SetArchivedAsync">
+                    <AntiforgeryToken />
+                    <input type="hidden" name="Archive" value="@(character.IsArchived ? "false" : "true")" />
+                    <button type="submit" class="btn btn-outline-secondary btn-sm"
+                            title="@(character.IsArchived ? "Visa NPC:n i Skriv som igen" : "Göm NPC:n i Skriv som")">
+                        @(character.IsArchived ? "Återställ" : "Arkivera")
+                    </button>
+                </form>
+            }
+            <a class="btn btn-outline-secondary btn-sm" href="campaigns/@CampaignId/characters/@character.Id/edit">Redigera</a>
+        </div>
     }
 </div>
+
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
 
 @if (character.IsNpc)
 {
@@ -78,16 +101,40 @@ else
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
 
+    // Binds från GM:ns arkivera-formulär.
+    [SupplyParameterFromForm]
+    private bool? Archive { get; set; }
+
+    private string userId = "";
     private CampaignDetails? campaign;
     private CharacterDetails? character;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        var userId = (await AuthenticationState).User.GetUserId() ?? "";
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
 
         campaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
         character = campaign is null ? null : await CharacterService.GetCharacterAsync(CampaignId, CharacterId, userId);
         if (character is null)
             NavigationManager.NotFound();
+    }
+
+    private async Task SetArchivedAsync()
+    {
+        if (Archive is not { } archived)
+            return;
+
+        try
+        {
+            await CharacterService.SetArchivedAsync(CampaignId, CharacterId, userId, archived);
+        }
+        catch (CampaignRuleException ex)
+        {
+            errorMessage = ex.Message;
+            return;
+        }
+
+        NavigationManager.NavigateTo($"campaigns/{CampaignId}/characters/{CharacterId}");
     }
 }

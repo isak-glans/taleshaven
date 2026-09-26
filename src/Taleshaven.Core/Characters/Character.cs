@@ -26,6 +26,9 @@ public class Character
     /// <summary>Anteckning om en NPC som bara GM ser (B15). Alltid null för spelarkaraktärer.</summary>
     public string? GmNote { get; private set; }
 
+    /// <summary>Arkiverade NPC:er göms i "Skriv som" men finns kvar i gamla inlägg (B17). Alltid false för spelarkaraktärer.</summary>
+    public bool IsArchived { get; private set; }
+
     /// <summary>Nyckel till den uppladdade bilden i bildlagringen, eller null.</summary>
     public string? AvatarKey { get; private set; }
 
@@ -84,6 +87,15 @@ public class Character
         SheetUrl = ValidateUrl(input.SheetUrl);
         RuleSystem = ruleSystem;
         UpdatedAt = now;
+    }
+
+    /// <summary>Arkiverar eller återställer en NPC (B17). Spelarkaraktärer kan inte arkiveras.</summary>
+    public void SetArchived(bool archived)
+    {
+        if (!IsNpc)
+            throw new CampaignRuleException("Bara NPC:er kan arkiveras.");
+
+        IsArchived = archived;
     }
 
     public void SetAvatar(string? avatarKey, DateTimeOffset now)

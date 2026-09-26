@@ -1,0 +1,81 @@
+.character-picker {
+    position: relative;
+}
+
+.character-picker-toggle {
+    align-items: center;
+    display: flex;
+    gap: 0.4rem;
+    max-width: 16rem;
+    min-width: 10rem;
+    text-align: left;
+}
+
+.character-picker-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Klick utanför menyn stänger den. */
+.character-picker-backdrop {
+    inset: 0;
+    position: fixed;
+    z-index: 10;
+}
+
+.character-picker-menu {
+    background: var(--bs-body-bg);
+    bottom: calc(100% + 0.25rem);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    left: 0;
+    max-height: min(24rem, 60vh);
+    padding: 0.35rem;
+    position: absolute;
+    width: min(20rem, calc(100vw - 2rem));
+    z-index: 11;
+}
+
+.character-picker-list {
+    overflow-y: auto;
+    outline: none;
+}
+
+.character-picker-heading {
+    color: var(--bs-secondary-color);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.4rem 0.4rem 0.15rem;
+    text-transform: uppercase;
+}
+
+.character-picker-option {
+    align-items: center;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.25rem 0.4rem;
+}
+
+.character-picker-option.active {
+    background: var(--bs-tertiary-bg);
+}
+
+.character-picker-option[aria-selected="true"] {
+    font-weight: 600;
+}
+
+.character-picker-none {
+    color: var(--bs-secondary-color);
+    text-align: center;
+    width: 24px;
+}
+
+.character-picker-empty {
+    color: var(--bs-secondary-color);
+    font-size: 0.875rem;
+    padding: 0.4rem;
+}

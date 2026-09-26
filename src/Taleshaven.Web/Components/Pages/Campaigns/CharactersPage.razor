@@ -36,11 +36,22 @@ else
 <h2 class="h5 mt-4">NPC:er</h2>
 @if (characters.Npcs.Count == 0)
 {
-    <p class="text-secondary">GM har inte lagt till några NPC:er.</p>
+    <p class="text-secondary">@(characters.ArchivedNpcs.Count > 0 ? "Alla NPC:er är arkiverade." : "GM har inte lagt till några NPC:er.")</p>
 }
 else
 {
     <CharacterGrid CampaignId="CampaignId" Characters="characters.Npcs" />
+}
+
+@if (characters.ArchivedNpcs.Count > 0)
+{
+    @* Arkiverade NPC:er syns inte i "Skriv som" men finns kvar i gamla inlägg (B17). *@
+    <details class="mt-3">
+        <summary class="text-secondary">Arkiverade NPC:er (@characters.ArchivedNpcs.Count)</summary>
+        <div class="mt-2">
+            <CharacterGrid CampaignId="CampaignId" Characters="characters.ArchivedNpcs" />
+        </div>
+    </details>
 }
 
 @code {
