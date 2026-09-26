@@ -1,9 +1,10 @@
-﻿@page "/campaigns/{CampaignId:int}/chronicle"
+@page "/campaigns/{CampaignId:int}/chronicle"
 @attribute [Authorize]
 
 @using Taleshaven.Core.Chronicle
 
-@* Krönikan läses som en bok: alla kapitel i följd, äldst först, med sidindelning (beslut B10). *@
+@* Krönikan läses som en bok, ett kapitel i taget (B10, B14). Kapitlet visas i en läsyta som fyller resten av
+   skärmen, så att rubrik och flikar alltid syns; sidnavigeringen ligger fast under läsytan. *@
 
 @inject ICampaignService CampaignService
 @inject IChronicleService ChronicleService
@@ -15,7 +16,7 @@
     return;
 }
 
-<PageTitle>Krönika · @campaign.Name</PageTitle>
+<PageTitle>@(Chapter is { } current ? $"{current.Title} · " : "")Krönika · @campaign.Name</PageTitle>
 
 <CampaignHeader Campaign="campaign" Active="CampaignTab.Chronicle" />
 
@@ -25,103 +26,94 @@
 }
 
 <div class="chronicle">
-    @if (chronicle.ChapterCount == 0)
+    @if (Chapter is null)
     {
         <p class="text-secondary">Krönikan är tom.@(chronicle.CanEdit ? "" : " GM har inte skrivit något kapitel än.")</p>
         @if (chronicle.CanEdit)
         {
-            <a class="btn btn-primary" href="@NewChapterLink">Skriv första kapitlet</a>
+            <a class="btn btn-primary" href="@ChronicleLinks.NewChapter(CampaignId)">Skriv första kapitlet</a>
         }
     }
     else
     {
-        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-            <a class="btn btn-sm btn-outline-secondary" href="@ChapterLink(1)">Läs från början</a>
-            <a class="btn btn-sm btn-outline-secondary" href="@ChapterLink(chronicle.ChapterCount)">Senaste kapitlet</a>
+        <div class="chronicle-toolbar d-flex flex-wrap align-items-center gap-2 mb-2">
+            @* Innehållet öppnas som en meny över texten, så att läsytan inte flyttas. *@
+            <details class="chronicle-contents">
+                <summary class="btn btn-sm btn-outline-secondary">Innehåll (@chronicle.ChapterCount kapitel)</summary>
+                <nav class="chronicle-contents-menu" aria-label="Innehåll">
+                    <ol class="chronicle-toc mb-0">
+                        @foreach (var entry in chronicle.Contents)
+                        {
+                            <li value="@entry.Number" class="@(entry.Number == Chapter.Number ? "current" : "")">
+                                <a href="@ChronicleLinks.Chapter(CampaignId, entry.Number)"
+                                   aria-current="@(entry.Number == Chapter.Number ? "page" : null)">@entry.Title</a>
+                                @if (entry.Number == chronicle.ChapterCount)
+                                {
+                                    <span class="badge text-bg-primary ms-1">Senaste</span>
+                                }
+                            </li>
+                        }
+                    </ol>
+                </nav>
+            </details>
+            @if (Chapter.Number != 1)
+            {
+                <a class="btn btn-sm btn-outline-secondary" href="@ChronicleLinks.Chapter(CampaignId, 1)">Läs från början</a>
+            }
+            @if (Chapter.Number != chronicle.ChapterCount)
+            {
+                <a class="btn btn-sm btn-outline-secondary" href="@ChronicleLinks.Chapter(CampaignId, chronicle.ChapterCount)">Senaste kapitlet</a>
+            }
             @if (chronicle.CanEdit)
             {
-                <a class="btn btn-sm btn-primary ms-auto" href="@NewChapterLink">Nytt kapitel</a>
+                <a class="btn btn-sm btn-primary ms-auto" href="@ChronicleLinks.NewChapter(CampaignId)">Nytt kapitel</a>
             }
         </div>
 
-        <nav class="chronicle-contents mb-4" aria-labelledby="chronicle-contents-heading">
-            <details open>
-                <summary id="chronicle-contents-heading" class="fw-semibold">Innehåll (@chronicle.ChapterCount kapitel)</summary>
-                <ol class="chronicle-toc mt-2">
-                    @foreach (var entry in chronicle.Contents)
-                    {
-                        <li value="@entry.Number">
-                            <a href="@ChapterLink(entry.Number)">@entry.Title</a>
-                            @if (entry.Number == chronicle.ChapterCount)
+        <div class="chronicle-reader">
+            <div class="chronicle-panel border rounded" data-fill-viewport tabindex="0" aria-label="Kapitel @Chapter.Number">
+                <article class="chronicle-chapter" id="kapitel-@Chapter.Number">
+                    <header>
+                        <div class="chronicle-chapter-number">
+                            Kapitel @Chapter.Number av @chronicle.ChapterCount
+                            @if (Chapter.Number == chronicle.ChapterCount)
                             {
                                 <span class="badge text-bg-primary ms-1">Senaste</span>
                             }
-                        </li>
-                    }
-                </ol>
-            </details>
-        </nav>
+                        </div>
+                        <h2 class="chronicle-chapter-title">@Chapter.Title</h2>
+                        <div class="small text-secondary">
+                            @Chapter.AuthorName · @Dates.Date(Chapter.CreatedAt)
+                            @if (Dates.Date(Chapter.UpdatedAt) != Dates.Date(Chapter.CreatedAt))
+                            {
+                                <text> · ändrat @Dates.Date(Chapter.UpdatedAt)</text>
+                            }
+                        </div>
+                    </header>
 
-        @foreach (var chapter in chronicle.Chapters)
-        {
-            <article class="chronicle-chapter" id="kapitel-@chapter.Number">
-                <header>
-                    <div class="chronicle-chapter-number">
-                        Kapitel @chapter.Number
-                        @if (chapter.Number == chronicle.ChapterCount)
-                        {
-                            <span class="badge text-bg-primary ms-1">Senaste</span>
-                        }
-                    </div>
-                    <h2 class="chronicle-chapter-title">@chapter.Title</h2>
-                    <div class="small text-secondary">
-                        @chapter.AuthorName · @Dates.Date(chapter.CreatedAt)
-                        @if (Dates.Date(chapter.UpdatedAt) != Dates.Date(chapter.CreatedAt))
-                        {
-                            <text> · ändrat @Dates.Date(chapter.UpdatedAt)</text>
-                        }
-                    </div>
-                </header>
+                    <div class="post-content chronicle-text">@((MarkupString)Markdown.ToSafeHtml(Chapter.Content))</div>
 
-                <div class="post-content chronicle-text">@((MarkupString)Markdown.ToSafeHtml(chapter.Content))</div>
-
-                @if (chronicle.CanEdit)
-                {
-                    <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
-                        <a class="btn btn-sm btn-outline-secondary" href="campaigns/@CampaignId/chronicle/@chapter.Id/edit">Redigera</a>
-                        <form method="post" @formname="@($"move-{chapter.Id}")" @onsubmit="MoveAsync" class="d-flex gap-1">
-                            <AntiforgeryToken />
-                            <input type="hidden" name="Move.ChapterId" value="@chapter.Id" />
-                            <button type="submit" name="Move.Direction" value="-1" class="btn btn-sm btn-outline-secondary"
-                                    title="Flytta tidigare i boken" aria-label="Flytta kapitel @chapter.Number tidigare" disabled="@(chapter.Number == 1)">↑</button>
-                            <button type="submit" name="Move.Direction" value="1" class="btn btn-sm btn-outline-secondary"
-                                    title="Flytta senare i boken" aria-label="Flytta kapitel @chapter.Number senare" disabled="@(chapter.Number == chronicle.ChapterCount)">↓</button>
-                        </form>
-                    </div>
-                }
-            </article>
-        }
-
-        @if (chronicle.PageCount > 1)
-        {
-            <nav aria-label="Sidor i krönikan">
-                <p class="text-center text-secondary small mb-2">Sida @chronicle.Page av @chronicle.PageCount</p>
-                <ul class="pagination justify-content-center flex-wrap">
-                    <li class="page-item @(chronicle.Page == 1 ? "disabled" : "")">
-                        <a class="page-link" href="@PageLink(chronicle.Page - 1)">Föregående</a>
-                    </li>
-                    @for (var p = 1; p <= chronicle.PageCount; p++)
+                    @if (chronicle.CanEdit)
                     {
-                        <li class="page-item @(p == chronicle.Page ? "active" : "")">
-                            <a class="page-link" href="@PageLink(p)" aria-current="@(p == chronicle.Page ? "page" : null)">@p</a>
-                        </li>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-4">
+                            <a class="btn btn-sm btn-outline-secondary" href="@ChronicleLinks.EditChapter(CampaignId, Chapter.Id)">Redigera</a>
+                            <form method="post" @formname="@($"move-{Chapter.Id}")" @onsubmit="MoveAsync" class="d-flex gap-1">
+                                <AntiforgeryToken />
+                                <input type="hidden" name="Move.ChapterId" value="@Chapter.Id" />
+                                <button type="submit" name="Move.Direction" value="-1" class="btn btn-sm btn-outline-secondary"
+                                        title="Flytta tidigare i boken" aria-label="Flytta kapitel @Chapter.Number tidigare" disabled="@(Chapter.Number == 1)">↑</button>
+                                <button type="submit" name="Move.Direction" value="1" class="btn btn-sm btn-outline-secondary"
+                                        title="Flytta senare i boken" aria-label="Flytta kapitel @Chapter.Number senare" disabled="@(Chapter.Number == chronicle.ChapterCount)">↓</button>
+                            </form>
+                        </div>
                     }
-                    <li class="page-item @(chronicle.Page == chronicle.PageCount ? "disabled" : "")">
-                        <a class="page-link" href="@PageLink(chronicle.Page + 1)">Nästa</a>
-                    </li>
-                </ul>
-            </nav>
-        }
+                </article>
+            </div>
+
+            <div data-fill-below>
+                <ChroniclePager CampaignId="CampaignId" Page="chronicle.Page" PageCount="chronicle.PageCount" />
+            </div>
+        </div>
     }
 </div>
 
@@ -135,7 +127,7 @@
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
 
-    // Binds från GM:ns flytta-formulär (ett per kapitel).
+    // Binds från GM:ns flytta-formulär.
     [SupplyParameterFromForm]
     private MoveModel? Move { get; set; }
 
@@ -144,11 +136,8 @@
     private ChronicleView? chronicle;
     private string? errorMessage;
 
-    private string NewChapterLink => $"campaigns/{CampaignId}/chronicle/new";
-
-    private string PageLink(int page) => $"campaigns/{CampaignId}/chronicle?sida={page}";
-
-    private string ChapterLink(int number) => $"campaigns/{CampaignId}/chronicle?sida={ChronicleLimits.PageOf(number)}#kapitel-{number}";
+    // Ett kapitel per sida.
+    private ChapterView? Chapter => chronicle?.Chapters.FirstOrDefault();
 
     protected override async Task OnInitializedAsync()
     {
@@ -180,7 +169,7 @@
             return;
         }
 
-        NavigationManager.NavigateTo(ChapterLink(number));
+        NavigationManager.NavigateTo(ChronicleLinks.Chapter(CampaignId, number));
     }
 
     private sealed class MoveModel

@@ -24,11 +24,11 @@ skissen, tillsammans med de beslut som fattats hittills.
 | B7 | OOC-flikens form | OOC är en chatt som fungerar som RPG-chatten, men här kan man även **slå tärningar**. |
 | B8 | Vad som visas i chatten | Inläggen från de **senaste 7 dagarna**, men **minst 20** och **högst cirka 100** inlägg. Äldre inlägg laddas automatiskt när man **scrollar uppåt**. Gäller både RPG och OOC. |
 | B9 | Skicka inlägg | **OOC:** Enter skickar, Shift+Enter ger ny rad. **RPG:** Enter ger ny rad, Ctrl+Enter skickar. En skicka-knapp finns alltid (mobil). |
-| B10 | Krönikans form | Krönikan läses **som en bok**: alla kapitel i följd, äldst först, **med sidindelning** (5 kapitel per sida som start). |
+| B10 | Krönikans form | Krönikan läses **som en bok**, äldst först, **ett kapitel i taget** (ändrat från 5 per sida, se B14). |
 | B11 | Befintliga RPG-trådar | De trådar som skapades innan chattformatet är testdata och **tas bort** vid ombyggnaden. |
 | B12 | Redigering av inlägg | Egna chattinlägg kan redigeras och markeras då som **"redigerad"**. Byggs efter chattombyggnaden. |
 | B13 | Chattens höjd | RPG- och OOC-chatten **fyller resten av skärmen**. Rubrik och flikar står fast; bara inläggen scrollar, och skrivfältet ligger längst ner. |
-| B14 | Bläddra i krönikan | Gränsen **5 000 tecken** per kapitel och 5 kapitel per sida står kvar. Sidnavigering finns **både överst och nederst**, med fasta **‹ ›**-pilar i kanten och tangenterna ← →. |
+| B14 | Bläddra i krönikan | **Ett kapitel per sida** (sida N = kapitel N), max **5 000 tecken** per kapitel. Kapitlet visas i en **läsyta som fyller resten av skärmen**, så att rubrik och flikar alltid syns; långa kapitel scrollar inuti läsytan. Innehållsförteckningen öppnas som en meny. **Längst ner** finns sidnavigering som alltid syns: med fler än två kapitel klassisk forumnavigering (« Första · ‹ Föregående · 1 … 5 6 7 … 12 · Nästa › · Sista »), med två kapitel bara Föregående/Nästa. Tangenterna ← → bläddrar. |
 | B15 | NPC:ers innehåll | En NPC har bara **namn, porträtt och en anteckning som bara GM ser**. Inget karaktärsdokument, ingen extern länk och inget regelsystem. |
 | B16 | Dolda NPC:er | GM kan välja **"Dold för spelarna"** och visa NPC:n senare. En dold NPC syns inte för spelarna, varken på fliken Karaktärer eller i chatten. I chatten visas i stället ett **alias** som GM väljer (utan alias "Okänd") och en neutral siluett. När NPC:n görs synlig visas riktigt namn och porträtt, även i gamla inlägg. GM ser alltid det riktiga namnet, märkt "Dold". |
 | B17 | Välja NPC | "Skriv som" blir en **sökbar väljare** med de senast använda NPC:erna överst. GM kan **arkivera** NPC:er som inte längre behövs; de göms i väljaren men finns kvar i gamla inlägg. |
@@ -182,14 +182,14 @@ och stred mot fyra spindlar. Sedan fortsatte de till orchbyn Xrashh …"*
 - C-1: Krönikan består av löpande numrerade kapitel (B1).
 - C-2: Varje kapitel har nummer, titel, formaterad text (max 5 000 tecken),
   författare, skapelsedatum och senast ändrad.
-- C-3: Alla kapitel visas i följd, äldst först, med sidindelning
-  (5 kapitel per sida som start) (B10).
-- C-4: En innehållsförteckning överst listar alla kapitel och länkar till rätt
-  sida och kapitel.
-- C-5: "Läs från början" leder till första sidan, "Senaste kapitlet" till det
+- C-3: Krönikan visar ett kapitel i taget, äldst först, i en läsyta som fyller
+  resten av skärmen (B10, B14).
+- C-4: En innehållsförteckning (meny) listar alla kapitel, markerar det aktuella
+  och länkar till varje kapitel.
+- C-5: "Läs från början" leder till första kapitlet, "Senaste kapitlet" till det
   senaste, som är tydligt markerat.
-- C-6: Varje sida och kapitel har en egen adress som kan delas, t.ex.
-  `/chronicle?sida=2#kapitel-7`.
+- C-6: Varje kapitel har en egen adress som kan delas, t.ex. `/chronicle?sida=7`.
+- C-6a: Sidnavigering längst ner, alltid synlig, och tangenterna ← → (B14).
 - C-7: GM kan skapa, redigera, ta bort och ändra ordningen på kapitel
   (flytta ett steg i taget med ↑/↓). Numreringen följer ordningen (F14).
   Borttagning kräver bekräftelse.
@@ -315,7 +315,7 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
    uppåt, "Nya inlägg ↓", Enter/Ctrl+Enter och liveuppdatering.
 6. ✅ Tärningar i OOC: `/slå` och `/roll` med valfri beskrivning, tärningspanel,
    kast på servern och visning i chatten.
-7. ✅ Krönika som bok: innehållsförteckning, 5 kapitel per sida, "Läs från början"
+7. ✅ Krönika som bok: innehållsförteckning, ett kapitel per sida (se punkt 12), "Läs från början"
    och "Senaste kapitlet", länkbara kapitel, GM skriver, redigerar, flyttar och
    tar bort kapitel.
 8. ✅ Karaktärer med bild och textdokument, NPC:er för GM, val av karaktär
@@ -327,7 +327,8 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
 11. ✅ Kampanjadministration för GM (A-2 till A-4): inställningar, status, ta bort spelare och radera kampanjen.
 
 ### Fas 4 – Förbättringar efter test
-12. Bättre sidbläddring i krönikan (B14).
+12. ✅ Krönikan (B14): ett kapitel per sida i en läsyta som fyller skärmen, innehåll som meny,
+    klassisk sidnavigering längst ner och ← →.
 13. NPC:er med namn, porträtt och GM-anteckning (B15).
 14. Chatten fyller skärmen (B13).
 15. Sökbar NPC-väljare med senast använda och arkiverade NPC:er (B17).

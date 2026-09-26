@@ -1,0 +1,16 @@
+.chronicle-pager {
+    padding-top: 0.75rem;
+}
+
+/* Tips om tangenterna visas bara där det finns ett tangentbord (inte på pekskärmar). */
+@media (hover: none) {
+    .pager-keys {
+        display: none;
+    }
+}
+
+@media (max-width: 640.98px) {
+    .pager-label {
+        display: none;
+    }
+}

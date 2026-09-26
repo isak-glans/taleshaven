@@ -1,4 +1,4 @@
-@page "/campaigns/{CampaignId:int}/chronicle/new"
+﻿@page "/campaigns/{CampaignId:int}/chronicle/new"
 @page "/campaigns/{CampaignId:int}/chronicle/{ChapterId:int}/edit"
 @attribute [Authorize]
 @rendermode InteractiveServer
@@ -94,9 +94,7 @@
 
     private string BackLink => LoadedChapter is null
         ? $"campaigns/{CampaignId}/chronicle"
-        : ChapterLink(LoadedChapter.Number);
-
-    private string ChapterLink(int number) => $"campaigns/{CampaignId}/chronicle?sida={ChronicleLimits.PageOf(number)}#kapitel-{number}";
+        : ChronicleLinks.Chapter(CampaignId, LoadedChapter.Number);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -137,7 +135,7 @@
                 ? await ChronicleService.CreateChapterAsync(CampaignId, userId, title, content)
                 : await ChronicleService.UpdateChapterAsync(CampaignId, LoadedChapter.Id, userId, title, content);
 
-            NavigationManager.NavigateTo(ChapterLink(number));
+            NavigationManager.NavigateTo(ChronicleLinks.Chapter(CampaignId, number));
             return null;
         }
         catch (CampaignRuleException ex)

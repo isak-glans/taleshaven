@@ -1,0 +1,76 @@
+﻿@using Taleshaven.Core.Chronicle
+
+@* Sidnavigering längst ner i krönikan (B14). Fler än två kapitel: klassisk navigering som i ett forum.
+   Två kapitel: bara föregående och nästa. Länkarna framåt/bakåt används också av tangenterna ← → (page-keys.js). *@
+
+@if (PageCount > 1)
+{
+    <nav class="chronicle-pager" aria-label="Kapitel i krönikan">
+        <ul class="pagination pagination-sm justify-content-center flex-wrap mb-1">
+            @if (PageCount > 2)
+            {
+                @PageItem(1, "«", " Första", Page > 1, ariaLabel: "Första kapitlet")
+            }
+            @PageItem(Page - 1, "‹", " Föregående", Page > 1, ariaLabel: "Föregående kapitel", prev: true)
+
+            @if (PageCount > 2)
+            {
+                @foreach (var p in ChronicleLimits.PageWindow(Page, PageCount))
+                {
+                    if (p is { } number)
+                    {
+                        <li class="page-item @(number == Page ? "active" : "")">
+                            <a class="page-link" href="@ChronicleLinks.Page(CampaignId, number)" aria-current="@(number == Page ? "page" : null)">@number</a>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="page-item disabled"><span class="page-link">…</span></li>
+                    }
+                }
+            }
+
+            @PageItem(Page + 1, "›", "Nästa ", Page < PageCount, ariaLabel: "Nästa kapitel", next: true, labelFirst: true)
+            @if (PageCount > 2)
+            {
+                @PageItem(PageCount, "»", "Sista ", Page < PageCount, ariaLabel: "Sista kapitlet", labelFirst: true)
+            }
+        </ul>
+        <p class="text-center text-secondary small mb-0">
+            Kapitel @Page av @PageCount<span class="pager-keys"> · ← → bläddrar</span>
+        </p>
+    </nav>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public int CampaignId { get; set; }
+
+    [Parameter, EditorRequired]
+    public int Page { get; set; }
+
+    [Parameter, EditorRequired]
+    public int PageCount { get; set; }
+
+    // Inaktiva steg (t.ex. "Föregående" på första sidan) visas som text, inte som länk.
+    // Ordet (label) göms på smala skärmar så att navigeringen ryms på en rad; symbolen står kvar.
+    private RenderFragment PageItem(int target, string symbol, string label, bool enabled, string ariaLabel,
+        bool prev = false, bool next = false, bool labelFirst = false) =>
+        @<li class="page-item @(enabled ? "" : "disabled")">
+            @if (enabled)
+            {
+                <a class="page-link" href="@ChronicleLinks.Page(CampaignId, target)" aria-label="@ariaLabel"
+                   data-page-prev="@(prev ? "" : null)" data-page-next="@(next ? "" : null)">@PageText(symbol, label, labelFirst)</a>
+            }
+            else
+            {
+                <span class="page-link">@PageText(symbol, label, labelFirst)</span>
+            }
+        </li>;
+
+    private static RenderFragment PageText(string symbol, string label, bool labelFirst) =>
+        @<text>@if (labelFirst)
+        {<span class="pager-label">@label</span>@symbol}
+        else
+        {@symbol<span class="pager-label">@label</span>}</text>;
+}

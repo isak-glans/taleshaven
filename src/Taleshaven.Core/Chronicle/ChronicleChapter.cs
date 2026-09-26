@@ -64,12 +64,39 @@ public static class ChronicleLimits
     public const int TitleMaxLength = 100;
     public const int ContentMaxLength = 5_000;
 
-    /// <summary>Antal kapitel per sida när krönikan läses (beslut B10).</summary>
-    public const int ChaptersPerPage = 5;
+    /// <summary>Antal kapitel per sida när krönikan läses: ett kapitel i taget, så sida N är kapitel N (B14).</summary>
+    public const int ChaptersPerPage = 1;
 
     public static int PageOf(int chapterNumber) => (chapterNumber - 1) / ChaptersPerPage + 1;
 
     public static int PageCount(int chapterCount) => Math.Max(1, (chapterCount + ChaptersPerPage - 1) / ChaptersPerPage);
+
+    /// <summary>
+    /// Sidnummer att visa i sidnavigeringen: första, sista och sidorna runt den aktuella.
+    /// <c>null</c> betyder en lucka ("…"). En lucka på bara en sida visas som sidan själv.
+    /// </summary>
+    public static IReadOnlyList<int?> PageWindow(int page, int pageCount, int neighbours = 2)
+    {
+        var shown = new SortedSet<int> { 1, pageCount };
+        for (var p = page - neighbours; p <= page + neighbours; p++)
+        {
+            if (p >= 1 && p <= pageCount)
+                shown.Add(p);
+        }
+
+        var result = new List<int?>();
+        int? previous = null;
+        foreach (var p in shown)
+        {
+            if (previous is { } prev && p - prev == 2)
+                result.Add(prev + 1);
+            else if (previous is not null && p - previous > 2)
+                result.Add(null);
+            result.Add(p);
+            previous = p;
+        }
+        return result;
+    }
 }
 
 /// <summary>

@@ -64,24 +64,37 @@ public class ChronicleChapterTests
 
     [Theory]
     [InlineData(1, 1)]
-    [InlineData(5, 1)]
-    [InlineData(6, 2)]
-    [InlineData(10, 2)]
-    [InlineData(11, 3)]
-    public void PageOf_FiveChaptersPerPage(int number, int expectedPage)
+    [InlineData(5, 5)]
+    [InlineData(12, 12)]
+    public void PageOf_OneChapterPerPage(int number, int expectedPage)
     {
+        Assert.Equal(1, ChronicleLimits.ChaptersPerPage);
         Assert.Equal(expectedPage, ChronicleLimits.PageOf(number));
     }
 
     [Theory]
     [InlineData(0, 1)]
     [InlineData(1, 1)]
-    [InlineData(5, 1)]
-    [InlineData(6, 2)]
-    [InlineData(12, 3)]
+    [InlineData(2, 2)]
+    [InlineData(12, 12)]
     public void PageCount_IsAtLeastOne(int chapters, int expectedPages)
     {
         Assert.Equal(expectedPages, ChronicleLimits.PageCount(chapters));
+    }
+
+    [Theory]
+    [InlineData(1, 1, "1")]
+    [InlineData(1, 5, "1 2 3 4 5")]
+    [InlineData(3, 7, "1 2 3 4 5 6 7")]
+    [InlineData(1, 20, "1 2 3 … 20")]
+    [InlineData(10, 20, "1 … 8 9 10 11 12 … 20")]
+    [InlineData(20, 20, "1 … 18 19 20")]
+    [InlineData(5, 20, "1 2 3 4 5 6 7 … 20")]
+    public void PageWindow_ShowsEdgesNeighboursAndGaps(int page, int pageCount, string expected)
+    {
+        var window = ChronicleLimits.PageWindow(page, pageCount);
+
+        Assert.Equal(expected, string.Join(" ", window.Select(p => p?.ToString() ?? "…")));
     }
 
     [Theory]
