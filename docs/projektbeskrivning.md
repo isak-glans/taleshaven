@@ -27,6 +27,14 @@ skissen, tillsammans med de beslut som fattats hittills.
 | B10 | Krönikans form | Krönikan läses **som en bok**: alla kapitel i följd, äldst först, **med sidindelning** (5 kapitel per sida som start). |
 | B11 | Befintliga RPG-trådar | De trådar som skapades innan chattformatet är testdata och **tas bort** vid ombyggnaden. |
 | B12 | Redigering av inlägg | Egna chattinlägg kan redigeras och markeras då som **"redigerad"**. Byggs efter chattombyggnaden. |
+| B13 | Chattens höjd | RPG- och OOC-chatten **fyller resten av skärmen**. Rubrik och flikar står fast; bara inläggen scrollar, och skrivfältet ligger längst ner. |
+| B14 | Bläddra i krönikan | Gränsen **5 000 tecken** per kapitel och 5 kapitel per sida står kvar. Sidnavigering finns **både överst och nederst**, med fasta **‹ ›**-pilar i kanten och tangenterna ← →. |
+| B15 | NPC:ers innehåll | En NPC har bara **namn, porträtt och en anteckning som bara GM ser**. Inget karaktärsdokument, ingen extern länk och inget regelsystem. |
+| B16 | Dolda NPC:er | GM kan välja **"Dold för spelarna"** och visa NPC:n senare. En dold NPC syns inte för spelarna, varken på fliken Karaktärer eller i chatten. I chatten visas i stället ett **alias** som GM väljer (utan alias "Okänd") och en neutral siluett. När NPC:n görs synlig visas riktigt namn och porträtt, även i gamla inlägg. GM ser alltid det riktiga namnet, märkt "Dold". |
+| B17 | Välja NPC | "Skriv som" blir en **sökbar väljare** med de senast använda NPC:erna överst. GM kan **arkivera** NPC:er som inte längre behövs; de göms i väljaren men finns kvar i gamla inlägg. |
+| B18 | Roller för hela sajten | **Administratör:** får allt, även dela ut roller. **Manager:** sköter porträttbiblioteket. De första administratörerna anges med e-postadress i konfigurationen (`Admin:Emails`); därefter delar en administratör ut roller på en egen sida. |
+| B19 | Porträttbibliotek | Porträtt kan **inte längre laddas upp per karaktär**. Administratörer och managers laddar upp porträtt till ett gemensamt bibliotek och sätter **taggar** (t.ex. `#dvärg #krigare`). När man väljer porträtt för en karaktär eller NPC bläddrar man i biblioteket och söker på taggar. Varje porträtt har ett valfritt fält för **källa och licens**. De uppladdade testbilderna tas bort när biblioteket införs. |
+| B20 | Ta bort porträtt som används | Tillåtet. Karaktärerna som använde porträttet får initialer i stället. |
 
 ### 1.2 Arbetsförslag (ej slutligt beslutade)
 
@@ -46,7 +54,7 @@ skissen, tillsammans med de beslut som fattats hittills.
 | F12 | Skrivskydd | Stängda och arkiverade kampanjer är skrivskyddade för alla utom GM. |
 | F13 | Tärningskommando | I OOC slår man med `/slå 2d6+3` (eller `/roll`) eller via en tärningsknapp bredvid skrivfältet. |
 | F14 | Krönikans numrering | Kapitelnumret följer ordningen i boken. Flyttar GM ett kapitel numreras de övriga om. |
-| F15 | Karaktärsbilder | Laddas upp (JPG, PNG eller WebP, högst 5 MB). Bilden beskärs till en kvadrat, skalas till 256×256, metadata tas bort och den sparas som WebP utanför wwwroot. |
+| F15 | Karaktärsbilder | *Ersätts av porträttbiblioteket (B19).* Laddas upp (JPG, PNG eller WebP, högst 5 MB). Bilden beskärs till en kvadrat, skalas till 256×256, metadata tas bort och den sparas som WebP utanför wwwroot. |
 | F16 | GM:s karaktärer | Allt GM skapar är NPC:er. Spelare skriver som egna karaktärer eller som sig själva; GM som NPC eller som berättare. |
 | F17 | Ta bort karaktär | Går bara om karaktären inte har skrivit några inlägg, så att gamla inlägg behåller sin karaktär. |
 | F18 | Ny spelare och olästa | När en spelare godkänns räknas allt som redan skrivits som läst, så att historiken inte blir hundratals olästa. |
@@ -200,7 +208,23 @@ och stred mot fyra spindlar. Sedan fortsatte de till orchbyn Xrashh …"*
   uppgift om regelsystem.
 - H-5: Ägaren kan redigera sin karaktär. GM kan redigera alla karaktärer i
   kampanjen.
-- H-6: GM kan skapa NPC:er (F3).
+- H-6: GM kan skapa NPC:er (F3) med namn, porträtt och en anteckning som bara
+  GM ser (B15).
+- H-7: En NPC kan vara dold för spelarna och visas senare. Dold NPC skriver i
+  chatten under ett alias med neutral siluett (B16).
+- H-8: GM kan arkivera NPC:er så att de inte syns i "Skriv som" (B17).
+- H-9: Porträtt väljs ur porträttbiblioteket, inte laddas upp (B19).
+
+### 3.10a Porträttbibliotek
+
+- PB-1: Administratörer och managers laddar upp porträtt. Bilden bearbetas som
+  tidigare: beskärs, skalas om, metadata tas bort och sparas som WebP.
+- PB-2: Varje porträtt har taggar och ett valfritt fält för källa och licens.
+  Taggar skrivs med små bokstäver, och redan använda taggar föreslås.
+- PB-3: Porträtt kan få ändrade taggar och tas bort. Karaktärer som använde ett
+  borttaget porträtt får initialer (B20).
+- PB-4: Väljaren visar porträtten i ett rutnät och söker på en eller flera
+  taggar (porträtt som har alla angivna taggar).
 
 ### 3.11 Tärningskast
 
@@ -258,8 +282,16 @@ Exempel:
 | Skapa/redigera krönika | Nej | Nej | Nej | Ja |
 | Hantera ansökningar och spelare | Nej | Nej | Nej | Ja |
 | Administrera kampanjen | Nej | Nej | Nej | Ja |
+| Se dolda NPC:er och GM-anteckningar | Nej | Nej | Nej | Ja |
 
 ¹ Om kampanjen inte är privat (F1).
+
+Roller för hela sajten (B18), oberoende av kampanjroll:
+
+| Funktion | Manager | Administratör |
+|---|:-:|:-:|
+| Hantera porträttbiblioteket | Ja | Ja |
+| Dela ut och ta bort roller | Nej | Ja |
 
 Arkiverade och stängda kampanjer är skrivskyddade för alla utom GM (F12).
 
@@ -294,6 +326,15 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
 10. ✅ Olästmarkeringar: antal på flikarna RPG/OOC och i kampanjlistan, "Nya inlägg" i chatten.
 11. ✅ Kampanjadministration för GM (A-2 till A-4): inställningar, status, ta bort spelare och radera kampanjen.
 
+### Fas 4 – Förbättringar efter test
+12. Bättre sidbläddring i krönikan (B14).
+13. NPC:er med namn, porträtt och GM-anteckning (B15).
+14. Chatten fyller skärmen (B13).
+15. Sökbar NPC-väljare med senast använda och arkiverade NPC:er (B17).
+16. Dolda NPC:er med alias (B16).
+17. Roller för hela sajten: Administratör och Manager (B18).
+18. Porträttbibliotek med taggar och väljare (B19, B20).
+
 ### Senare
 Social inloggning, privata meddelanden, notiser/e-postnotiser, flera
 RPG-kanaler, tärningar i RPG, privata tärningskast, reaktioner, svar på
@@ -313,6 +354,9 @@ Campaign ──< ChronicleChapter
 Post ── DiceRoll? (tärningskast, endast OOC)
 User ──< ReadMarker >── Thread
 Post ──< PostRevision
+Portrait ──< PortraitTag
+Character ── Portrait? (från biblioteket, B19)
+User ──< UserRole (Administratör, Manager)
 ```
 
 | Entitet | Viktiga fält |
@@ -324,7 +368,9 @@ Post ──< PostRevision
 | Thread | Id, CampaignId, typ, titel, beskrivning, status, skapare, skapad |
 | Post | Id, ThreadId, författare, CharacterId?, innehåll, skapad, redigerad |
 | PostRevision | PostId, tidigare innehåll, tidpunkt |
-| Character | Id, CampaignId, ägare, namn, bildnyckel, dokument, extern länk, regelsystem, IsNpc, skapad, ändrad |
+| Character | Id, CampaignId, ägare, namn, PortraitId?, dokument, extern länk, regelsystem, IsNpc, skapad, ändrad. NPC:er dessutom: GM-anteckning, dold, alias, arkiverad (B15–B17). |
+| Portrait | Id, bildnyckel, källa och licens, uppladdad av, skapad (B19) |
+| PortraitTag | PortraitId, tagg |
 | ChronicleChapter | Id, CampaignId, nummer, titel, innehåll, författare, skapad, ändrad |
 | DiceRoll | Notation, beskrivning, antal, sidor, modifierare, resultat, total. Lagras som jsonb-kolumnen `Roll` på inlägget; användare och tidpunkt kommer från inlägget. |
 | ReadMarker | UserId, ThreadId, LastReadPostId |
@@ -345,7 +391,7 @@ datamodellen.
 | Autentisering | ASP.NET Core Identity (e-post/lösenord), externa leverantörer senare |
 | Databas | PostgreSQL via Entity Framework Core (Npgsql). Lokalt i Docker (`postgres:18`). |
 | Formaterad text | Markdown, renderat med Markdig och sanerat med HtmlSanitizer |
-| Bilder | SkiaSharp: beskärs, skalas om, EXIF rensas och kodas om till WebP. Lagras på disk (`App_Data/media`) och serveras via `/media/avatars/{nyckel}` för inloggade. Drift på Linux kräver paketet SkiaSharp.NativeAssets.Linux. |
+| Bilder | SkiaSharp: beskärs, skalas om, EXIF rensas och kodas om till WebP. Lagras på disk (`App_Data/media`) och serveras för inloggade. Porträtten ligger i ett gemensamt bibliotek (B19). Drift på Linux kräver paketet SkiaSharp.NativeAssets.Linux. |
 | Realtid | Nya inlägg pushas till öppna sessioner via Blazor Servers anslutning (fungerar inom en serverinstans) |
 | Tärningar | `RandomNumberGenerator` på servern |
 
@@ -383,8 +429,11 @@ Beroenden: `Web → Core, Infrastructure` och `Infrastructure → Core`.
 - **Auktorisering:** varje handling kontrolleras på servern mot kampanjroll.
   UI-döljning räcker inte.
 - **Formaterad text:** ingen rå HTML från användare, och all renderad HTML saneras.
-- **Bilduppladdning:** kontroll av typ och storlek, omkodning och slumpade
-  filnamn. Bilderna serveras aldrig som körbart innehåll.
+- **Bilduppladdning:** bara administratörer och managers laddar upp (B19).
+  Kontroll av typ och storlek, omkodning och slumpade filnamn. Bilderna serveras
+  aldrig som körbart innehåll.
+- **Dolda NPC:er:** riktigt namn, porträtt och GM-anteckning skickas aldrig till
+  spelarnas webbläsare, inte ens i chattens data (B16).
 - **Tärningskast:** genereras och sparas på servern och kan inte ändras eller
   tas bort.
 - **Redigering och borttagning:** inlägg markeras som redigerade och historiken
