@@ -15,7 +15,8 @@
 @inject ILogger<ChatView> Logger
 
 <div class="chat">
-    <div class="chat-messages">
+    @* Inläggsytan fyller resten av skärmen och scrollar själv (fill-viewport.js, B13). *@
+    <div class="chat-messages" @ref="messagesElement" data-fill-viewport>
         @if (hasOlder)
         {
             <div class="chat-top text-secondary small" @ref="topSentinel">Laddar äldre inlägg…</div>
@@ -148,7 +149,7 @@
         </div>
     </div>
 
-    <div class="chat-composer">
+    <div class="chat-composer" data-fill-below>
         @if (newBelow)
         {
             <button type="button" class="btn btn-sm btn-primary chat-new-below" @onclick="JumpToNewest">Nya inlägg ↓</button>
@@ -216,6 +217,7 @@
     private IJSObjectReference? topObserver;
     private DotNetObjectReference<ChatView>? selfReference;
     private ElementReference topSentinel;
+    private ElementReference messagesElement;
     private string userId = "";
     private bool hasOlder;
     private bool loadingOlder;
@@ -343,12 +345,12 @@
         if (anchorBeforePrepend is var (elementId, top))
         {
             anchorBeforePrepend = null;
-            await module.InvokeVoidAsync("restoreAnchor", elementId, top);
+            await module.InvokeVoidAsync("restoreAnchor", messagesElement, elementId, top);
 
             if (hasOlder)
             {
                 // Om toppen fortfarande syns (korta inlägg) kommer ingen ny signal från observern, så ladda direkt.
-                if (await module.InvokeAsync<bool>("isNearTop", topSentinel))
+                if (await module.InvokeAsync<bool>("isNearTop", topSentinel, messagesElement))
                     await LoadOlderAsync();
                 else
                     await ObserveTopAsync();
@@ -358,13 +360,13 @@
         if (scrollToBottom)
         {
             scrollToBottom = false;
-            await module.InvokeVoidAsync("scrollToBottom");
+            await module.InvokeVoidAsync("scrollToBottom", messagesElement);
         }
 
         if (scrollToFirstUnread)
         {
             scrollToFirstUnread = false;
-            await module.InvokeVoidAsync("scrollToElement", "first-unread");
+            await module.InvokeVoidAsync("scrollToElement", messagesElement, "first-unread");
         }
 
         // Börja lyssna på toppen först när vi har scrollat ner, annars laddas äldre inlägg direkt.
@@ -380,7 +382,7 @@
     private async Task ObserveTopAsync()
     {
         await StopObservingTopAsync();
-        topObserver = await module!.InvokeAsync<IJSObjectReference>("observeTop", topSentinel, selfReference);
+        topObserver = await module!.InvokeAsync<IJSObjectReference>("observeTop", topSentinel, selfReference, messagesElement);
     }
 
     private async Task StopObservingTopAsync()
@@ -480,7 +482,7 @@
                     return;
 
                 // Följ med nedåt bara om läsaren redan är längst ner; annars visas "Nya inlägg".
-                var atBottom = await module.InvokeAsync<bool>("isNearBottom");
+                var atBottom = await module.InvokeAsync<bool>("isNearBottom", messagesElement);
                 if (!Append(newer))
                     return;
 

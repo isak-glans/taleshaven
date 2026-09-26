@@ -29,7 +29,7 @@ skissen, tillsammans med de beslut som fattats hittills.
 | B12 | Redigering av inlägg | Egna chattinlägg kan redigeras och markeras då som **"redigerad"**. Byggs efter chattombyggnaden. |
 | B13 | Chattens höjd | RPG- och OOC-chatten **fyller resten av skärmen**. Rubrik och flikar står fast; bara inläggen scrollar, och skrivfältet ligger längst ner. |
 | B14 | Bläddra i krönikan | **Ett kapitel per sida** (sida N = kapitel N), max **5 000 tecken** per kapitel. Kapitlet visas i en **läsyta som fyller resten av skärmen**, så att rubrik och flikar alltid syns; långa kapitel scrollar inuti läsytan. Innehållsförteckningen öppnas som en meny. **Längst ner** finns sidnavigering som alltid syns: med fler än två kapitel klassisk forumnavigering (« Första · ‹ Föregående · 1 … 5 6 7 … 12 · Nästa › · Sista »), med två kapitel bara Föregående/Nästa. Tangenterna ← → bläddrar. |
-| B15 | NPC:ers innehåll | En NPC har bara **namn, porträtt och en anteckning som bara GM ser**. Inget karaktärsdokument, ingen extern länk och inget regelsystem. |
+| B15 | NPC:ers innehåll | En NPC har bara **namn, porträtt och en anteckning som bara GM ser** (högst 2 000 tecken, Markdown). Inget karaktärsdokument, ingen extern länk och inget regelsystem; äldre sådana uppgifter på NPC:er döljs men raderas inte. Anteckningen skickas aldrig till spelarnas webbläsare. |
 | B16 | Dolda NPC:er | GM kan välja **"Dold för spelarna"** och visa NPC:n senare. En dold NPC syns inte för spelarna, varken på fliken Karaktärer eller i chatten. I chatten visas i stället ett **alias** som GM väljer (utan alias "Okänd") och en neutral siluett. När NPC:n görs synlig visas riktigt namn och porträtt, även i gamla inlägg. GM ser alltid det riktiga namnet, märkt "Dold". |
 | B17 | Välja NPC | "Skriv som" blir en **sökbar väljare** med de senast använda NPC:erna överst. GM kan **arkivera** NPC:er som inte längre behövs; de göms i väljaren men finns kvar i gamla inlägg. |
 | B18 | Roller för hela sajten | **Administratör:** får allt, även dela ut roller. **Manager:** sköter porträttbiblioteket. De första administratörerna anges med e-postadress i konfigurationen (`Admin:Emails`); därefter delar en administratör ut roller på en egen sida. |
@@ -329,8 +329,9 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
 ### Fas 4 – Förbättringar efter test
 12. ✅ Krönikan (B14): ett kapitel per sida i en läsyta som fyller skärmen, innehåll som meny,
     klassisk sidnavigering längst ner och ← →.
-13. NPC:er med namn, porträtt och GM-anteckning (B15).
-14. Chatten fyller skärmen (B13).
+13. ✅ NPC:er med namn, bild och GM-anteckning (B15). Bilden laddas upp tills porträttbiblioteket finns (punkt 18).
+14. ✅ Chatten fyller skärmen (B13): inläggen scrollar i en egen yta, rubrik, flikar och skrivfält står kvar
+    (även på mobil).
 15. Sökbar NPC-väljare med senast använda och arkiverade NPC:er (B17).
 16. Dolda NPC:er med alias (B16).
 17. Roller för hela sajten: Administratör och Manager (B18).

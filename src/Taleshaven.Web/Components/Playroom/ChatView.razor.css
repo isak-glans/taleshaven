@@ -1,8 +1,10 @@
+/* Inläggsytan: höjden sätts av fill-viewport.js så att rubrik, flikar och skrivfält alltid syns (B13). */
 .chat-messages {
-    min-height: 40vh;
     /* Läspositionen styrs av ChatView.razor.js; webbläsarens egen förankring skulle justera en gång till. */
     overflow-anchor: none;
-    padding-bottom: 0.5rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 0.25rem 0.5rem 0;
 }
 
 .chat-top {
@@ -165,12 +167,12 @@
     font-size: 1.1rem;
 }
 
+/* Skrivfältet ligger direkt under inläggsytan. position: relative för knappen "Nya inlägg ↓" ovanför. */
 .chat-composer {
     background: var(--bs-body-bg);
     border-top: 1px solid var(--bs-border-color);
-    bottom: 0;
-    padding: 0.5rem 0 0.75rem;
-    position: sticky;
+    padding: 0.5rem 0 0;
+    position: relative;
     z-index: 2;
 }
 
