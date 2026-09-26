@@ -335,9 +335,15 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
 15. ✅ Sökbar NPC-väljare med senast använda och arkiverade NPC:er (B17): de fem senast använda överst,
     sedan alla i bokstavsordning; sökruta när det finns sex eller fler. GM arkiverar och återställer
     på NPC:ns sida; arkiverade ligger i en hopfälld del under Karaktärer.
-16. Dolda NPC:er med alias (B16).
-17. Roller för hela sajten: Administratör och Manager (B18).
-18. Porträttbibliotek med taggar och väljare (B19, B20).
+16. ✅ Dolda NPC:er med alias (B16): kryssruta och alias på NPC:ns redigeringssida. Inläggen läses per
+    användare, så riktigt namn och porträtt skickas bara till GM.
+17. ✅ Roller för hela sajten: Administratör och Manager (B18). Rollerna ligger i Identitys rolltabeller och
+    delas ut på /admin/roles. E-postadresser i `Admin:Emails` räknas alltid som administratörer när adressen
+    är bekräftad; de tas bort i konfigurationen, inte på sidan. En administratör kan inte ta bort sin egen
+    administratörsroll.
+18. ✅ Porträttbibliotek med taggar och väljare (B19, B20): sidan Porträtt för administratörer och managers
+    (ladda upp, tagga, ändra, ta bort) och en väljare på karaktärens redigeringssida. Varje sökord matchar
+    början av en tagg. Porträtt som tas bort ger initialer; porträtt ligger kvar när en kampanj raderas.
 
 ### Senare
 Social inloggning, privata meddelanden, notiser/e-postnotiser, flera
@@ -358,7 +364,6 @@ Campaign ──< ChronicleChapter
 Post ── DiceRoll? (tärningskast, endast OOC)
 User ──< ReadMarker >── Thread
 Post ──< PostRevision
-Portrait ──< PortraitTag
 Character ── Portrait? (från biblioteket, B19)
 User ──< UserRole (Administratör, Manager)
 ```
@@ -373,8 +378,7 @@ User ──< UserRole (Administratör, Manager)
 | Post | Id, ThreadId, författare, CharacterId?, innehåll, skapad, redigerad |
 | PostRevision | PostId, tidigare innehåll, tidpunkt |
 | Character | Id, CampaignId, ägare, namn, PortraitId?, dokument, extern länk, regelsystem, IsNpc, skapad, ändrad. NPC:er dessutom: GM-anteckning, dold, alias, arkiverad (B15–B17). |
-| Portrait | Id, bildnyckel, källa och licens, uppladdad av, skapad (B19) |
-| PortraitTag | PortraitId, tagg |
+| Portrait | Id, bildnyckel, taggar (`text[]` med GIN-index), källa och licens, uppladdad av, skapad (B19) |
 | ChronicleChapter | Id, CampaignId, nummer, titel, innehåll, författare, skapad, ändrad |
 | DiceRoll | Notation, beskrivning, antal, sidor, modifierare, resultat, total. Lagras som jsonb-kolumnen `Roll` på inlägget; användare och tidpunkt kommer från inlägget. |
 | ReadMarker | UserId, ThreadId, LastReadPostId |

@@ -1,6 +1,16 @@
-@* Rund bild för en användare eller karaktär. Utan uppladdad bild visas initialer på en färg som är stabil per nyckel. *@
+@* Rund bild för en användare eller karaktär. Utan uppladdad bild visas initialer på en färg som är stabil per nyckel.
+   En dold NPC (B16) visas som en neutral siluett, utan initialer som kan avslöja namnet. *@
 
-@if (ImageUrl is not null)
+@if (Silhouette)
+{
+    <span class="avatar avatar-silhouette" aria-hidden="true" style="width: @(Size)px; height: @(Size)px">
+        <svg viewBox="0 0 24 24" width="@(Size * 3 / 4)" height="@(Size * 3 / 4)" fill="currentColor">
+            <circle cx="12" cy="8" r="4.5" />
+            <path d="M3 22c0-5 4-8.5 9-8.5s9 3.5 9 8.5z" />
+        </svg>
+    </span>
+}
+else if (ImageUrl is not null)
 {
     <img class="avatar" src="@ImageUrl" alt="" width="@Size" height="@Size" style="width: @(Size)px; height: @(Size)px" loading="lazy" />
 }
@@ -23,6 +33,9 @@ else
 
     [Parameter]
     public int Size { get; set; } = 40;
+
+    [Parameter]
+    public bool Silhouette { get; set; }
 
     // Punkt som decimaltecken oavsett kultur; "14,4px" är ogiltig CSS och ignoreras av webbläsaren.
     private string FontSize => (Size * 0.36).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "px";

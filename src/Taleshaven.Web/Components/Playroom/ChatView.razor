@@ -74,7 +74,8 @@
                         <div class="chat-avatar">
                             @if (character is not null)
                             {
-                                <Avatar Name="@character.Name" ImageUrl="@character.AvatarUrl" ColorKey="@($"character-{character.Id}")" />
+                                <Avatar Name="@character.Name" ImageUrl="@character.AvatarUrl" ColorKey="@($"character-{character.Id}")"
+                                        Silhouette="@(character.IsHidden && !IsGameMaster)" />
                             }
                             else
                             {
@@ -90,6 +91,11 @@
                                 @if (character is { IsNpc: true })
                                 {
                                     <span class="badge text-bg-secondary">NPC</span>
+                                    @* Bara GM får riktigt namn på en dold NPC; spelarna får aliaset (B16). *@
+                                    @if (character.IsHidden && IsGameMaster)
+                                    {
+                                        <span class="badge text-bg-warning" title="Spelarna ser: @(character.Alias ?? Character.UnknownName)">Dold</span>
+                                    }
                                 }
                                 else if (character is not null)
                                 {
@@ -257,6 +263,8 @@
     [PersistentState]
     public ReadState? InitialReadState { get; set; }
 
+    private bool IsGameMaster => ViewerRole == CampaignRole.GameMaster;
+
     // Bara deltagare har läsposition (F2).
     private bool TracksReading => ViewerRole != CampaignRole.None;
 
@@ -270,7 +278,7 @@
             selectedCharacterId = postingOptions[0].Id;
 
         InitialReadState ??= new ReadState(TracksReading ? await Unread.GetLastReadPostIdAsync(Thread.Id, userId) : null);
-        InitialPage ??= await ThreadService.GetInitialPostsAsync(Thread.Id, InitialReadState.LastReadPostId);
+        InitialPage ??= await ThreadService.GetInitialPostsAsync(Thread.Id, userId, InitialReadState.LastReadPostId);
         hasOlder = InitialPage.HasOlder;
         posts.AddRange(InitialPage.Posts.Select(ToDisplay));
 
@@ -313,7 +321,7 @@
             Notifier.PostEdited += OnPostEdited;
 
             // Inlägg som skrevs mellan förrenderingen och att kretsen startade.
-            Append(await ThreadService.GetPostsAfterAsync(Thread.Id, LastPostId));
+            Append(await ThreadService.GetPostsAfterAsync(Thread.Id, LastPostId, userId));
 
             // Öppna vid första olästa om det finns, annars längst ner.
             if (firstUnreadId is null)
@@ -391,7 +399,7 @@
         loadingOlder = true;
         try
         {
-            var older = await ThreadService.GetPostsBeforeAsync(Thread.Id, posts[0].Item.Id);
+            var older = await ThreadService.GetPostsBeforeAsync(Thread.Id, posts[0].Item.Id, userId);
 
             // Inlägget som var överst ska stå kvar på samma plats på skärmen när äldre läggs in ovanför.
             var anchorId = $"post-{posts[0].Item.Id}";
@@ -467,7 +475,7 @@
         {
             try
             {
-                var newer = await ThreadService.GetPostsAfterAsync(Thread.Id, LastPostId);
+                var newer = await ThreadService.GetPostsAfterAsync(Thread.Id, LastPostId, userId);
                 if (newer.Count == 0 || module is null)
                     return;
 
@@ -521,7 +529,7 @@
         {
             try
             {
-                if (await ThreadService.GetPostAsync(Thread.Id, postId) is { } updated && Replace(updated))
+                if (await ThreadService.GetPostAsync(Thread.Id, postId, userId) is { } updated && Replace(updated))
                     StateHasChanged();
             }
             catch (Exception ex)

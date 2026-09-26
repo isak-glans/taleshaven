@@ -6,7 +6,14 @@
         <a class="character-card card card-body" href="campaigns/@CampaignId/characters/@character.Id">
             <Avatar Name="@character.Name" ImageUrl="@character.AvatarUrl" ColorKey="@($"character-{character.Id}")" Size="56" />
             <div class="character-card-text">
-                <div class="fw-semibold character-name">@character.Name</div>
+                <div class="fw-semibold character-name">
+                    @character.Name
+                    @if (character.IsHidden)
+                    {
+                        @* Dolda NPC:er skickas bara till GM (B16). *@
+                        <span class="badge text-bg-warning align-middle">Dold</span>
+                    }
+                </div>
                 <div class="small text-secondary">
                     @(character.IsNpc ? "NPC" : $"Spelas av {character.OwnerName}")
                     @if (character.RuleSystem is not null)

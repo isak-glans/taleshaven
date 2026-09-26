@@ -1,16 +1,14 @@
-﻿@page "/campaigns/{CampaignId:int}/characters/new"
+@page "/campaigns/{CampaignId:int}/characters/new"
 @page "/campaigns/{CampaignId:int}/characters/{CharacterId:int}/edit"
 @attribute [Authorize]
 @rendermode InteractiveServer
 
 @using Taleshaven.Core.Characters
-@using Taleshaven.Core.Media
 
 @* Skapa eller redigera en karaktär. Spelare skapar egna karaktärer, GM skapar NPC:er. *@
 
 @inject ICampaignService CampaignService
 @inject ICharacterService CharacterService
-@inject IImageProcessor ImageProcessor
 @inject NavigationManager NavigationManager
 
 @if (!loaded || LoadedCampaign is null)
@@ -33,22 +31,9 @@
 <div class="character-editor">
     <h2 class="h4 mb-3">@Heading</h2>
 
-    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
-        <Avatar Name="@(string.IsNullOrWhiteSpace(name) ? "?" : name)" ImageUrl="@CurrentImageUrl"
-                ColorKey="@($"character-{CharacterId}")" Size="96" />
-        <div>
-            <label for="character-image" class="form-label mb-1">Bild</label>
-            <InputFile id="character-image" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp" OnChange="OnImageSelectedAsync" />
-            <div class="form-text">JPG, PNG eller WebP, högst 5 MB. Bilden beskärs till en kvadrat.</div>
-            @if (CurrentImageUrl is not null)
-            {
-                <button type="button" class="btn btn-link btn-sm px-0 text-danger" @onclick="RemoveImage">Ta bort bild</button>
-            }
-            @if (imageError is not null)
-            {
-                <div class="text-danger small" role="alert">@imageError</div>
-            }
-        </div>
+    @* Porträtt väljs ur sajtens bibliotek i stället för att laddas upp (B19). *@
+    <div class="mb-3">
+        <PortraitPicker Name="@name" ColorKey="@($"character-{CharacterId}")" @bind-Value="portraitId" @bind-Url="portraitUrl" />
     </div>
 
     <div class="row g-3 mb-3">
@@ -68,6 +53,25 @@
                 <input id="character-url" type="url" class="form-control" maxlength="@CharacterLimits.SheetUrlMaxLength"
                        placeholder="https://…" @bind="sheetUrl" />
             </div>
+        }
+        @if (IsNpc)
+        {
+            @* Dold NPC (B16): spelarna ser bara aliaset och en siluett tills GM visar den. *@
+            <div class="col-md-6 d-flex align-items-end">
+                <div class="form-check mb-2">
+                    <input id="character-hidden" type="checkbox" class="form-check-input" @bind="hidden" />
+                    <label for="character-hidden" class="form-check-label">Dold för spelarna</label>
+                </div>
+            </div>
+            @if (hidden)
+            {
+                <div class="col-md-6">
+                    <label for="character-alias" class="form-label">Alias <span class="text-secondary">(det spelarna ser)</span></label>
+                    <input id="character-alias" class="form-control" maxlength="@CharacterLimits.NameMaxLength"
+                           placeholder="@Character.UnknownName" @bind="alias" />
+                    <div class="form-text">Utan alias visas "@Character.UnknownName". När du tar bort markeringen syns det riktiga namnet och porträttet, även i gamla inlägg.</div>
+                </div>
+            }
         }
     </div>
 
@@ -135,10 +139,10 @@
     private string? name;
     private string? ruleSystem;
     private string? sheetUrl;
-    private byte[]? newAvatar;
-    private string? previewUrl;
-    private bool removeAvatar;
-    private string? imageError;
+    private bool hidden;
+    private string? alias;
+    private int? portraitId;
+    private string? portraitUrl;
     private bool confirmDelete;
     private string? deleteError;
 
@@ -159,7 +163,6 @@
         ? $"campaigns/{CampaignId}/characters"
         : $"campaigns/{CampaignId}/characters/{LoadedCharacter.Id}";
 
-    private string? CurrentImageUrl => previewUrl ?? (removeAvatar ? null : LoadedCharacter?.AvatarUrl);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -191,63 +194,32 @@
         name ??= LoadedCharacter?.Name;
         ruleSystem ??= LoadedCharacter?.RuleSystem;
         sheetUrl ??= LoadedCharacter?.SheetUrl;
+        alias ??= LoadedCharacter?.Alias;
+        if (!loaded)
+        {
+            hidden = LoadedCharacter?.IsHidden ?? false;
+            portraitId = LoadedCharacter?.PortraitId;
+            portraitUrl = LoadedCharacter?.AvatarUrl;
+        }
         loaded = true;
-    }
-
-    // Bilden behandlas direkt när den väljs, så att förhandsvisningen visar exakt det som sparas.
-    private async Task OnImageSelectedAsync(InputFileChangeEventArgs e)
-    {
-        imageError = null;
-        if (e.File.Size > ImageLimits.MaxUploadBytes)
-        {
-            imageError = "Bilden får vara högst 5 MB.";
-            return;
-        }
-
-        try
-        {
-            await using var upload = e.File.OpenReadStream(ImageLimits.MaxUploadBytes);
-            using var buffer = new MemoryStream();
-            await upload.CopyToAsync(buffer);
-            buffer.Position = 0;
-
-            newAvatar = ImageProcessor.CreateAvatar(buffer);
-            previewUrl = $"data:{IImageStore.AvatarContentType};base64,{Convert.ToBase64String(newAvatar)}";
-            removeAvatar = false;
-        }
-        catch (CampaignRuleException ex)
-        {
-            imageError = ex.Message;
-        }
-        catch (IOException)
-        {
-            imageError = "Bilden kunde inte läsas.";
-        }
-    }
-
-    private void RemoveImage()
-    {
-        newAvatar = null;
-        previewUrl = null;
-        removeAvatar = true;
     }
 
     // Editorn innehåller karaktärsdokumentet, eller för en NPC anteckningen som bara GM ser.
     private async Task<string?> SaveAsync(string text)
     {
         var input = IsNpc
-            ? new CharacterInput(name, Sheet: null, SheetUrl: null, RuleSystem: null, GmNote: text)
+            ? new CharacterInput(name, Sheet: null, SheetUrl: null, RuleSystem: null, GmNote: text, Hidden: hidden, Alias: alias)
             : new CharacterInput(name, text, sheetUrl, ruleSystem);
         try
         {
             int id;
             if (LoadedCharacter is null)
             {
-                id = await CharacterService.CreateAsync(CampaignId, userId, input, newAvatar);
+                id = await CharacterService.CreateAsync(CampaignId, userId, input, portraitId);
             }
             else
             {
-                await CharacterService.UpdateAsync(CampaignId, LoadedCharacter.Id, userId, input, newAvatar, removeAvatar);
+                await CharacterService.UpdateAsync(CampaignId, LoadedCharacter.Id, userId, input, portraitId);
                 id = LoadedCharacter.Id;
             }
 

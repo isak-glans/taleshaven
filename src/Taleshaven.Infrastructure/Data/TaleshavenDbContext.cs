@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Taleshaven.Core.Campaigns;
 using Taleshaven.Core.Characters;
 using Taleshaven.Core.Chronicle;
+using Taleshaven.Core.Portraits;
 using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Identity;
 
@@ -19,6 +20,7 @@ public class TaleshavenDbContext(DbContextOptions<TaleshavenDbContext> options) 
     public DbSet<ReadMarker> ReadMarkers => Set<ReadMarker>();
     public DbSet<ChronicleChapter> ChronicleChapters => Set<ChronicleChapter>();
     public DbSet<Character> Characters => Set<Character>();
+    public DbSet<Portrait> Portraits => Set<Portrait>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

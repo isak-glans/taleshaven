@@ -32,6 +32,11 @@
             {
                 <span class="badge text-bg-light border align-middle">Arkiverad</span>
             }
+            @if (character.IsHidden)
+            {
+                @* Dolda NPC:er når bara GM hit; för andra ger sidan 404 (B16). *@
+                <span class="badge text-bg-warning align-middle">Dold</span>
+            }
         </h2>
         <div class="text-secondary small">
             @(character.IsNpc ? "NPC hos GM" : $"Spelas av {character.OwnerName}")
@@ -41,6 +46,10 @@
             }
             · uppdaterad @Dates.DateTime(character.UpdatedAt)
         </div>
+        @if (character.IsHidden)
+        {
+            <div class="small">Spelarna ser: <strong>@(character.Alias ?? Character.UnknownName)</strong></div>
+        }
         @if (!character.IsNpc && character.SheetUrl is not null)
         {
             <a class="small" href="@character.SheetUrl" target="_blank" rel="nofollow noopener noreferrer">Fullständigt rollformulär ↗</a>

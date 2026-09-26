@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Taleshaven.Core.Campaigns;
 using Taleshaven.Core.Characters;
+using Taleshaven.Core.Portraits;
 using Taleshaven.Infrastructure.Identity;
 
 namespace Taleshaven.Infrastructure.Data.Configurations;
@@ -15,7 +16,13 @@ internal sealed class CharacterConfiguration : IEntityTypeConfiguration<Characte
         builder.Property(c => c.SheetUrl).HasMaxLength(CharacterLimits.SheetUrlMaxLength);
         builder.Property(c => c.RuleSystem).HasMaxLength(CharacterLimits.RuleSystemMaxLength);
         builder.Property(c => c.GmNote).HasMaxLength(CharacterLimits.GmNoteMaxLength);
-        builder.Property(c => c.AvatarKey).HasMaxLength(64);
+        builder.Property(c => c.Alias).HasMaxLength(CharacterLimits.NameMaxLength);
+
+        // Tas porträttet bort ur biblioteket får karaktären initialer (B20).
+        builder.HasOne<Portrait>()
+            .WithMany()
+            .HasForeignKey(c => c.PortraitId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasOne<Campaign>()
             .WithMany()

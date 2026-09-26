@@ -1,13 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Taleshaven.Core;
 using Taleshaven.Core.Campaigns;
-using Taleshaven.Core.Media;
 using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Data;
 
 namespace Taleshaven.Infrastructure.Campaigns;
 
-internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbFactory, IImageStore imageStore, TimeProvider timeProvider) : ICampaignService
+internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbFactory, TimeProvider timeProvider) : ICampaignService
 {
     public async Task<IReadOnlyList<CampaignListItem>> GetCampaignsAsync(string viewerId, CancellationToken cancellationToken = default)
     {
@@ -138,17 +137,9 @@ internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbF
         if (!string.Equals(confirmationName?.Trim(), campaign.Name, StringComparison.Ordinal))
             throw new CampaignRuleException("Skriv kampanjens namn exakt för att bekräfta att den ska raderas.");
 
-        var avatarKeys = await db.Characters
-            .Where(c => c.CampaignId == campaignId && c.AvatarKey != null)
-            .Select(c => c.AvatarKey!)
-            .ToListAsync(cancellationToken);
-
         // Databasen raderar allt som hör till kampanjen i samma sats (kaskad): kanaler, inlägg, historik,
-        // krönika, karaktärer, ansökningar, medlemskap och läspositioner.
+        // krönika, karaktärer, ansökningar, medlemskap och läspositioner. Porträtten ligger kvar i biblioteket (B19).
         await db.Campaigns.Where(c => c.Id == campaignId).ExecuteDeleteAsync(cancellationToken);
-
-        foreach (var key in avatarKeys)
-            imageStore.DeleteAvatar(key);
     }
 
     private static async Task<Campaign> LoadManagedCampaignAsync(TaleshavenDbContext db, int campaignId, string userId, CancellationToken cancellationToken)

@@ -9,31 +9,31 @@ namespace Taleshaven.Infrastructure.Media;
 /// </summary>
 internal sealed partial class LocalImageStore(string rootPath) : IImageStore
 {
-    private string AvatarDirectory => Path.Combine(rootPath, "avatars");
+    private string PortraitDirectory => Path.Combine(rootPath, "portraits");
 
-    public async Task<string> SaveAvatarAsync(byte[] image, CancellationToken cancellationToken = default)
+    public async Task<string> SavePortraitAsync(byte[] image, CancellationToken cancellationToken = default)
     {
-        Directory.CreateDirectory(AvatarDirectory);
+        Directory.CreateDirectory(PortraitDirectory);
         var key = $"{Guid.NewGuid():N}.webp";
-        await File.WriteAllBytesAsync(Path.Combine(AvatarDirectory, key), image, cancellationToken);
+        await File.WriteAllBytesAsync(Path.Combine(PortraitDirectory, key), image, cancellationToken);
         return key;
     }
 
-    public Stream? OpenAvatar(string key)
+    public Stream? OpenPortrait(string key)
     {
         if (!IsValidKey(key))
             return null;
 
-        var path = Path.Combine(AvatarDirectory, key);
+        var path = Path.Combine(PortraitDirectory, key);
         return File.Exists(path) ? File.OpenRead(path) : null;
     }
 
-    public void DeleteAvatar(string key)
+    public void DeletePortrait(string key)
     {
         if (!IsValidKey(key))
             return;
 
-        var path = Path.Combine(AvatarDirectory, key);
+        var path = Path.Combine(PortraitDirectory, key);
         if (File.Exists(path))
             File.Delete(path);
     }

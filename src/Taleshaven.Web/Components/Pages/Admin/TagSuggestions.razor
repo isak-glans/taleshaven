@@ -1,0 +1,41 @@
+@using Taleshaven.Core.Portraits
+
+@* Redan använda taggar att klicka på (PB-2). Filtreras på det ord som skrivs just nu. *@
+
+@if (Visible.Count > 0)
+{
+    <div class="tag-suggestions d-flex flex-wrap gap-1 mt-1" aria-label="Föreslagna taggar">
+        @foreach (var tag in Visible)
+        {
+            <button type="button" class="btn btn-sm btn-light border py-0 px-2 small" @onclick="() => OnPick.InvokeAsync(tag.Tag)">#@tag.Tag</button>
+        }
+    </div>
+}
+
+@code {
+    private const int MaxSuggestions = 12;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<TagCount> Tags { get; set; } = [];
+
+    /// <summary>Texten i taggfältet. Det sista, ofärdiga ordet filtrerar förslagen.</summary>
+    [Parameter]
+    public string? Current { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnPick { get; set; }
+
+    private IReadOnlyList<TagCount> Visible
+    {
+        get
+        {
+            var entered = PortraitTags.ParseSearch(Current);
+            var typing = Current is { Length: > 0 } text && !char.IsWhiteSpace(text[^1]) ? entered.LastOrDefault() : null;
+            return Tags
+                .Where(t => !entered.Contains(t.Tag) || t.Tag == typing)
+                .Where(t => typing is null || (t.Tag.StartsWith(typing, StringComparison.Ordinal) && t.Tag != typing))
+                .Take(MaxSuggestions)
+                .ToList();
+        }
+    }
+}

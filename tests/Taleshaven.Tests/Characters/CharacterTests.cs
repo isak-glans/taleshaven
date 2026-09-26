@@ -25,7 +25,7 @@ public class CharacterTests
         Assert.Equal("**HP** 12/12", character.Sheet);
         Assert.Equal("https://www.dndbeyond.com/characters/123", character.SheetUrl);
         Assert.Equal("D&D 5e", character.RuleSystem);
-        Assert.Null(character.AvatarKey);
+        Assert.Null(character.PortraitId);
     }
 
     [Fact]
@@ -138,6 +138,57 @@ public class CharacterTests
 
         Assert.Throws<CampaignRuleException>(() => character.SetArchived(true));
         Assert.False(character.IsArchived);
+    }
+
+    [Fact]
+    public void Npc_CanBeHiddenWithAlias()
+    {
+        var npc = Character.Create(7, "gm", isNpc: true,
+            new CharacterInput("Hövdingen Grok", null, null, null, Hidden: true, Alias: "  Den maskerade  "), Now);
+
+        Assert.True(npc.IsHidden);
+        Assert.Equal("Den maskerade", npc.Alias);
+
+        npc.Update(new CharacterInput("Hövdingen Grok", null, null, null, Hidden: false, Alias: "Den maskerade"), Now);
+        Assert.False(npc.IsHidden);
+    }
+
+    [Fact]
+    public void Npc_AliasHasMaxLength()
+    {
+        Assert.Throws<CampaignRuleException>(() => Character.Create(7, "gm", isNpc: true,
+            new CharacterInput("Grok", null, null, null, Hidden: true, Alias: new string('a', CharacterLimits.NameMaxLength + 1)), Now));
+    }
+
+    [Fact]
+    public void PlayerCharacter_IsNeverHidden()
+    {
+        var character = Character.Create(7, "anna", isNpc: false, new CharacterInput("Aldric", "HP 12", null, null, Hidden: true, Alias: "X"), Now);
+
+        Assert.False(character.IsHidden);
+        Assert.Null(character.Alias);
+    }
+
+    [Theory]
+    [InlineData(false, null, "Grok")]
+    [InlineData(true, "Den maskerade", "Den maskerade")]
+    [InlineData(true, null, "Okänd")]
+    public void NameForPlayers_UsesAliasWhileHidden(bool hidden, string? alias, string expected)
+    {
+        Assert.Equal(expected, Character.NameForPlayers("Grok", hidden, alias));
+    }
+
+    [Fact]
+    public void PostCharacter_HidesRealNameAndPortraitFromPlayers()
+    {
+        var forPlayer = PostCharacter.ForViewer(5, "Grok", true, "/media/avatars/abc", isHidden: true, alias: "Den maskerade", viewerIsGameMaster: false);
+        Assert.Equal(new PostCharacter(5, "Den maskerade", true, null, IsHidden: true), forPlayer);
+
+        var forGm = PostCharacter.ForViewer(5, "Grok", true, "/media/avatars/abc", isHidden: true, alias: "Den maskerade", viewerIsGameMaster: true);
+        Assert.Equal(new PostCharacter(5, "Grok", true, "/media/avatars/abc", IsHidden: true, Alias: "Den maskerade"), forGm);
+
+        var visible = PostCharacter.ForViewer(5, "Grok", true, "/media/avatars/abc", isHidden: false, alias: "Den maskerade", viewerIsGameMaster: false);
+        Assert.Equal(new PostCharacter(5, "Grok", true, "/media/avatars/abc"), visible);
     }
 
     [Fact]

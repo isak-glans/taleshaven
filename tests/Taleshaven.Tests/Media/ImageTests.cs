@@ -23,15 +23,15 @@ public class SkiaImageProcessorTests
     [InlineData(600, 300, SKEncodedImageFormat.Png)]
     [InlineData(300, 900, SKEncodedImageFormat.Jpeg)]
     [InlineData(100, 100, SKEncodedImageFormat.Webp)]
-    public void CreatesSquareWebpAvatar(int width, int height, SKEncodedImageFormat format)
+    public void CreatesSquareWebpPortrait(int width, int height, SKEncodedImageFormat format)
     {
-        var avatar = processor.CreateAvatar(Image(width, height, format));
+        var avatar = processor.CreatePortrait(Image(width, height, format));
 
         using var codec = SKCodec.Create(new MemoryStream(avatar));
         Assert.NotNull(codec);
         Assert.Equal(SKEncodedImageFormat.Webp, codec.EncodedFormat);
-        Assert.Equal(ImageLimits.AvatarSize, codec.Info.Width);
-        Assert.Equal(ImageLimits.AvatarSize, codec.Info.Height);
+        Assert.Equal(ImageLimits.PortraitSize, codec.Info.Width);
+        Assert.Equal(ImageLimits.PortraitSize, codec.Info.Height);
     }
 
     [Fact]
@@ -39,13 +39,13 @@ public class SkiaImageProcessorTests
     {
         var notAnImage = new MemoryStream("<script>alert(1)</script>"u8.ToArray());
 
-        Assert.Throws<CampaignRuleException>(() => processor.CreateAvatar(notAnImage));
+        Assert.Throws<CampaignRuleException>(() => processor.CreatePortrait(notAnImage));
     }
 
     [Fact]
     public void RejectsHugeDimensions()
     {
-        Assert.Throws<CampaignRuleException>(() => processor.CreateAvatar(Image(ImageLimits.MaxSourceDimension + 1, 2)));
+        Assert.Throws<CampaignRuleException>(() => processor.CreatePortrait(Image(ImageLimits.MaxSourceDimension + 1, 2)));
     }
 }
 
@@ -60,21 +60,21 @@ public class LocalImageStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task SavesOpensAndDeletesAvatar()
+    public async Task SavesOpensAndDeletesPortrait()
     {
         var store = new LocalImageStore(root);
 
-        var key = await store.SaveAvatarAsync([1, 2, 3]);
+        var key = await store.SavePortraitAsync([1, 2, 3]);
 
         Assert.Matches("^[0-9a-f]{32}\\.webp$", key);
-        using (var stream = store.OpenAvatar(key))
+        using (var stream = store.OpenPortrait(key))
         {
             Assert.NotNull(stream);
             Assert.Equal(3, stream.Length);
         }
 
-        store.DeleteAvatar(key);
-        Assert.Null(store.OpenAvatar(key));
+        store.DeletePortrait(key);
+        Assert.Null(store.OpenPortrait(key));
     }
 
     [Theory]
@@ -88,6 +88,6 @@ public class LocalImageStoreTests : IDisposable
         var store = new LocalImageStore(root);
 
         Assert.False(LocalImageStore.IsValidKey(key));
-        Assert.Null(store.OpenAvatar(key));
+        Assert.Null(store.OpenPortrait(key));
     }
 }

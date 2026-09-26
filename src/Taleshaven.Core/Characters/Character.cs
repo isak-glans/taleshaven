@@ -29,8 +29,19 @@ public class Character
     /// <summary>Arkiverade NPC:er göms i "Skriv som" men finns kvar i gamla inlägg (B17). Alltid false för spelarkaraktärer.</summary>
     public bool IsArchived { get; private set; }
 
-    /// <summary>Nyckel till den uppladdade bilden i bildlagringen, eller null.</summary>
-    public string? AvatarKey { get; private set; }
+    /// <summary>Dold NPC (B16): spelarna ser bara <see cref="Alias"/> och en siluett, varken på Karaktärer eller i chatten.</summary>
+    public bool IsHidden { get; private set; }
+
+    /// <summary>Namnet spelarna ser medan NPC:n är dold. Utan alias visas <see cref="UnknownName"/>.</summary>
+    public string? Alias { get; private set; }
+
+    public const string UnknownName = "Okänd";
+
+    /// <summary>Namnet som visas för den som inte får se dolda NPC:er.</summary>
+    public static string NameForPlayers(string name, bool isHidden, string? alias) => isHidden ? alias ?? UnknownName : name;
+
+    /// <summary>Porträtt ur biblioteket (B19), eller null för initialer. Blir null om porträttet tas bort (B20).</summary>
+    public int? PortraitId { get; private set; }
 
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -68,8 +79,14 @@ public class Character
             if (note?.Length > CharacterLimits.GmNoteMaxLength)
                 throw new CampaignRuleException($"Anteckningen får vara högst {CharacterLimits.GmNoteMaxLength} tecken.");
 
+            var alias = string.IsNullOrWhiteSpace(input.Alias) ? null : input.Alias.Trim();
+            if (alias?.Length > CharacterLimits.NameMaxLength)
+                throw new CampaignRuleException($"Aliaset får vara högst {CharacterLimits.NameMaxLength} tecken.");
+
             Name = name;
             GmNote = note;
+            IsHidden = input.Hidden;
+            Alias = alias;
             UpdatedAt = now;
             return;
         }
@@ -98,9 +115,9 @@ public class Character
         IsArchived = archived;
     }
 
-    public void SetAvatar(string? avatarKey, DateTimeOffset now)
+    public void SetPortrait(int? portraitId, DateTimeOffset now)
     {
-        AvatarKey = avatarKey;
+        PortraitId = portraitId;
         UpdatedAt = now;
     }
 
@@ -120,8 +137,10 @@ public class Character
     }
 }
 
-/// <summary>Uppgifter för att skapa eller ändra en karaktär. För NPC:er används bara <see cref="Name"/> och <see cref="GmNote"/>.</summary>
-public sealed record CharacterInput(string? Name, string? Sheet, string? SheetUrl, string? RuleSystem, string? GmNote = null);
+/// <summary>Uppgifter för att skapa eller ändra en karaktär. För NPC:er används bara <see cref="Name"/>, <see cref="GmNote"/>,
+/// <see cref="Hidden"/> och <see cref="Alias"/>.</summary>
+public sealed record CharacterInput(
+    string? Name, string? Sheet, string? SheetUrl, string? RuleSystem, string? GmNote = null, bool Hidden = false, string? Alias = null);
 
 public static class CharacterLimits
 {

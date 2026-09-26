@@ -1,0 +1,43 @@
+.portrait-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.portrait-tag {
+    font-size: 0.75rem;
+    padding: 0 0.4rem;
+}
+
+.portrait-grid {
+    display: grid;
+    gap: 0.4rem;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    max-height: 22rem;
+    overflow-y: auto;
+}
+
+.portrait-choice {
+    aspect-ratio: 1;
+    background: none;
+    border: 2px solid transparent;
+    border-radius: 0.5rem;
+    padding: 0;
+}
+
+.portrait-choice img {
+    border-radius: 0.375rem;
+    display: block;
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+}
+
+.portrait-choice:hover,
+.portrait-choice:focus-visible {
+    border-color: var(--bs-primary-border-subtle);
+}
+
+.portrait-choice.selected {
+    border-color: var(--bs-primary);
+}

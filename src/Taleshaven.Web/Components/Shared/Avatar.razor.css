@@ -11,3 +11,12 @@
     font-weight: 600;
     justify-content: center;
 }
+
+.avatar-silhouette {
+    align-items: flex-end;
+    background-color: var(--bs-secondary-bg);
+    color: var(--bs-secondary-color);
+    display: inline-flex;
+    justify-content: center;
+    overflow: hidden;
+}

@@ -29,7 +29,9 @@ var connectionString = builder.Configuration.GetConnectionString("Taleshaven")
     ?? throw new InvalidOperationException("Connection string 'Taleshaven' not found.");
 // Uppladdade bilder lagras utanför wwwroot och serveras via /media (se nedan).
 var mediaPath = Path.Combine(builder.Environment.ContentRootPath, builder.Configuration["Storage:MediaPath"] ?? "App_Data/media");
-builder.Services.AddTaleshavenInfrastructure(connectionString, mediaPath);
+// Sajtens första administratörer anges med e-postadress (B18); därefter delar de ut roller på /admin/roles.
+var adminEmails = builder.Configuration.GetSection("Admin:Emails").Get<string[]>() ?? [];
+builder.Services.AddTaleshavenInfrastructure(connectionString, mediaPath, adminEmails);
 builder.Services.AddSingleton<PostNotifier>();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
@@ -72,16 +74,16 @@ app.MapRazorComponents<App>()
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 
-// Karaktärsbilder. Nyckeln är unik per uppladdning, så bilden kan cachas länge.
-app.MapGet("/media/avatars/{key}", (string key, IImageStore images, HttpContext context) =>
+// Porträtt ur biblioteket (B19). Nyckeln är unik per uppladdning, så bilden kan cachas länge.
+app.MapGet("/media/portraits/{key}", (string key, IImageStore images, HttpContext context) =>
     {
-        var stream = images.OpenAvatar(key);
+        var stream = images.OpenPortrait(key);
         if (stream is null)
             return Results.NotFound();
 
         context.Response.Headers.XContentTypeOptions = "nosniff";
         context.Response.Headers.CacheControl = "private, max-age=31536000, immutable";
-        return Results.File(stream, IImageStore.AvatarContentType);
+        return Results.File(stream, IImageStore.PortraitContentType);
     })
     .RequireAuthorization();
 

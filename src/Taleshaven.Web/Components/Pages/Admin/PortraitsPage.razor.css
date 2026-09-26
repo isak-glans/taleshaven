@@ -1,0 +1,21 @@
+.portrait-preview {
+    border-radius: 0.5rem;
+    height: 128px;
+    object-fit: cover;
+    width: 128px;
+}
+
+.portrait-cards {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+}
+
+.portrait-card-tags {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.portrait-card-source {
+    overflow-wrap: anywhere;
+}

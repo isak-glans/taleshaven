@@ -33,7 +33,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             CanWrite: CampaignPermissions.CanWritePost(access.Role, access.CampaignStatus, thread.Status));
     }
 
-    public async Task<PostPage> GetInitialPostsAsync(int threadId, long? lastReadPostId = null, CancellationToken cancellationToken = default)
+    public async Task<PostPage> GetInitialPostsAsync(int threadId, string viewerId, long? lastReadPostId = null, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
@@ -41,7 +41,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         var newest = await ToPostItemsAsync(db, db.Posts
             .Where(p => p.ThreadId == threadId)
             .OrderByDescending(p => p.Id)
-            .Take(ChatWindow.InitialMaxPosts + 1), cancellationToken);
+            .Take(ChatWindow.InitialMaxPosts + 1), viewerId, cancellationToken);
 
         var newestFirst = newest.Reverse().ToList();
         var times = newestFirst.Select(p => p.CreatedAt).ToList();
@@ -52,24 +52,24 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         return new PostPage(newest.Skip(newest.Count - count).ToList(), HasOlder: newest.Count > count);
     }
 
-    public async Task<PostPage> GetPostsBeforeAsync(int threadId, long beforePostId, CancellationToken cancellationToken = default)
+    public async Task<PostPage> GetPostsBeforeAsync(int threadId, long beforePostId, string viewerId, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
         var older = await ToPostItemsAsync(db, db.Posts
             .Where(p => p.ThreadId == threadId && p.Id < beforePostId)
             .OrderByDescending(p => p.Id)
-            .Take(ChatWindow.OlderPageSize + 1), cancellationToken);
+            .Take(ChatWindow.OlderPageSize + 1), viewerId, cancellationToken);
 
         var hasOlder = older.Count > ChatWindow.OlderPageSize;
         return new PostPage(older.Skip(hasOlder ? 1 : 0).ToList(), hasOlder);
     }
 
-    public async Task<IReadOnlyList<PostItem>> GetPostsAfterAsync(int threadId, long afterPostId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PostItem>> GetPostsAfterAsync(int threadId, long afterPostId, string viewerId, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-        return await ToPostItemsAsync(db, db.Posts.Where(p => p.ThreadId == threadId && p.Id > afterPostId), cancellationToken);
+        return await ToPostItemsAsync(db, db.Posts.Where(p => p.ThreadId == threadId && p.Id > afterPostId), viewerId, cancellationToken);
     }
 
     public async Task<PostItem> CreatePostAsync(int campaignId, int threadId, string userId, string? content, int? characterId = null, CancellationToken cancellationToken = default)
@@ -117,14 +117,14 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         db.PostRevisions.Add(post.Edit(content, timeProvider.GetUtcNow()));
         await db.SaveChangesAsync(cancellationToken);
 
-        return (await ToPostItemsAsync(db, db.Posts.Where(p => p.Id == postId), cancellationToken)).Single();
+        return (await ToPostItemsAsync(db, db.Posts.Where(p => p.Id == postId), userId, cancellationToken)).Single();
     }
 
-    public async Task<PostItem?> GetPostAsync(int threadId, long postId, CancellationToken cancellationToken = default)
+    public async Task<PostItem?> GetPostAsync(int threadId, long postId, string viewerId, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-        return (await ToPostItemsAsync(db, db.Posts.Where(p => p.Id == postId && p.ThreadId == threadId), cancellationToken))
+        return (await ToPostItemsAsync(db, db.Posts.Where(p => p.Id == postId && p.ThreadId == threadId), viewerId, cancellationToken))
             .SingleOrDefault();
     }
 
@@ -160,11 +160,12 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         db.Posts.Add(post);
         await db.SaveChangesAsync(cancellationToken);
 
-        return (await ToPostItemsAsync(db, db.Posts.Where(p => p.Id == post.Id), cancellationToken)).Single();
+        return (await ToPostItemsAsync(db, db.Posts.Where(p => p.Id == post.Id), post.AuthorId, cancellationToken)).Single();
     }
 
     // Projektionen sker efter filtrering och sortering, och ordningen återställs i minnet (äldst först).
-    private static async Task<IReadOnlyList<PostItem>> ToPostItemsAsync(TaleshavenDbContext db, IQueryable<Post> posts, CancellationToken cancellationToken)
+    private static async Task<IReadOnlyList<PostItem>> ToPostItemsAsync(
+        TaleshavenDbContext db, IQueryable<Post> posts, string viewerId, CancellationToken cancellationToken)
     {
         var rows = await (
                 from p in posts
@@ -179,6 +180,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                     p.AuthorId,
                     u.DisplayName,
                     IsGameMaster = p.AuthorId == c.GameMasterId,
+                    ViewerIsGameMaster = c.GameMasterId == viewerId,
                     p.Content,
                     p.CreatedAt,
                     p.EditedAt,
@@ -186,7 +188,9 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                     CharacterId = (int?)ch.Id,
                     CharacterName = ch.Name,
                     CharacterIsNpc = (bool?)ch.IsNpc,
-                    CharacterAvatarKey = ch.AvatarKey,
+                    CharacterAvatarKey = db.Portraits.Where(pt => pt.Id == ch.PortraitId).Select(pt => pt.ImageKey).FirstOrDefault(),
+                    CharacterIsHidden = (bool?)ch.IsHidden,
+                    CharacterAlias = ch.Alias,
                 })
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -196,9 +200,10 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             .Select(r => new PostItem(
                 r.Id, r.AuthorId, r.DisplayName, r.IsGameMaster, r.Content, r.CreatedAt,
                 r.Roll is null ? null : DiceRollView.From(r.Roll),
-                r.CharacterId is not { } characterId ? null : new PostCharacter(
+                r.CharacterId is not { } characterId ? null : PostCharacter.ForViewer(
                     characterId, r.CharacterName!, r.CharacterIsNpc ?? false,
-                    r.CharacterAvatarKey is null ? null : IImageStore.AvatarUrl(r.CharacterAvatarKey)),
+                    r.CharacterAvatarKey is null ? null : IImageStore.PortraitUrl(r.CharacterAvatarKey),
+                    r.CharacterIsHidden ?? false, r.CharacterAlias, r.ViewerIsGameMaster),
                 r.EditedAt))
             .ToList();
     }

@@ -12,7 +12,7 @@ internal sealed class SkiaImageProcessor : IImageProcessor
 {
     private const int WebpQuality = 85;
 
-    public byte[] CreateAvatar(Stream source)
+    public byte[] CreatePortrait(Stream source)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -33,9 +33,9 @@ internal sealed class SkiaImageProcessor : IImageProcessor
         // Centrerad kvadrat ur originalet.
         var side = Math.Min(oriented.Width, oriented.Height);
         var sourceRect = SKRect.Create((oriented.Width - side) / 2f, (oriented.Height - side) / 2f, side, side);
-        var targetRect = SKRect.Create(0, 0, ImageLimits.AvatarSize, ImageLimits.AvatarSize);
+        var targetRect = SKRect.Create(0, 0, ImageLimits.PortraitSize, ImageLimits.PortraitSize);
 
-        using var surface = SKSurface.Create(new SKImageInfo(ImageLimits.AvatarSize, ImageLimits.AvatarSize, SKColorType.Rgba8888, SKAlphaType.Premul));
+        using var surface = SKSurface.Create(new SKImageInfo(ImageLimits.PortraitSize, ImageLimits.PortraitSize, SKColorType.Rgba8888, SKAlphaType.Premul));
         surface.Canvas.Clear(SKColors.Transparent);
         using (var image = SKImage.FromBitmap(oriented))
         {

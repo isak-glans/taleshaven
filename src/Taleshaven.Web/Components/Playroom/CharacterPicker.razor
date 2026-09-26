@@ -49,6 +49,10 @@
                                 <span class="character-picker-none" aria-hidden="true">–</span>
                             }
                             <span class="character-picker-name">@entry.Name</span>
+                            @if (entry.IsHidden)
+                            {
+                                <span class="badge text-bg-warning ms-auto">Dold</span>
+                            }
                         </div>
                     }
                 }
@@ -209,9 +213,9 @@
         visibleGroups = groups;
     }
 
-    private static Entry ToEntry(CharacterOption option) => new(option.Id, option.Name, option.AvatarUrl);
+    private static Entry ToEntry(CharacterOption option) => new(option.Id, option.Name, option.AvatarUrl, option.IsHidden);
 
-    private sealed record Entry(int? Id, string Name, string? AvatarUrl);
+    private sealed record Entry(int? Id, string Name, string? AvatarUrl, bool IsHidden = false);
 
     private sealed record Group(string? Heading, List<Entry> Entries);
 }

@@ -1,0 +1,169 @@
+@page "/admin/roles"
+@attribute [Authorize]
+
+@using Taleshaven.Core.Site
+@using Taleshaven.Web.Components.Account
+@using Taleshaven.Web.Components.Account.Shared
+
+@* Roller för hela sajten (B18). Bara administratörer; för andra finns sidan inte. *@
+
+@inject ISiteRoleService RoleService
+@inject IdentityRedirectManager RedirectManager
+@inject NavigationManager NavigationManager
+
+@if (holders is null)
+{
+    return;
+}
+
+<PageTitle>Roller</PageTitle>
+
+<h1 class="h3 mb-1">Roller</h1>
+<p class="text-secondary">
+    <strong>Administratörer</strong> får allt, även dela ut roller. <strong>Managers</strong> sköter porträttbiblioteket.
+</p>
+
+<StatusMessage Message="@errorMessage" />
+
+<form method="post" @formname="grant" @onsubmit="GrantAsync" class="card card-body mb-4 role-grant">
+    <AntiforgeryToken />
+    <h2 class="h6">Ge en roll</h2>
+    <div class="row g-2 align-items-end">
+        <div class="col-sm-6">
+            <label for="grant-email" class="form-label small">E-postadress</label>
+            <input id="grant-email" name="Grant.Email" type="email" class="form-control" required value="@Grant?.Email" />
+        </div>
+        <div class="col-sm-3">
+            <label for="grant-role" class="form-label small">Roll</label>
+            <select id="grant-role" name="Grant.Role" class="form-select">
+                @foreach (var role in SiteRoles.All)
+                {
+                    <option value="@role" selected="@((Grant?.Role ?? SiteRole.Manager) == role)">@SiteRoles.DisplayName(role)</option>
+                }
+            </select>
+        </div>
+        <div class="col-sm-3">
+            <button type="submit" class="btn btn-primary w-100">Ge roll</button>
+        </div>
+    </div>
+</form>
+
+@foreach (var role in SiteRoles.All)
+{
+    var inRole = holders.Where(h => h.Role == role).ToList();
+    <h2 class="h5">@(role == SiteRole.Administrator ? "Administratörer" : "Managers")</h2>
+    @if (inRole.Count == 0)
+    {
+        <p class="text-secondary">Ingen ännu.</p>
+        continue;
+    }
+
+    <ul class="list-group mb-4 role-list" data-role="@role">
+        @foreach (var holder in inRole)
+        {
+            <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+                <div>
+                    <div class="fw-semibold">@holder.DisplayName</div>
+                    <div class="small text-secondary">@holder.Email</div>
+                </div>
+                @if (holder.FromConfiguration)
+                {
+                    <span class="badge text-bg-light border ms-auto" title="Anges i Admin:Emails i konfigurationen">Konfiguration</span>
+                }
+                else if (holder.Role == SiteRole.Administrator && holder.UserId == userId)
+                {
+                    <span class="small text-secondary ms-auto">Det här är du</span>
+                }
+                else
+                {
+                    <form method="post" @formname="@($"revoke-{holder.Role}-{holder.UserId}")" @onsubmit="RevokeAsync" class="ms-auto">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="Revoke.UserId" value="@holder.UserId" />
+                        <input type="hidden" name="Revoke.Role" value="@holder.Role" />
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Ta bort roll</button>
+                    </form>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "grant")]
+    private GrantModel? Grant { get; set; }
+
+    [SupplyParameterFromForm]
+    private RevokeModel? Revoke { get; set; }
+
+    private string userId = "";
+    private IReadOnlyList<SiteRoleHolder>? holders;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+
+        if (!SitePermissions.CanManageRoles(await RoleService.GetRolesAsync(userId)))
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        holders = await RoleService.GetHoldersAsync(userId);
+    }
+
+    private async Task GrantAsync()
+    {
+        if (Grant?.Role is not { } role)
+            return;
+
+        try
+        {
+            await RoleService.GrantAsync(userId, Grant.Email, role);
+        }
+        catch (CampaignRuleException ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+            return;
+        }
+
+        RedirectManager.RedirectToWithStatus("admin/roles", $"{Grant.Email?.Trim()} är nu {SiteRoles.DisplayName(role).ToLowerInvariant()}.", HttpContext);
+    }
+
+    private async Task RevokeAsync()
+    {
+        if (Revoke is not { UserId.Length: > 0, Role: { } role })
+            return;
+
+        var name = holders?.FirstOrDefault(h => h.UserId == Revoke.UserId)?.DisplayName ?? "Användaren";
+        try
+        {
+            await RoleService.RevokeAsync(userId, Revoke.UserId, role);
+        }
+        catch (CampaignRuleException ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+            return;
+        }
+
+        RedirectManager.RedirectToWithStatus("admin/roles", $"{name} är inte längre {SiteRoles.DisplayName(role).ToLowerInvariant()}.", HttpContext);
+    }
+
+    private sealed class GrantModel
+    {
+        public string? Email { get; set; }
+        public SiteRole? Role { get; set; }
+    }
+
+    private sealed class RevokeModel
+    {
+        public string? UserId { get; set; }
+        public SiteRole? Role { get; set; }
+    }
+}

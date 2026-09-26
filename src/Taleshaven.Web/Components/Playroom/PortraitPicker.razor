@@ -1,0 +1,168 @@
+@using Taleshaven.Core.Portraits
+
+@* Väljer en karaktärs porträtt ur sajtens bibliotek (B19, PB-4): rutnät med sökning på taggar.
+   Varje sökord matchar början av en tagg, och porträttet måste ha alla. *@
+
+@inject IPortraitService Portraits
+
+<div class="portrait-picker">
+    <div class="d-flex flex-wrap align-items-center gap-3">
+        <Avatar Name="@(string.IsNullOrWhiteSpace(Name) ? "?" : Name)" ImageUrl="@Url" ColorKey="@ColorKey" Size="96" />
+        <div class="d-flex flex-column align-items-start gap-1">
+            <span class="form-label mb-0">Porträtt</span>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-primary btn-sm" aria-expanded="@(open ? "true" : "false")" @onclick="ToggleAsync">
+                    @(open ? "Stäng biblioteket" : Value is null ? "Välj porträtt" : "Byt porträtt")
+                </button>
+                @if (Value is not null)
+                {
+                    <button type="button" class="btn btn-link btn-sm px-0 text-danger" @onclick="() => SelectAsync(null)">Ta bort porträtt</button>
+                }
+            </div>
+            <div class="form-text mt-0">Utan porträtt visas initialer.</div>
+        </div>
+    </div>
+
+    @if (open)
+    {
+        <div class="portrait-library border rounded p-2 mt-2">
+            <input type="search" class="form-control form-control-sm" placeholder="Sök på taggar, t.ex. dvärg krigare" aria-label="Sök porträtt på taggar"
+                   @ref="searchInput" @bind="query" @bind:event="oninput" @bind:after="OnQueryChangedAsync" autocomplete="off" />
+
+            @if (tags.Count > 0)
+            {
+                <div class="portrait-tags mt-2" aria-label="Vanliga taggar">
+                    @foreach (var tag in tags.Take(SuggestedTagCount))
+                    {
+                        <button type="button" class="btn btn-sm btn-light border portrait-tag" @onclick="() => AddTagAsync(tag.Tag)">#@tag.Tag</button>
+                    }
+                </div>
+            }
+
+            @if (page is null)
+            {
+                <p class="text-secondary small mt-2 mb-0">Laddar…</p>
+            }
+            else if (page.Portraits.Count == 0)
+            {
+                <p class="text-secondary small mt-2 mb-0">
+                    @(string.IsNullOrWhiteSpace(query)
+                        ? "Biblioteket är tomt. Administratörer och managers lägger till porträtt."
+                        : "Inga porträtt har de taggarna.")
+                </p>
+            }
+            else
+            {
+                <div class="portrait-grid mt-2" role="listbox" aria-label="Porträtt">
+                    @foreach (var portrait in page.Portraits)
+                    {
+                        <button type="button" role="option" aria-selected="@(portrait.Id == Value ? "true" : "false")"
+                                class="portrait-choice @(portrait.Id == Value ? "selected" : "")" data-portrait-id="@portrait.Id"
+                                title="@Describe(portrait)" @onclick="() => SelectAsync(portrait)">
+                            <img src="@portrait.Url" alt="@PortraitTags.Format(portrait.Tags)" width="80" height="80" loading="lazy" />
+                        </button>
+                    }
+                </div>
+                @if (page.HasMore)
+                {
+                    <button type="button" class="btn btn-link btn-sm px-0 mt-1" @onclick="ShowMoreAsync">Visa fler</button>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 48;
+    private const int SuggestedTagCount = 12;
+
+    private bool open;
+    private string query = "";
+    private int limit = PageSize;
+    private int searchVersion;
+    private PortraitPage? page;
+    private IReadOnlyList<TagCount> tags = [];
+    private ElementReference searchInput;
+    private bool focusSearch;
+
+    /// <summary>Karaktärens namn, för initialer när porträtt saknas.</summary>
+    [Parameter]
+    public string? Name { get; set; }
+
+    [Parameter, EditorRequired]
+    public string ColorKey { get; set; } = "";
+
+    /// <summary>Valt porträtt, eller null för initialer.</summary>
+    [Parameter]
+    public int? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<int?> ValueChanged { get; set; }
+
+    /// <summary>Adressen till det valda porträttet, för förhandsvisningen.</summary>
+    [Parameter]
+    public string? Url { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> UrlChanged { get; set; }
+
+    private async Task ToggleAsync()
+    {
+        open = !open;
+        if (!open)
+            return;
+
+        focusSearch = true;
+        tags = await Portraits.GetTagsAsync();
+        await SearchAsync();
+    }
+
+    private async Task SearchAsync()
+    {
+        // Svaren kan komma i fel ordning när man skriver snabbt; bara det senaste visas.
+        var version = ++searchVersion;
+        var result = await Portraits.SearchAsync(query, limit);
+        if (version == searchVersion)
+            page = result;
+    }
+
+    private async Task OnQueryChangedAsync()
+    {
+        limit = PageSize;
+        await SearchAsync();
+    }
+
+    private async Task AddTagAsync(string tag)
+    {
+        var terms = PortraitTags.ParseSearch(query);
+        if (!terms.Contains(tag))
+            query = string.Join(" ", terms.Append(tag));
+        limit = PageSize;
+        await SearchAsync();
+    }
+
+    private async Task ShowMoreAsync()
+    {
+        limit += PageSize;
+        await SearchAsync();
+    }
+
+    private async Task SelectAsync(PortraitView? portrait)
+    {
+        await ValueChanged.InvokeAsync(portrait?.Id);
+        await UrlChanged.InvokeAsync(portrait?.Url);
+        open = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (focusSearch && open)
+        {
+            focusSearch = false;
+            await searchInput.FocusAsync();
+        }
+    }
+
+    private static string Describe(PortraitView portrait) =>
+        portrait.Source is null ? PortraitTags.Format(portrait.Tags) : $"{PortraitTags.Format(portrait.Tags)}\n{portrait.Source}";
+}
