@@ -15,20 +15,20 @@ skissen, tillsammans med de beslut som fattats hittills.
 
 | # | Fråga | Beslut |
 |---|-------|--------|
-| B1 | Krönikans struktur | **Ett krönikeinlägg = ett kapitel.** Kapitlen numreras löpande inom kampanjen. Max **5 000 tecken** per kapitel. |
+| B1 | Krönikans struktur | *Ersätts av B33 i fas 6.* **Ett krönikeinlägg = ett kapitel.** Kapitlen numreras löpande inom kampanjen. Max **5 000 tecken** per kapitel. |
 | B2 | Ansökan till kampanj | Ansökan görs via ett formulär med **meddelandefält** till GM. Privata meddelanden (PM) ingår inte i MVP. |
-| B3 | Tärningskast | Tärningar slås **endast i OOC-kanalen**. Tärningar i RPG kan övervägas senare. |
+| B3 | Tärningskast | *Ersätts av B31 i fas 6.* Tärningar slås **endast i OOC-kanalen**. Tärningar i RPG kan övervägas senare. |
 | B4 | Inloggning | Fas 1: **vanligt konto med e-post och lösenord** (primärt). Google, Facebook och Discord kan läggas till senare. |
 | B5 | Databas | **PostgreSQL**. Under utveckling körs den i Docker via `docker-compose.yml` i repots rot. |
-| B6 | RPG-flikens form | RPG är en **chatt i stil med Discord**, inte en lista med trådar. Varje kampanj har **en RPG-kanal**. Flera kanaler är en möjlig förbättring (avsnitt 5); datamodellen tillåter det. |
-| B7 | OOC-flikens form | OOC är en chatt som fungerar som RPG-chatten, men här kan man även **slå tärningar**. |
-| B8 | Vad som visas i chatten | Inläggen från de **senaste 7 dagarna**, men **minst 20** och **högst cirka 100** inlägg. Äldre inlägg laddas automatiskt när man **scrollar uppåt**. Gäller både RPG och OOC. |
-| B9 | Skicka inlägg | **OOC:** Enter skickar, Shift+Enter ger ny rad. **RPG:** Enter ger ny rad, Ctrl+Enter skickar. En skicka-knapp finns alltid (mobil). |
-| B10 | Krönikans form | Krönikan läses **som en bok**, äldst först, **ett kapitel i taget** (ändrat från 5 per sida, se B14). |
+| B6 | RPG-flikens form | *Ersätts av B25 i fas 6.* RPG är en **chatt i stil med Discord**, inte en lista med trådar. Varje kampanj har **en RPG-kanal**. Flera kanaler är en möjlig förbättring (avsnitt 5); datamodellen tillåter det. |
+| B7 | OOC-flikens form | *Ersätts av B25 i fas 6.* OOC är en chatt som fungerar som RPG-chatten, men här kan man även **slå tärningar**. |
+| B8 | Vad som visas i chatten | *Ersätts av B28 i fas 6.* Inläggen från de **senaste 7 dagarna**, men **minst 20** och **högst cirka 100** inlägg. Äldre inlägg laddas automatiskt när man **scrollar uppåt**. Gäller både RPG och OOC. |
+| B9 | Skicka inlägg | *Ersätts av B28 i fas 6.* **OOC:** Enter skickar, Shift+Enter ger ny rad. **RPG:** Enter ger ny rad, Ctrl+Enter skickar. En skicka-knapp finns alltid (mobil). |
+| B10 | Krönikans form | *Ersätts av B33 i fas 6.* Krönikan läses **som en bok**, äldst först, **ett kapitel i taget** (ändrat från 5 per sida, se B14). |
 | B11 | Befintliga RPG-trådar | De trådar som skapades innan chattformatet är testdata och **tas bort** vid ombyggnaden. |
 | B12 | Redigering av inlägg | Egna chattinlägg kan redigeras och markeras då som **"redigerad"**. Byggs efter chattombyggnaden. |
-| B13 | Chattens höjd | RPG- och OOC-chatten **fyller resten av skärmen**. Rubrik och flikar står fast; bara inläggen scrollar, och skrivfältet ligger längst ner. |
-| B14 | Bläddra i krönikan | **Ett kapitel per sida** (sida N = kapitel N), max **5 000 tecken** per kapitel. Kapitlet visas i en **läsyta som fyller resten av skärmen**, så att rubrik och flikar alltid syns; långa kapitel scrollar inuti läsytan. Innehållsförteckningen öppnas som en meny. **Längst ner** finns sidnavigering som alltid syns: med fler än två kapitel klassisk forumnavigering (« Första · ‹ Föregående · 1 … 5 6 7 … 12 · Nästa › · Sista »), med två kapitel bara Föregående/Nästa. Tangenterna ← → bläddrar. |
+| B13 | Chattens höjd | *Ersätts av B28 i fas 6.* RPG- och OOC-chatten **fyller resten av skärmen**. Rubrik och flikar står fast; bara inläggen scrollar, och skrivfältet ligger längst ner. |
+| B14 | Bläddra i krönikan | *Ersätts av B33 i fas 6.* **Ett kapitel per sida** (sida N = kapitel N), max **5 000 tecken** per kapitel. Kapitlet visas i en **läsyta som fyller resten av skärmen**, så att rubrik och flikar alltid syns; långa kapitel scrollar inuti läsytan. Innehållsförteckningen öppnas som en meny. **Längst ner** finns sidnavigering som alltid syns: med fler än två kapitel klassisk forumnavigering (« Första · ‹ Föregående · 1 … 5 6 7 … 12 · Nästa › · Sista »), med två kapitel bara Föregående/Nästa. Tangenterna ← → bläddrar. |
 | B15 | NPC:ers innehåll | En NPC har bara **namn, porträtt och en anteckning som bara GM ser** (högst 2 000 tecken, Markdown). Inget karaktärsdokument, ingen extern länk och inget regelsystem; äldre sådana uppgifter på NPC:er döljs men raderas inte. Anteckningen skickas aldrig till spelarnas webbläsare. |
 | B16 | Dolda NPC:er | GM kan välja **"Dold för spelarna"** och visa NPC:n senare. En dold NPC syns inte för spelarna, varken på fliken Karaktärer eller i chatten. I chatten visas i stället ett **alias** som GM väljer (utan alias "Okänd") och en neutral siluett. När NPC:n görs synlig visas riktigt namn och porträtt, även i gamla inlägg. GM ser alltid det riktiga namnet, märkt "Dold". |
 | B17 | Välja NPC | "Skriv som" blir en **sökbar väljare** med de senast använda NPC:erna överst. GM kan **arkivera** NPC:er som inte längre behövs; de göms i väljaren men finns kvar i gamla inlägg. |
@@ -40,12 +40,32 @@ skissen, tillsammans med de beslut som fattats hittills.
 | B23 | Längd på chattinlägg | RPG- och OOC-inlägg får vara högst **5 000 tecken** (ändrat från 10 000, F10). Befintliga längre inlägg ligger kvar. |
 | B24 | Språk | **Gränssnittet är på engelska**: rubriker, knappar, felmeddelanden, datum och kontosidor. Tärningskommandot är `/roll` (`/slå` tas bort). Den här projektbeskrivningen skrivs fortfarande på svenska. |
 
+#### Beslut för fas 6 – Trådar (2026-09-27)
+
+Kampanjen byggs om från chatt till ett forum med trådar. Grundidén: *Taleshaven hanterar en kampanjs berättelse
+som en samling trådar och inlägg, inte som en chatt.* Känslan ska vara lika kompakt och lättillgänglig som
+dagens RPG-vy, men inläggen är bestående delar av berättelsen, inte flyktiga chattmeddelanden.
+Besluten nedan ersätter B1, B3, B6–B10, B13, B14, F2 (delvis), F13 och F14 när fas 6 är byggd.
+
+| # | Fråga | Beslut |
+|---|-------|--------|
+| B25 | Trådar | En kampanj består av **trådar** som GM skapar och namnger fritt, i valfritt antal. En tråd har titel, **typ** (*Story* eller *Discussion*), **status** (*Active* eller *Completed*), introduktion och, för Story-trådar, krönika. Det finns **inga fasta RPG- eller OOC-trådar**; OOC är en vanlig Discussion-tråd som GM skapar om hen vill. *Completed* är inte samma sak som arkiverad: tråden är avslutad men är fortfarande en del av kampanjens historia. Bara GM skapar trådar i första versionen. |
+| B26 | Flikar | Kampanjens flikar blir **Threads · Characters · Players**. Flikarna RPG, OOC och Chronicle tas bort. Threads är kampanjens startsida. |
+| B27 | Trådlistan | Trådarna visas som **kompakta textrader** utan bilder och utan stora ikoner: titel, typ, status, antal inlägg, antal deltagare, senaste inlägg (vem och när, med avatar) och olästmarkering med antal ("3 new posts"). **Aktiva trådar ligger före avslutade.** GM styr ordningen med en position (flytta ↑/↓), eftersom kapitlens ordning inte alltid följer när de skapades. En dold NPC visas med sitt alias under "senaste inlägg" och räknas inte som deltagare (B16). |
+| B28 | Trådsidan | Överst titel, typ, status, antal inlägg och deltagare, och därunder **introduktionen** (eller krönikan, B33). Inläggen är **sidindelade, 25 per sida**, med sidnavigering längst ner: Previous/Next, sidnummer med … för långa trådar, och **Latest**. **Ingen oändlig scroll och ingen automatisk scroll.** Sidan scrollar som en vanlig webbsida (ersätter B8 och B13). En tråd öppnas vid **första olästa inlägget**. Nya inlägg läggs till direkt bara för den som står på sista sidan; andra ser en rad "N new posts – go to latest". Skrivfältet ligger under sista sidan och knappen heter **Post**. Enter ger ny rad och Ctrl+Enter publicerar i alla trådar (ersätter B9). En liten trådinformation visar typ, status, deltagare, introduktionen (när krönikan visas) och genvägar till första olästa och senaste inlägget. |
+| B29 | Skriva som | I **Story-trådar** skriver man som karaktär, NPC eller berättare, som i dagens RPG-chatt. I **Discussion-trådar** skriver man som sig själv. |
+| B30 | Svara, citera, redigera, ta bort | Varje inlägg har **Reply, Quote, Edit och Delete** (vid hovring eller i en `…`-meny). Trådarna är **platta**, utan nästlade svar. **Quote** lägger in det citerade som ett citat med namn. **Reply** visar en rad "Replying to …" med länk till originalet. Varje inlägg har en fast länk (`?post=N`) som hittar rätt sida. Man redigerar och tar bort sina egna inlägg; **GM kan redigera och ta bort alla inlägg i sin kampanj.** Redigerade inlägg visas med "(edited)". Borttagning är **mjuk**: inlägget ligger kvar på sin plats med texten "This post was deleted.", och innehållet sparas i historiken. |
+| B31 | Tärningar i texten | Tärningar kan slås i **alla trådar**, mitt i texten: `[dice]1d20+3[/dice]`. Slaget görs **på servern när inlägget publiceras**, och resultatet visas där taggen stod. Förhandsgranskningen visar "rolls when posted" i stället för ett resultat. I den sparade texten byts taggen mot en referens (`[dice:N]`) till det sparade slaget. **Slag kan inte ändras eller tas bort genom redigering**, och nya taggar i en redigering slås inte. **Inlägg med slag kan bara tas bort av GM.** Högst 10 slag per inlägg. En knapp 🎲 och tärningspanelen lägger in taggen, och `/roll 1d20` finns kvar som genväg för ett inlägg med bara ett slag. Ersätter B3 och F13. |
+| B32 | Avsluta en tråd | GM sätter en tråd till *Completed*. För en Story-tråd **uppmanas GM att skriva krönikan** i samma steg, men kan hoppa över och skriva den senare. En avslutad tråd är **skrivskyddad för spelarna**. GM kan öppna den igen om den avslutades av misstag. Discussion-trådar kan också avslutas, men har ingen krönika. |
+| B33 | Krönika per Story-tråd | Den globala krönikan tas bort. **Varje Story-tråd har en egen krönika**: ett redigerbart dokument (Markdown, högst 5 000 tecken), inte en serie inlägg. När tråden är *Completed* **visas krönikan i stället för introduktionen**. Introduktionen raderas inte utan finns kvar under trådinformationen. Bara GM skriver och redigerar krönikan i första versionen. Den visar "Last edited by …". Syftet är att en ny spelare ska kunna läsa de avslutade kapitlens krönikor ("Previously on …") och sedan gå in i den aktiva tråden, utan att läsa varje gammalt inlägg. Ersätter B1, B10, B14 och F14. |
+| B34 | Befintlig data | **Ingenting flyttas över**; det som finns är testdata. Gamla chattar och krönikekapitel tas bort, och en ny exempelkampanj skapas i trådformatet. Gamla databasfält tas bort först när den nya modellen fungerar. |
+
 ### 1.2 Arbetsförslag (ej slutligt beslutade)
 
 | # | Fråga | Förslag |
 |---|-------|---------|
 | F1 | Läsbarhet för utomstående | Kampanjinnehåll är läsbart för alla inloggade som standard (enligt skissen). En kampanj kan markeras som privat. |
-| F2 | Olästa inlägg | Läsposition per kanal för deltagare. Andras inlägg efter läspositionen är olästa (egna räknas inte). Antalet visas på flikarna RPG/OOC och som "N nya" i kampanjlistan (över 99 visas "99+"). Chatten öppnas vid första olästa med en linje "Nya inlägg", och allt i en öppen chatt räknas som läst. |
+| F2 | Olästa inlägg | *I fas 6 per tråd, se B27–B28.* Läsposition per kanal för deltagare. Andras inlägg efter läspositionen är olästa (egna räknas inte). Antalet visas på flikarna RPG/OOC och som "N nya" i kampanjlistan (över 99 visas "99+"). Chatten öppnas vid första olästa med en linje "Nya inlägg", och allt i en öppen chatt räknas som läst. |
 | F3 | NPC:er | GM kan skapa NPC-karaktärer och skriva som dem i RPG-chatten. |
 | F4 | Karaktär och kampanj | En karaktär tillhör en kampanj. En spelare kan ha flera karaktärer i samma kampanj. |
 | F5 | Textformat | Text lagras som Markdown, renderas server-side och saneras före visning. |
@@ -56,8 +76,8 @@ skissen, tillsammans med de beslut som fattats hittills.
 | F10 | Längd på RPG- och OOC-inlägg | *Ersätts av B23.* Högst 10 000 tecken (Markdown-källtexten). |
 | F11 | Ansökningar i spelrummet | Ansökningsformuläret och GM:ns ansökningslista ligger under fliken **Spelare**. |
 | F12 | Skrivskydd | Stängda och arkiverade kampanjer är skrivskyddade för alla utom GM. |
-| F13 | Tärningskommando | I OOC slår man med `/roll 2d6+3` (B24) eller via en tärningsknapp bredvid skrivfältet. |
-| F14 | Krönikans numrering | Kapitelnumret följer ordningen i boken. Flyttar GM ett kapitel numreras de övriga om. |
+| F13 | Tärningskommando | *Ersätts av B31 i fas 6.* I OOC slår man med `/roll 2d6+3` (B24) eller via en tärningsknapp bredvid skrivfältet. |
+| F14 | Krönikans numrering | *Ersätts av B27 och B33 i fas 6.* Kapitelnumret följer ordningen i boken. Flyttar GM ett kapitel numreras de övriga om. |
 | F15 | Karaktärsbilder | *Ersätts av porträttbiblioteket (B19).* Laddas upp (JPG, PNG eller WebP, högst 5 MB). Bilden beskärs till en kvadrat, skalas till 256×256, metadata tas bort och den sparas som WebP utanför wwwroot. |
 | F16 | GM:s karaktärer | Allt GM skapar är NPC:er. Spelare skriver som egna karaktärer eller som sig själva; GM som NPC eller som berättare. |
 | F17 | Ta bort karaktär | Går bara om karaktären inte har skrivit några inlägg, så att gamla inlägg behåller sin karaktär. |
@@ -129,6 +149,9 @@ Exempel från skissen:
 - S-7: En godkänd ansökan kan inte överskrida kampanjens max antal spelare.
 
 ### 3.5 Spelrummet
+
+> Avsnitt 3.5–3.9 beskriver spelrummet som det är byggt i dag (fas 1–5). I fas 6 ersätts de av
+> trådarna i avsnitt 3.14 (B25–B34). Tärningarna i 3.11 ändras enligt B31.
 
 Varje kampanj har ett spelrum med flikarna:
 
@@ -269,6 +292,89 @@ Exempel:
 - X-6: Utkast sparas automatiskt så att text inte går förlorad om anslutningen
   bryts.
 
+### 3.14 Trådar (fas 6)
+
+Målbilden för kampanjens innehåll efter fas 6:
+
+```text
+Campaign
+├── Threads
+│   ├── Story        Introduction · Posts · Chronicle (när den är Completed)
+│   └── Discussion   Introduction · Posts
+├── Characters
+└── Players
+```
+
+En Story-tråd är en del av berättelsen, t.ex. ett kapitel eller en scen. En Discussion-tråd är allt
+utanför berättelsen: OOC, regelfrågor, planering, karaktärsskapande osv.
+
+**Trådlistan (fliken Threads)**
+
+- TR-1: Listan visar kampanjens alla trådar som kompakta textrader: titel, typ, status, antal inlägg,
+  antal deltagare, senaste inlägg (vem och när) och olästa (B27). Inga bilder eller stora ikoner.
+- TR-2: Aktiva trådar ligger före avslutade, och avslutade trådar ska vara lätta att nå. GM ändrar
+  ordningen med ↑/↓.
+- TR-3: GM skapar trådar med **+ New thread**: titel, typ (Story/Discussion) och introduktion i
+  Markdown-editorn (B25).
+- TR-4: GM kan ändra titel, introduktion och status.
+
+Exempel:
+
+```text
+Active
+  Chapter 4 – The ruins            Story        14 posts · 3 participants
+  ● 3 new posts                                 Latest: Isak · 2 hours ago
+  OOC                              Discussion
+
+Completed
+  Chapter 3 – Through the forest   Story
+  Chapter 2 – The inn              Story
+  Chapter 1 – Arrival              Story
+```
+
+**Trådsidan**
+
+- TR-5: Överst titel, typ, status, antal inlägg och deltagare, och därunder introduktionen, eller
+  krönikan om tråden är avslutad (B28, B33).
+- TR-6: Inläggen visas 25 per sida med sidnavigering längst ner: Previous (avstängd på första sidan),
+  sidnummer med … (t.ex. `1 2 3 … 12 13 14`), Next (avstängd på sista sidan) och Latest.
+- TR-7: Tråden öppnas vid första olästa inlägget. Det finns genvägar till första olästa och senaste
+  inlägget. Ingen automatisk scroll.
+- TR-8: Nya inlägg läggs till direkt för den som står på sista sidan; andra ser "N new posts – go to latest".
+- TR-9: Inläggen behåller dagens kompakta stil: avatar, namn, karaktär, GM-märkning och tid, utan stora
+  kort per inlägg.
+- TR-10: Skrivfältet ligger under sista sidan och knappen heter Post. I Story-trådar väljer man vem man
+  skriver som (B29).
+- TR-11: Reply, Quote, Edit och Delete per inlägg, med fast länk till varje inlägg (B30).
+- TR-12: Borttagna inlägg visas som "This post was deleted." på sin plats.
+
+**Livscykel för en Story-tråd**
+
+```text
+Create → Active → inlägg skrivs → GM sätter Completed → krönikan skrivs → Completed
+```
+
+- TR-13: När GM avslutar en Story-tråd visas ett steg för att skriva krönikan (kan hoppas över) (B32).
+- TR-14: En avslutad tråd är skrivskyddad för spelarna. GM kan öppna den igen.
+- TR-15: Krönikan är ett enda dokument per Story-tråd, högst 5 000 tecken, och kan redigeras av GM även
+  efter att tråden avslutats. Den visar "Last edited by …" (B33).
+- TR-16: Originalinläggen finns kvar; krönikan är en sammanfattning, inte en ersättning.
+
+**Tärningar (B31)**
+
+- TR-17: `[dice]1d20+3[/dice]` i ett inlägg slås på servern när inlägget publiceras och visas på taggens
+  plats med enskilda tärningar, modifierare och total. Naturlig 20 och 1 på d20 markeras som i dag.
+- TR-18: Förhandsgranskningen visar "rolls when posted".
+- TR-19: Slag kan inte ändras eller tas bort genom redigering, och nya taggar i en redigering slås inte.
+  Inlägg med slag kan bara tas bort av GM.
+- TR-20: Högst 10 slag per inlägg. Knappen 🎲 och tärningspanelen lägger in taggen; `/roll 1d20` är en
+  genväg för ett inlägg med bara ett slag.
+
+**Nya spelare**
+
+- TR-21: En ny spelare ska inte behöva läsa hundratals gamla inlägg. De avslutade Story-trådarna visar sina
+  krönikor överst ("Previously on …"), så att man kan läsa dem och sedan gå in i den aktiva tråden.
+
 ---
 
 ## 4. Behörigheter
@@ -298,6 +404,20 @@ Roller för hela sajten (B18), oberoende av kampanjroll:
 | Dela ut och ta bort roller | Nej | Ja |
 
 Arkiverade och stängda kampanjer är skrivskyddade för alla utom GM (F12).
+
+Efter fas 6 (B25–B33) ersätts raderna om RPG, OOC och krönika av:
+
+| Funktion | Användare (ej deltagare) | Ansökande | Spelare | GM |
+|---|:-:|:-:|:-:|:-:|
+| Läsa trådar och krönikor | Ja¹ | Ja¹ | Ja | Ja |
+| Skriva i aktiva trådar och slå tärningar | Nej | Nej | Ja | Ja |
+| Skriva i avslutade trådar | Nej | Nej | Nej | Ja |
+| Redigera och ta bort egna inlägg | Nej | Nej | Ja² | Ja |
+| Redigera och ta bort andras inlägg | Nej | Nej | Nej | Ja |
+| Skapa, redigera, ordna och avsluta trådar | Nej | Nej | Nej | Ja |
+| Skriva och redigera krönika | Nej | Nej | Nej | Ja |
+
+² Inlägg med tärningsslag kan bara tas bort av GM (B31).
 
 Alla behörighetskontroller görs på servern.
 
@@ -362,19 +482,37 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
     låst), så att inlägg, karaktärer och krönikekapitel behåller sin författare. Inloggningar, passkeys, roller,
     medlemskap, ansökningar och läspositioner raderas. Den som är GM måste först radera sina kampanjer.
 
+### Fas 6 – Trådar (B25–B34)
+Förslaget kom från `taleshaven-thread-system-todo.md` (2026-09-27) och besluten togs samma dag.
+Ordningen gör att sajten fungerar mellan stegen.
+
+24. Datamodell: trådar med typ, status, introduktion, krönika och position; inlägg med flera tärningsslag,
+    mjuk borttagning och svarsreferens. Ingenting flyttas över; gamla chattar och krönikekapitel tas bort (B34).
+25. Flikarna Threads · Characters · Players och trådlistan med olästa, senaste inlägg och ordning (B26, B27).
+26. Skapa och redigera trådar (GM), med ordning ↑/↓ (B25).
+27. Trådsidan: introduktion, 25 inlägg per sida, sidnavigering med Latest, skrivfält och skriva som;
+    nya inlägg direkt på sista sidan (B28, B29).
+28. Olästa: öppna vid första olästa, genväg till senaste, antal i trådlistan och i kampanjlistan.
+29. Reply, Quote, Edit och Delete (mjuk borttagning), fasta länkar till inlägg (B30).
+30. Tärningar i texten med `[dice]…[/dice]` (B31).
+31. Avsluta en tråd, skriva krönika per Story-tråd, krönikan i stället för introduktionen (B32, B33).
+32. Städning: ta bort chattarna, krönikefliken, gamla adresser och chattord (Send, message, RPG/OOC som
+    flikar); ny exempelkampanj i trådformatet.
+
 ### Senare
-Social inloggning, privata meddelanden, notiser/e-postnotiser, tärningar i
-RPG, privata tärningskast, reaktioner, svar på specifika inlägg, bilder i
-inlägg, sökning, bokmärken, export, dolda scener, mer avancerad
-tärningssyntax, PWA.
+Social inloggning, privata meddelanden, notiser/e-postnotiser, privata
+tärningskast, reaktioner, bilder i inlägg, sökning, bokmärken, export, dolda
+scener, mer avancerad tärningssyntax, PWA.
 
 Möjliga förbättringar att ta ställning till senare:
-- **Flera RPG-kanaler:** när gruppen delar på sig kan GM skapa en RPG-kanal per
-  scen (t.ex. "RPG – Grottan" och "RPG – Staden"), så att parallella scener inte
-  blandas. Datamodellen klarar det redan (B6); det som behövs är gränssnitt för
-  att skapa, byta och arkivera kanaler.
-- **Privata tärningskast:** GM slår dolt (vänta, beslut saknas).
+- **"Story so far":** en läsvy som visar alla avslutade Story-trådars krönikor efter varandra, så att en
+  ny spelare kan läsa historien från början på en sida. Ingen egen flik, bara en länk från trådlistan.
+  Vänta (beslut 2026-09-27).
+- **Spelare skapar egna Discussion-trådar** och **spelare redigerar krönikan** (B25, B33 säger bara GM
+  i första versionen).
+- **Privata tärningskast:** GM slår dolt. Kan byggas ovanpå tärningarna i texten (B31).
 - **Export av kampanj:** behövs inte nu; säkerhetskopior av databasen räcker.
+- ~~Flera RPG-kanaler~~: löses av trådarna i fas 6.
 
 ---
 
@@ -412,6 +550,23 @@ RPG- och OOC-chatten är var sin kanal i tabellen `Threads` (typ `Rpg` resp.
 `Ooc`), en av varje per kampanj. De delar därför logik för inlägg, laddning,
 liveuppdatering och olästmarkering. Fler RPG-kanaler kräver ingen ändring av
 datamodellen.
+
+**Efter fas 6 (planerat):**
+
+```text
+Campaign ──< Thread (typ: Story | Discussion, status: Active | Completed) ──< Post
+Post ──< DiceRoll (0–10 slag, refereras från texten som [dice:N])
+Post ── ReplyTo? (Post)
+User ──< ReadMarker >── Thread
+```
+
+| Entitet | Viktiga fält |
+|---|---|
+| Thread | Id, CampaignId, titel, typ, status, introduktion, krönika, krönika ändrad av/när, position, skapad, ändrad |
+| Post | Id, ThreadId, författare, CharacterId?, innehåll, tärningsslag (jsonb-lista), svar på (PostId?), skapad, redigerad, borttagen (tid och av vem) |
+
+`ChronicleChapter` och den nuvarande kolumnen `Roll` (ett slag per inlägg) tas bort när den nya modellen
+fungerar (B34).
 
 ---
 
@@ -468,7 +623,8 @@ Beroenden: `Web → Core, Infrastructure` och `Infrastructure → Core`.
 - **Dolda NPC:er:** riktigt namn, porträtt och GM-anteckning skickas aldrig till
   spelarnas webbläsare, inte ens i chattens data (B16).
 - **Tärningskast:** genereras och sparas på servern och kan inte ändras eller
-  tas bort.
+  tas bort. I fas 6 slås de när inlägget publiceras och kan inte ändras eller tas
+  bort genom redigering; bara GM kan ta bort ett inlägg med slag (B31).
 - **Redigering och borttagning:** inlägg markeras som redigerade och historiken
   sparas. Borttagning av innehåll görs som mjuk radering.
 
@@ -476,7 +632,9 @@ Beroenden: `Web → Core, Infrastructure` och `Infrastructure → Core`.
 
 ## 9. Öppna frågor
 
-Inga just nu. Tidigare frågor är besvarade (2026-09-27):
+Inga just nu. Frågorna om trådsystemet (fas 6) är besvarade i B25–B34.
+
+Tidigare frågor är besvarade (2026-09-27):
 
 - Flera RPG-kanaler och privata tärningskast: väntar, se "Möjliga förbättringar" i avsnitt 5.
 - Spelare föreslår krönikekapitel: nej, bara GM skriver krönikan.
