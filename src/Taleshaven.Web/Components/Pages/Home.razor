@@ -1,9 +1,14 @@
 @page "/"
 
+@using Taleshaven.Web.Components.Account.Shared
+
 @inject ICampaignService CampaignService
 @inject IUnreadService Unread
 
 <PageTitle>Taleshaven</PageTitle>
+
+@* T.ex. "Your account has been deleted." efter att kontot tagits bort. *@
+<StatusMessage />
 
 <AuthorizeView>
     <Authorized>

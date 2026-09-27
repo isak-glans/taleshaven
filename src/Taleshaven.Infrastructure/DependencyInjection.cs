@@ -10,6 +10,7 @@ using Taleshaven.Core.Portraits;
 using Taleshaven.Core.Site;
 using Taleshaven.Core.Text;
 using Taleshaven.Core.Threads;
+using Taleshaven.Core.Users;
 using Taleshaven.Infrastructure.Campaigns;
 using Taleshaven.Infrastructure.Characters;
 using Taleshaven.Infrastructure.Chronicle;
@@ -42,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IChronicleService, ChronicleService>();
         services.AddScoped<ICharacterService, CharacterService>();
         services.AddScoped<IPortraitService, PortraitService>();
+        services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<ISiteRoleService>(provider =>
             new SiteRoleService(provider.GetRequiredService<IDbContextFactory<TaleshavenDbContext>>(), adminEmails));
         services.AddSingleton<IMarkdownRenderer, MarkdownRenderer>();

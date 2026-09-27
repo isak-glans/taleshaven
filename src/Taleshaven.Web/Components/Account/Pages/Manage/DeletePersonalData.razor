@@ -1,24 +1,32 @@
-﻿@page "/Account/Manage/DeletePersonalData"
+@page "/Account/Manage/DeletePersonalData"
 
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Identity
+@using Taleshaven.Core.Users
 @using Taleshaven.Infrastructure.Identity
+
+@* Ta bort sitt konto (B21). Kontot anonymiseras i stället för att raderas, så att inläggen i kampanjerna finns kvar. *@
 
 @inject UserManager<ApplicationUser> UserManager
 @inject SignInManager<ApplicationUser> SignInManager
+@inject IAccountService AccountService
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<DeletePersonalData> Logger
 
-<PageTitle>Delete Personal Data</PageTitle>
+<PageTitle>Delete account</PageTitle>
 
 <StatusMessage Message="@message" />
 
-<h3>Delete Personal Data</h3>
+<h3>Delete account</h3>
 
 <div class="alert alert-warning" role="alert">
-    <p>
-        <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
-    </p>
+    <p><strong>Deleting your account is permanent and cannot be undone.</strong></p>
+    <ul class="mb-0">
+        <li>Your email address, password, logins and roles are removed, and you can no longer log in.</li>
+        <li>You leave all campaigns, and any applications you have sent are removed.</li>
+        <li>Your posts, characters and chronicle chapters stay in the campaigns, shown as "@DeletedAccount.DisplayName".</li>
+        <li>If you are the GM of a campaign, delete the campaign first.</li>
+    </ul>
 </div>
 
 <div>
@@ -33,7 +41,7 @@
                 <ValidationMessage For="() => Input.Password" class="text-danger" />
             </div>
         }
-        <button class="w-100 btn btn-lg btn-danger" type="submit">Delete data and close my account</button>
+        <button class="w-100 btn btn-lg btn-danger" type="submit">Delete my account</button>
     </EditForm>
 </div>
 
@@ -75,18 +83,21 @@
             return;
         }
 
-        var result = await UserManager.DeleteAsync(user);
-        if (!result.Succeeded)
+        var userId = await UserManager.GetUserIdAsync(user);
+        try
         {
-            throw new InvalidOperationException("Unexpected error occurred deleting user.");
+            await AccountService.DeleteAccountAsync(userId);
+        }
+        catch (CampaignRuleException ex)
+        {
+            message = $"Error: {ex.Message}";
+            return;
         }
 
         await SignInManager.SignOutAsync();
+        Logger.LogInformation("Användaren {UserId} tog bort sitt konto.", userId);
 
-        var userId = await UserManager.GetUserIdAsync(user);
-        Logger.LogInformation("User with ID '{UserId}' deleted themselves.", userId);
-
-        RedirectManager.RedirectToCurrentPage();
+        RedirectManager.RedirectToWithStatus("", "Your account has been deleted.", HttpContext);
     }
 
     private sealed class InputModel

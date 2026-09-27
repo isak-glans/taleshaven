@@ -357,7 +357,10 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
     *The Mists of Harrowmere* (GM Gunnar, spelare Freja och Leif, konton på `@taleshaven.test`) ersätter testkampanjerna.
 22. ✅ Dra tillbaka ansökan (B22): "Withdraw application" under Spelare, med ett bekräftelsesteg. Ansökan
     sparas som historik med status *Withdrawn*, försvinner ur GM:s lista, och man kan ansöka igen.
-23. Borttagning av användarkonto med anonymiserade inlägg (B21).
+23. ✅ Borttagning av användarkonto med anonymiserade inlägg (B21): Account › Personal data › Delete account,
+    med lösenord. Användarraden blir en anonym "gravsten" (namn "Deleted user", ingen e-post, inget lösenord,
+    låst), så att inlägg, karaktärer och krönikekapitel behåller sin författare. Inloggningar, passkeys, roller,
+    medlemskap, ansökningar och läspositioner raderas. Den som är GM måste först radera sina kampanjer.
 
 ### Senare
 Social inloggning, privata meddelanden, notiser/e-postnotiser, tärningar i
