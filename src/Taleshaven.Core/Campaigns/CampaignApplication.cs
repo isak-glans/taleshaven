@@ -6,6 +6,9 @@ public enum ApplicationStatus
     Pending = 0,
     Approved = 1,
     Rejected = 2,
+
+    /// <summary>Den som ansökte drog tillbaka ansökan innan GM svarade (B22).</summary>
+    Withdrawn = 3,
 }
 
 public class CampaignApplication

@@ -70,6 +70,15 @@
                     <div class="alert alert-info">
                         Your application was sent @Dates.DateTime(pending.SubmittedAt) and is waiting for an answer from the GM.
                     </div>
+                    @* Två steg (öppna, sedan bekräfta) så att ingen drar tillbaka av misstag (B22). *@
+                    <details class="withdraw-application">
+                        <summary class="small text-danger">Withdraw application</summary>
+                        <form method="post" @formname="withdraw" @onsubmit="WithdrawAsync" class="mt-1">
+                            <AntiforgeryToken />
+                            <p class="small mb-1">The GM will no longer see your application. You can apply again later.</p>
+                            <button type="submit" class="btn btn-sm btn-danger">Yes, withdraw my application</button>
+                        </form>
+                    </details>
                 }
                 else
                 {
@@ -216,6 +225,21 @@
         }
 
         RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}/players", "Your application has been sent to the GM.", HttpContext);
+    }
+
+    private async Task WithdrawAsync()
+    {
+        try
+        {
+            await ApplicationService.WithdrawAsync(CampaignId, userId);
+        }
+        catch (CampaignRuleException ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+            return;
+        }
+
+        RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}/players", "Your application has been withdrawn.", HttpContext);
     }
 
     private async Task DecideAsync()

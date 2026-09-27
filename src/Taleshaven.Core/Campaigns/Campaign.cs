@@ -94,6 +94,15 @@ public class Campaign
         return application;
     }
 
+    /// <summary>Den som ansökt drar tillbaka sin väntande ansökan (B22). Hen kan ansöka igen senare.</summary>
+    public void WithdrawApplication(string userId, DateTimeOffset now)
+    {
+        var application = Applications.SingleOrDefault(a => a.UserId == userId && a.Status == ApplicationStatus.Pending)
+            ?? throw new CampaignRuleException("You have no application waiting for an answer.");
+
+        application.Decide(ApplicationStatus.Withdrawn, userId, now);
+    }
+
     public void ApproveApplication(Guid applicationId, string gameMasterId, DateTimeOffset now)
     {
         var application = GetPendingApplicationForGameMaster(applicationId, gameMasterId);

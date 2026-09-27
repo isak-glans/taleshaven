@@ -7,6 +7,9 @@ public interface ICampaignApplicationService
 {
     Task ApplyAsync(int campaignId, string userId, string? message, CancellationToken cancellationToken = default);
 
+    /// <summary>Drar tillbaka användarens väntande ansökan (B22).</summary>
+    Task WithdrawAsync(int campaignId, string userId, CancellationToken cancellationToken = default);
+
     /// <summary>Väntande ansökningar, äldst först. Tom lista om användaren inte är kampanjens GM.</summary>
     Task<IReadOnlyList<PendingApplication>> GetPendingApplicationsAsync(int campaignId, string gameMasterId, CancellationToken cancellationToken = default);
 

@@ -73,6 +73,48 @@ public class CampaignApplicationTests
     }
 
     [Fact]
+    public void Withdraw_MarksApplicationWithdrawnAndAllowsNewApplication()
+    {
+        var campaign = NewCampaign();
+        var application = campaign.Apply("anna", null, Now);
+
+        campaign.WithdrawApplication("anna", Now.AddHours(1));
+
+        Assert.Equal(ApplicationStatus.Withdrawn, application.Status);
+        Assert.Equal(Now.AddHours(1), application.DecidedAt);
+        Assert.Equal("anna", application.DecidedById);
+        Assert.Empty(campaign.Memberships);
+
+        var second = campaign.Apply("anna", "Jag ångrade mig.", Now.AddHours(2));
+        Assert.Equal(ApplicationStatus.Pending, second.Status);
+    }
+
+    [Fact]
+    public void Withdraw_RequiresOwnPendingApplication()
+    {
+        var campaign = NewCampaign();
+        campaign.Apply("anna", null, Now);
+
+        Assert.Throws<CampaignRuleException>(() => campaign.WithdrawApplication("bertil", Now));
+
+        var application = campaign.Applications.Single();
+        campaign.RejectApplication(application.Id, Gm, Now);
+        Assert.Throws<CampaignRuleException>(() => campaign.WithdrawApplication("anna", Now));
+        Assert.Equal(ApplicationStatus.Rejected, application.Status);
+    }
+
+    [Fact]
+    public void WithdrawnApplication_CannotBeApproved()
+    {
+        var campaign = NewCampaign();
+        var application = campaign.Apply("anna", null, Now);
+        campaign.WithdrawApplication("anna", Now);
+
+        Assert.Throws<CampaignRuleException>(() => campaign.ApproveApplication(application.Id, Gm, Now));
+        Assert.Empty(campaign.Memberships);
+    }
+
+    [Fact]
     public void Apply_RejectsWhenCampaignIsFull()
     {
         var campaign = NewCampaign(maxPlayers: 1);

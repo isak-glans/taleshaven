@@ -19,6 +19,16 @@ internal sealed class CampaignApplicationService(IDbContextFactory<TaleshavenDbC
         await SaveAsync(db, cancellationToken);
     }
 
+    public async Task WithdrawAsync(int campaignId, string userId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var campaign = await LoadCampaignAsync(db, campaignId, cancellationToken);
+
+        campaign.WithdrawApplication(userId, timeProvider.GetUtcNow());
+
+        await SaveAsync(db, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<PendingApplication>> GetPendingApplicationsAsync(int campaignId, string gameMasterId, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);

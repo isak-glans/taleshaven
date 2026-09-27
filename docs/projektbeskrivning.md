@@ -355,7 +355,8 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
     Kodkommentarer och interna loggmeddelanden är fortfarande på svenska.
 21. ✅ Städad testdata: e2e-testerna städar efter sig (alla konton på `@exempel.se`), och exempelkampanjen
     *The Mists of Harrowmere* (GM Gunnar, spelare Freja och Leif, konton på `@taleshaven.test`) ersätter testkampanjerna.
-22. Dra tillbaka ansökan (B22).
+22. ✅ Dra tillbaka ansökan (B22): "Withdraw application" under Spelare, med ett bekräftelsesteg. Ansökan
+    sparas som historik med status *Withdrawn*, försvinner ur GM:s lista, och man kan ansöka igen.
 23. Borttagning av användarkonto med anonymiserade inlägg (B21).
 
 ### Senare
