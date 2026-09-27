@@ -81,16 +81,16 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         if (characterId is not null)
         {
             if (thread.Kind != ThreadKind.Rpg)
-                throw new CampaignRuleException("Karaktärer används bara i RPG.");
+                throw new CampaignRuleException("Characters are only used in RPG.");
 
             var character = await db.Characters.AsNoTracking()
                 .SingleOrDefaultAsync(c => c.Id == characterId && c.CampaignId == campaignId, cancellationToken)
-                ?? throw new CampaignRuleException("Karaktären finns inte.");
+                ?? throw new CampaignRuleException("The character doesn't exist.");
 
             if (!CampaignPermissions.CanPostAsCharacter(access.Role, userId, character.OwnerId, character.IsNpc))
-                throw new CampaignRuleException("Du kan inte skriva som den karaktären.");
+                throw new CampaignRuleException("You can't post as that character.");
             if (character.IsArchived)
-                throw new CampaignRuleException($"{character.Name} är arkiverad. Återställ NPC:n under Karaktärer för att skriva som den.");
+                throw new CampaignRuleException($"{character.Name} is archived. Restore the NPC under Characters to post as it.");
         }
 
         var post = Post.Create(threadId, userId, content, timeProvider.GetUtcNow(), characterId);
@@ -107,12 +107,12 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                 where p.Id == postId && t.CampaignId == campaignId
                 select p)
             .SingleOrDefaultAsync(cancellationToken)
-            ?? throw new CampaignRuleException("Inlägget finns inte.");
+            ?? throw new CampaignRuleException("The post doesn't exist.");
 
         var thread = await db.Threads.AsNoTracking().SingleAsync(t => t.Id == post.ThreadId, cancellationToken);
         var access = await CampaignAccess.GetAsync(db, campaignId, userId, cancellationToken);
         if (!CampaignPermissions.CanEditPost(access.Role, access.CampaignStatus, thread.Status, userId, post.AuthorId))
-            throw new CampaignRuleException("Du kan bara redigera dina egna inlägg.");
+            throw new CampaignRuleException("You can only edit your own posts.");
 
         db.PostRevisions.Add(post.Edit(content, timeProvider.GetUtcNow()));
         await db.SaveChangesAsync(cancellationToken);
@@ -134,7 +134,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
 
         var (thread, _) = await GetWritableThreadAsync(db, campaignId, threadId, userId, cancellationToken);
         if (thread.Kind != ThreadKind.Ooc)
-            throw new CampaignRuleException("Tärningar kan bara slås i OOC.");
+            throw new CampaignRuleException("Dice can only be rolled in OOC.");
 
         // Kastet görs här på servern; klienten skickar bara vilken notation som ska slås.
         var roll = DiceRoll.Roll(notation, label, diceRoller);
@@ -146,11 +146,11 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         TaleshavenDbContext db, int campaignId, int threadId, string userId, CancellationToken cancellationToken)
     {
         var thread = await db.Threads.AsNoTracking().SingleOrDefaultAsync(t => t.Id == threadId && t.CampaignId == campaignId, cancellationToken)
-            ?? throw new CampaignRuleException("Kanalen finns inte.");
+            ?? throw new CampaignRuleException("The channel doesn't exist.");
 
         var access = await CampaignAccess.GetAsync(db, campaignId, userId, cancellationToken);
         if (!CampaignPermissions.CanWritePost(access.Role, access.CampaignStatus, thread.Status))
-            throw new CampaignRuleException("Du har inte behörighet att skriva här.");
+            throw new CampaignRuleException("You don't have permission to post here.");
 
         return (thread, access);
     }

@@ -20,7 +20,7 @@ skissen, tillsammans med de beslut som fattats hittills.
 | B3 | Tärningskast | Tärningar slås **endast i OOC-kanalen**. Tärningar i RPG kan övervägas senare. |
 | B4 | Inloggning | Fas 1: **vanligt konto med e-post och lösenord** (primärt). Google, Facebook och Discord kan läggas till senare. |
 | B5 | Databas | **PostgreSQL**. Under utveckling körs den i Docker via `docker-compose.yml` i repots rot. |
-| B6 | RPG-flikens form | RPG är en **chatt i stil med Discord**, inte en lista med trådar. Varje kampanj har **en RPG-kanal**. Om fler kanaler behövs senare är oklart; datamodellen tillåter det. |
+| B6 | RPG-flikens form | RPG är en **chatt i stil med Discord**, inte en lista med trådar. Varje kampanj har **en RPG-kanal**. Flera kanaler är en möjlig förbättring (avsnitt 5); datamodellen tillåter det. |
 | B7 | OOC-flikens form | OOC är en chatt som fungerar som RPG-chatten, men här kan man även **slå tärningar**. |
 | B8 | Vad som visas i chatten | Inläggen från de **senaste 7 dagarna**, men **minst 20** och **högst cirka 100** inlägg. Äldre inlägg laddas automatiskt när man **scrollar uppåt**. Gäller både RPG och OOC. |
 | B9 | Skicka inlägg | **OOC:** Enter skickar, Shift+Enter ger ny rad. **RPG:** Enter ger ny rad, Ctrl+Enter skickar. En skicka-knapp finns alltid (mobil). |
@@ -35,6 +35,10 @@ skissen, tillsammans med de beslut som fattats hittills.
 | B18 | Roller för hela sajten | **Administratör:** får allt, även dela ut roller. **Manager:** sköter porträttbiblioteket. De första administratörerna anges med e-postadress i konfigurationen (`Admin:Emails`); därefter delar en administratör ut roller på en egen sida. |
 | B19 | Porträttbibliotek | Porträtt kan **inte längre laddas upp per karaktär**. Administratörer och managers laddar upp porträtt till ett gemensamt bibliotek och sätter **taggar** (t.ex. `#dvärg #krigare`). När man väljer porträtt för en karaktär eller NPC bläddrar man i biblioteket och söker på taggar. Varje porträtt har ett valfritt fält för **källa och licens**. De uppladdade testbilderna tas bort när biblioteket införs. |
 | B20 | Ta bort porträtt som används | Tillåtet. Karaktärerna som använde porträttet får initialer i stället. |
+| B21 | Borttaget användarkonto | Inläggen ligger kvar men visas som **"Deleted user"**; kontot och e-postadressen raderas. |
+| B22 | Dra tillbaka ansökan | Den som väntar på svar kan **dra tillbaka sin ansökan** under fliken Spelare. |
+| B23 | Längd på chattinlägg | RPG- och OOC-inlägg får vara högst **5 000 tecken** (ändrat från 10 000, F10). Befintliga längre inlägg ligger kvar. |
+| B24 | Språk | **Gränssnittet är på engelska**: rubriker, knappar, felmeddelanden, datum och kontosidor. Tärningskommandot är `/roll` (`/slå` tas bort). Den här projektbeskrivningen skrivs fortfarande på svenska. |
 
 ### 1.2 Arbetsförslag (ej slutligt beslutade)
 
@@ -49,16 +53,16 @@ skissen, tillsammans med de beslut som fattats hittills.
 | F7 | Ny ansökan efter avslag | Tillåten. Den avslagna ansökan finns kvar som historik. |
 | F8 | Meddelande i ansökan | Valfritt, högst 1 000 tecken. |
 | F9 | Full kampanj | Väntande ansökningar ligger kvar men kan inte godkännas förrän det finns plats. |
-| F10 | Längd på RPG- och OOC-inlägg | Högst 10 000 tecken (Markdown-källtexten). |
+| F10 | Längd på RPG- och OOC-inlägg | *Ersätts av B23.* Högst 10 000 tecken (Markdown-källtexten). |
 | F11 | Ansökningar i spelrummet | Ansökningsformuläret och GM:ns ansökningslista ligger under fliken **Spelare**. |
 | F12 | Skrivskydd | Stängda och arkiverade kampanjer är skrivskyddade för alla utom GM. |
-| F13 | Tärningskommando | I OOC slår man med `/slå 2d6+3` (eller `/roll`) eller via en tärningsknapp bredvid skrivfältet. |
+| F13 | Tärningskommando | I OOC slår man med `/roll 2d6+3` (B24) eller via en tärningsknapp bredvid skrivfältet. |
 | F14 | Krönikans numrering | Kapitelnumret följer ordningen i boken. Flyttar GM ett kapitel numreras de övriga om. |
 | F15 | Karaktärsbilder | *Ersätts av porträttbiblioteket (B19).* Laddas upp (JPG, PNG eller WebP, högst 5 MB). Bilden beskärs till en kvadrat, skalas till 256×256, metadata tas bort och den sparas som WebP utanför wwwroot. |
 | F16 | GM:s karaktärer | Allt GM skapar är NPC:er. Spelare skriver som egna karaktärer eller som sig själva; GM som NPC eller som berättare. |
 | F17 | Ta bort karaktär | Går bara om karaktären inte har skrivit några inlägg, så att gamla inlägg behåller sin karaktär. |
 | F18 | Ny spelare och olästa | När en spelare godkänns räknas allt som redan skrivits som läst, så att historiken inte blir hundratals olästa. |
-| F19 | Radera kampanj | GM skriver kampanjens namn för att bekräfta. Allt innehåll raderas, även karaktärsbilder. Arkivering rekommenderas för kampanjer som bara är avslutade. |
+| F19 | Radera kampanj | GM skriver kampanjens namn för att bekräfta. Allt innehåll raderas; porträtten ligger kvar i biblioteket (B19). Arkivering rekommenderas för kampanjer som bara är avslutade. |
 | F20 | Ta bort spelare | Spelarens inlägg och karaktärer finns kvar. Spelaren kan ansöka igen och börjar då om utan olästa (F18). |
 
 ---
@@ -230,9 +234,9 @@ och stred mot fyra spindlar. Sedan fortsatte de till orchbyn Xrashh …"*
 
 - T-1: Stöd för d4, d6, d8, d10, d12, d20 och d100.
 - T-2: Syntax `NdX`, `NdX+M` och `NdX-M`, t.ex. `1d20`, `2d6+3`, `1d20-1`.
-- T-3: Man slår genom att skriva `/slå 2d6+3` (eller `/roll`) i OOC-chatten,
+- T-3: Man slår genom att skriva `/roll 2d6+3` i OOC-chatten,
   eller via en tärningsknapp där man väljer tärning, antal och modifierare (F13).
-  Text efter notationen blir en valfri beskrivning, t.ex. `/slå 1d20+5 anfall`
+  Text efter notationen blir en valfri beskrivning, t.ex. `/roll 1d20+5 attack`
   (högst 100 tecken).
 - T-4: Kastet visas som ett eget meddelande i OOC-chatten med enskilda
   tärningar, modifierare, total, vem som slog och när. Kastet visar alltid
@@ -345,11 +349,28 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
     (ladda upp, tagga, ändra, ta bort) och en väljare på karaktärens redigeringssida. Varje sökord matchar
     början av en tagg. Porträtt som tas bort ger initialer; porträtt ligger kvar när en kampanj raderas.
 
+### Fas 5 – Engelska och städning
+19. ✅ Chattinlägg högst 5 000 tecken (B23). Databaskolumnen rymmer fortfarande 10 000, så äldre inlägg ligger kvar.
+20. ✅ Gränssnittet på engelska, `/roll` som tärningskommando (B24). Datum visas på engelska men i svensk tid.
+    Kodkommentarer och interna loggmeddelanden är fortfarande på svenska.
+21. ✅ Städad testdata: e2e-testerna städar efter sig (alla konton på `@exempel.se`), och exempelkampanjen
+    *The Mists of Harrowmere* (GM Gunnar, spelare Freja och Leif, konton på `@taleshaven.test`) ersätter testkampanjerna.
+22. Dra tillbaka ansökan (B22).
+23. Borttagning av användarkonto med anonymiserade inlägg (B21).
+
 ### Senare
-Social inloggning, privata meddelanden, notiser/e-postnotiser, flera
-RPG-kanaler, tärningar i RPG, privata tärningskast, reaktioner, svar på
-specifika inlägg, bilder i inlägg, sökning, bokmärken, export, dolda scener,
-mer avancerad tärningssyntax, PWA.
+Social inloggning, privata meddelanden, notiser/e-postnotiser, tärningar i
+RPG, privata tärningskast, reaktioner, svar på specifika inlägg, bilder i
+inlägg, sökning, bokmärken, export, dolda scener, mer avancerad
+tärningssyntax, PWA.
+
+Möjliga förbättringar att ta ställning till senare:
+- **Flera RPG-kanaler:** när gruppen delar på sig kan GM skapa en RPG-kanal per
+  scen (t.ex. "RPG – Grottan" och "RPG – Staden"), så att parallella scener inte
+  blandas. Datamodellen klarar det redan (B6); det som behövs är gränssnitt för
+  att skapa, byta och arkivera kanaler.
+- **Privata tärningskast:** GM slår dolt (vänta, beslut saknas).
+- **Export av kampanj:** behövs inte nu; säkerhetskopior av databasen räcker.
 
 ---
 
@@ -451,9 +472,10 @@ Beroenden: `Web → Core, Infrastructure` och `Infrastructure → Core`.
 
 ## 9. Öppna frågor
 
-1. Behövs flera RPG-kanaler (t.ex. när gruppen delar på sig)?
-2. Ska spelare kunna föreslå krönikekapitel, eller skriver bara GM?
-3. Ska GM kunna dölja tärningskast (privata kast)?
-4. Hur hanteras borttagning av ett användarkonto: anonymiseras inläggen?
-5. Ska GM kunna exportera kampanjen?
-6. Ska den som ansöker kunna dra tillbaka sin ansökan?
+Inga just nu. Tidigare frågor är besvarade (2026-09-27):
+
+- Flera RPG-kanaler och privata tärningskast: väntar, se "Möjliga förbättringar" i avsnitt 5.
+- Spelare föreslår krönikekapitel: nej, bara GM skriver krönikan.
+- Borttaget konto: inläggen anonymiseras (B21).
+- Export av kampanj: behövs inte nu.
+- Dra tillbaka ansökan: ja (B22).

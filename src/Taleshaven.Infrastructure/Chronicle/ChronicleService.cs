@@ -68,7 +68,7 @@ internal sealed class ChronicleService(IDbContextFactory<TaleshavenDbContext> db
         await EnsureCanEditAsync(db, campaignId, userId, cancellationToken);
 
         var chapter = await db.ChronicleChapters.SingleOrDefaultAsync(c => c.CampaignId == campaignId && c.Id == chapterId, cancellationToken)
-            ?? throw new CampaignRuleException("Kapitlet finns inte.");
+            ?? throw new CampaignRuleException("The chapter doesn't exist.");
 
         chapter.Update(title, content, timeProvider.GetUtcNow());
         await db.SaveChangesAsync(cancellationToken);
@@ -82,7 +82,7 @@ internal sealed class ChronicleService(IDbContextFactory<TaleshavenDbContext> db
 
         var chapters = await LoadChaptersAsync(db, campaignId, cancellationToken);
         var chapter = chapters.SingleOrDefault(c => c.Id == chapterId)
-            ?? throw new CampaignRuleException("Kapitlet finns inte.");
+            ?? throw new CampaignRuleException("The chapter doesn't exist.");
 
         ChronicleOrdering.Remove(chapters, chapter);
         db.ChronicleChapters.Remove(chapter);
@@ -96,7 +96,7 @@ internal sealed class ChronicleService(IDbContextFactory<TaleshavenDbContext> db
 
         var chapters = await LoadChaptersAsync(db, campaignId, cancellationToken);
         var chapter = chapters.SingleOrDefault(c => c.Id == chapterId)
-            ?? throw new CampaignRuleException("Kapitlet finns inte.");
+            ?? throw new CampaignRuleException("The chapter doesn't exist.");
 
         ChronicleOrdering.Move(chapters, chapter, direction);
         await db.SaveChangesAsync(cancellationToken);
@@ -107,7 +107,7 @@ internal sealed class ChronicleService(IDbContextFactory<TaleshavenDbContext> db
     {
         var access = await CampaignAccess.GetAsync(db, campaignId, userId, cancellationToken);
         if (!CampaignPermissions.CanEditChronicle(access.Role))
-            throw new CampaignRuleException("Endast kampanjens GM kan skriva i krönikan.");
+            throw new CampaignRuleException("Only the campaign's GM can write in the chronicle.");
     }
 
     private static async Task<List<ChronicleChapter>> LoadChaptersAsync(TaleshavenDbContext db, int campaignId, CancellationToken cancellationToken) =>

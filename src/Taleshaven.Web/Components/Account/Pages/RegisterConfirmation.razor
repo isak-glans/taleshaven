@@ -1,4 +1,4 @@
-﻿@page "/Account/RegisterConfirmation"
+@page "/Account/RegisterConfirmation"
 
 @using System.Text
 @using Microsoft.AspNetCore.Identity
@@ -10,22 +10,22 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Bekräfta konto</PageTitle>
+<PageTitle>Confirm account</PageTitle>
 
-<h1>Bekräfta konto</h1>
+<h1>Confirm account</h1>
 
 <StatusMessage Message="@statusMessage" />
 
 @if (emailConfirmationLink is not null)
 {
     <p>
-        Ingen e-posttjänst är konfigurerad än, så bekräftelselänken visas här i stället för att mejlas:
-        <a id="confirm-link" href="@emailConfirmationLink">Klicka här för att bekräfta ditt konto</a>
+        No email service is configured yet, so the confirmation link is shown here instead of being emailed:
+        <a id="confirm-link" href="@emailConfirmationLink">Click here to confirm your account</a>
     </p>
 }
 else
 {
-    <p role="alert">Kontrollera din e-post för att bekräfta ditt konto.</p>
+    <p role="alert">Check your email to confirm your account.</p>
 }
 
 @code {

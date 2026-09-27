@@ -1,4 +1,4 @@
-﻿@using Taleshaven.Core.Characters
+@using Taleshaven.Core.Characters
 
 @* En kampanjs RPG- eller OOC-chatt med rubrik och flikar. Används av RpgPage och OocPage.
    Sidorna är separata komponenter så att ett flikbyte alltid ger nya parametrar; en gemensam sida
@@ -20,12 +20,12 @@
 
 @if (Kind == ThreadKind.Ooc)
 {
-    <p class="text-secondary small mb-0">Här pratar ni utanför rollspelet: planering, regelfrågor, frånvaro och annat.</p>
+    <p class="text-secondary small mb-0">Out-of-character talk: planning, rules questions, absences and anything else.</p>
 }
 
 <ChatView @key="thread.Id" Thread="thread" SendOnEnter="@(Kind == ThreadKind.Ooc)" CampaignId="CampaignId"
           ViewerRole="campaign.ViewerRole" PostingOptions="@(LoadedPostingOptions ?? [])"
-          Placeholder="@(Kind == ThreadKind.Ooc ? "Skriv ett meddelande…" : "Skriv ditt inlägg…")" />
+          Placeholder="@(Kind == ThreadKind.Ooc ? "Write a message…" : "Write your post…")" />
 
 @code {
     [Parameter, EditorRequired]

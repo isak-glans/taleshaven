@@ -66,10 +66,10 @@ public class DiceNotationTests
 public class DiceCommandTests
 {
     [Theory]
-    [InlineData("/slå 2d6+3", "2d6+3", null)]
+    [InlineData("/roll 2d6+3", "2d6+3", null)]
     [InlineData("/roll 1d20", "1d20", null)]
-    [InlineData("/SLÅ d20 anfall mot orchen", "1d20", "anfall mot orchen")]
-    [InlineData("  /slå   1d100   ", "1d100", null)]
+    [InlineData("/ROLL d20 attack the orc", "1d20", "attack the orc")]
+    [InlineData("  /roll   1d100   ", "1d100", null)]
     public void RecognizesCommands(string input, string expectedNotation, string? expectedLabel)
     {
         Assert.True(DiceCommand.IsCommand(input, out var notation, out var label, out var error));
@@ -79,9 +79,10 @@ public class DiceCommandTests
     }
 
     [Theory]
-    [InlineData("Hej allihop")]
-    [InlineData("Jag slår 2d6")]
-    [InlineData("/slåss mot draken")]
+    [InlineData("Hello everyone")]
+    [InlineData("I roll 2d6")]
+    [InlineData("/slå 2d6")]
+    [InlineData("/rollercoaster")]
     [InlineData("/rolled")]
     [InlineData("")]
     public void IgnoresOrdinaryText(string input)
@@ -90,8 +91,8 @@ public class DiceCommandTests
     }
 
     [Theory]
-    [InlineData("/slå")]
-    [InlineData("/slå 3d7")]
+    [InlineData("/roll")]
+    [InlineData("/roll 3d7")]
     [InlineData("/roll abc")]
     public void ReportsErrorsForInvalidCommands(string input)
     {
@@ -102,7 +103,7 @@ public class DiceCommandTests
     [Fact]
     public void RejectsTooLongLabel()
     {
-        var input = "/slå 1d20 " + new string('a', DiceRoll.LabelMaxLength + 1);
+        var input = "/roll 1d20 " + new string('a', DiceRoll.LabelMaxLength + 1);
 
         Assert.True(DiceCommand.IsCommand(input, out _, out _, out var error));
         Assert.NotNull(error);

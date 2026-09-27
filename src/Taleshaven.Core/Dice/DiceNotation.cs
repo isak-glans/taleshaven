@@ -14,11 +14,11 @@ public readonly partial record struct DiceNotation
     public DiceNotation(int count, int sides, int modifier = 0)
     {
         if (count is < 1 or > MaxCount)
-            throw new CampaignRuleException($"Antalet tärningar måste vara mellan 1 och {MaxCount}.");
+            throw new CampaignRuleException($"The number of dice must be between 1 and {MaxCount}.");
         if (!AllowedSides.Contains(sides))
-            throw new CampaignRuleException($"Tärningen d{sides} stöds inte. Använd {string.Join(", ", AllowedSides.Select(s => $"d{s}"))}.");
+            throw new CampaignRuleException($"The d{sides} die isn't supported. Use {string.Join(", ", AllowedSides.Select(s => $"d{s}"))}.");
         if (Math.Abs(modifier) > MaxModifier)
-            throw new CampaignRuleException($"Modifieraren måste vara mellan -{MaxModifier} och +{MaxModifier}.");
+            throw new CampaignRuleException($"The modifier must be between -{MaxModifier} and +{MaxModifier}.");
 
         Count = count;
         Sides = sides;
@@ -38,7 +38,7 @@ public readonly partial record struct DiceNotation
         var match = NotationPattern().Match((input ?? "").Replace(" ", ""));
         if (!match.Success)
         {
-            error = "Ogiltig tärning. Skriv t.ex. 2d6+3, 1d20 eller d100.";
+            error = "Invalid dice. Write e.g. 2d6+3, 1d20 or d100.";
             return false;
         }
 

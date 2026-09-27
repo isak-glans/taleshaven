@@ -4,7 +4,11 @@ public static class ThreadLimits
 {
     public const int TitleMaxLength = 100;
     public const int DescriptionMaxLength = 500;
-    public const int PostMaxLength = 10_000;
+    /// <summary>Längsta inlägg som kan skrivas eller redigeras (B23).</summary>
+    public const int PostMaxLength = 5_000;
+
+    /// <summary>Kolumnens storlek i databasen. Större än <see cref="PostMaxLength"/>, så att inlägg från tiden före B23 ligger kvar.</summary>
+    public const int PostStorageMaxLength = 10_000;
 }
 
 /// <summary>

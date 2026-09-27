@@ -47,7 +47,7 @@ public class CampaignAdministrationTests
         var campaign = CampaignWithPlayers("anna", "bertil");
 
         var ex = Assert.Throws<CampaignRuleException>(() => campaign.UpdateDetails("Barovia", null, 1));
-        Assert.Contains("2 spelare", ex.Message);
+        Assert.Contains("2 players", ex.Message);
         Assert.Equal(4, campaign.MaxPlayers);
     }
 

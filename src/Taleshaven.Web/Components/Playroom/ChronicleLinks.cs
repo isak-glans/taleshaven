@@ -7,7 +7,7 @@ public static class ChronicleLinks
 {
     public static string Chronicle(int campaignId) => $"campaigns/{campaignId}/chronicle";
 
-    public static string Page(int campaignId, int page) => $"campaigns/{campaignId}/chronicle?sida={page}";
+    public static string Page(int campaignId, int page) => $"campaigns/{campaignId}/chronicle?page={page}";
 
     public static string Chapter(int campaignId, int number) => Page(campaignId, ChronicleLimits.PageOf(number));
 

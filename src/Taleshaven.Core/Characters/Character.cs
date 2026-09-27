@@ -35,7 +35,7 @@ public class Character
     /// <summary>Namnet spelarna ser medan NPC:n är dold. Utan alias visas <see cref="UnknownName"/>.</summary>
     public string? Alias { get; private set; }
 
-    public const string UnknownName = "Okänd";
+    public const string UnknownName = "Unknown";
 
     /// <summary>Namnet som visas för den som inte får se dolda NPC:er.</summary>
     public static string NameForPlayers(string name, bool isHidden, string? alias) => isHidden ? alias ?? UnknownName : name;
@@ -67,9 +67,9 @@ public class Character
 
         var name = input.Name?.Trim() ?? "";
         if (name.Length == 0)
-            throw new CampaignRuleException("Karaktären måste ha ett namn.");
+            throw new CampaignRuleException("The character needs a name.");
         if (name.Length > CharacterLimits.NameMaxLength)
-            throw new CampaignRuleException($"Namnet får vara högst {CharacterLimits.NameMaxLength} tecken.");
+            throw new CampaignRuleException($"The name can be at most {CharacterLimits.NameMaxLength} characters.");
 
         if (IsNpc)
         {
@@ -77,11 +77,11 @@ public class Character
             // (de visas inte) i stället för att raderas.
             var note = string.IsNullOrWhiteSpace(input.GmNote) ? null : input.GmNote.Trim();
             if (note?.Length > CharacterLimits.GmNoteMaxLength)
-                throw new CampaignRuleException($"Anteckningen får vara högst {CharacterLimits.GmNoteMaxLength} tecken.");
+                throw new CampaignRuleException($"The note can be at most {CharacterLimits.GmNoteMaxLength} characters.");
 
             var alias = string.IsNullOrWhiteSpace(input.Alias) ? null : input.Alias.Trim();
             if (alias?.Length > CharacterLimits.NameMaxLength)
-                throw new CampaignRuleException($"Aliaset får vara högst {CharacterLimits.NameMaxLength} tecken.");
+                throw new CampaignRuleException($"The alias can be at most {CharacterLimits.NameMaxLength} characters.");
 
             Name = name;
             GmNote = note;
@@ -93,11 +93,11 @@ public class Character
 
         var sheet = input.Sheet?.Trim() ?? "";
         if (sheet.Length > CharacterLimits.SheetMaxLength)
-            throw new CampaignRuleException($"Karaktärsdokumentet får vara högst {CharacterLimits.SheetMaxLength} tecken.");
+            throw new CampaignRuleException($"The character sheet can be at most {CharacterLimits.SheetMaxLength} characters.");
 
         var ruleSystem = string.IsNullOrWhiteSpace(input.RuleSystem) ? null : input.RuleSystem.Trim();
         if (ruleSystem?.Length > CharacterLimits.RuleSystemMaxLength)
-            throw new CampaignRuleException($"Regelsystemet får vara högst {CharacterLimits.RuleSystemMaxLength} tecken.");
+            throw new CampaignRuleException($"The rule system can be at most {CharacterLimits.RuleSystemMaxLength} characters.");
 
         Name = name;
         Sheet = sheet;
@@ -110,7 +110,7 @@ public class Character
     public void SetArchived(bool archived)
     {
         if (!IsNpc)
-            throw new CampaignRuleException("Bara NPC:er kan arkiveras.");
+            throw new CampaignRuleException("Only NPCs can be archived.");
 
         IsArchived = archived;
     }
@@ -129,9 +129,9 @@ public class Character
 
         url = url.Trim();
         if (url.Length > CharacterLimits.SheetUrlMaxLength)
-            throw new CampaignRuleException($"Länken får vara högst {CharacterLimits.SheetUrlMaxLength} tecken.");
+            throw new CampaignRuleException($"The link can be at most {CharacterLimits.SheetUrlMaxLength} characters.");
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
-            throw new CampaignRuleException("Länken till rollformuläret måste börja med https:// eller http://.");
+            throw new CampaignRuleException("The character sheet link must start with https:// or http://.");
 
         return uri.ToString();
     }

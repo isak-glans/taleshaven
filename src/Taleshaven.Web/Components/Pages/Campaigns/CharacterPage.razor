@@ -17,7 +17,7 @@
 
 <CampaignHeader Campaign="campaign" Active="CampaignTab.Characters" />
 
-<p class="small mb-2"><a href="campaigns/@CampaignId/characters">Karaktärer</a> ›</p>
+<p class="small mb-2"><a href="campaigns/@CampaignId/characters">Characters</a> ›</p>
 
 <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
     <Avatar Name="@character.Name" ImageUrl="@character.AvatarUrl" ColorKey="@($"character-{character.Id}")" Size="96" />
@@ -30,29 +30,29 @@
             }
             @if (character.IsArchived)
             {
-                <span class="badge text-bg-light border align-middle">Arkiverad</span>
+                <span class="badge text-bg-light border align-middle">Archived</span>
             }
             @if (character.IsHidden)
             {
                 @* Dolda NPC:er når bara GM hit; för andra ger sidan 404 (B16). *@
-                <span class="badge text-bg-warning align-middle">Dold</span>
+                <span class="badge text-bg-warning align-middle">Hidden</span>
             }
         </h2>
         <div class="text-secondary small">
-            @(character.IsNpc ? "NPC hos GM" : $"Spelas av {character.OwnerName}")
+            @(character.IsNpc ? "NPC run by the GM" : $"Played by {character.OwnerName}")
             @if (!character.IsNpc && character.RuleSystem is not null)
             {
                 <text> · @character.RuleSystem</text>
             }
-            · uppdaterad @Dates.DateTime(character.UpdatedAt)
+            · updated @Dates.DateTime(character.UpdatedAt)
         </div>
         @if (character.IsHidden)
         {
-            <div class="small">Spelarna ser: <strong>@(character.Alias ?? Character.UnknownName)</strong></div>
+            <div class="small">Players see: <strong>@(character.Alias ?? Character.UnknownName)</strong></div>
         }
         @if (!character.IsNpc && character.SheetUrl is not null)
         {
-            <a class="small" href="@character.SheetUrl" target="_blank" rel="nofollow noopener noreferrer">Fullständigt rollformulär ↗</a>
+            <a class="small" href="@character.SheetUrl" target="_blank" rel="nofollow noopener noreferrer">Full character sheet ↗</a>
         }
     </div>
     @if (character.CanEdit)
@@ -65,12 +65,12 @@
                     <AntiforgeryToken />
                     <input type="hidden" name="Archive" value="@(character.IsArchived ? "false" : "true")" />
                     <button type="submit" class="btn btn-outline-secondary btn-sm"
-                            title="@(character.IsArchived ? "Visa NPC:n i Skriv som igen" : "Göm NPC:n i Skriv som")">
-                        @(character.IsArchived ? "Återställ" : "Arkivera")
+                            title="@(character.IsArchived ? "Show the NPC in Post as again" : "Hide the NPC from Post as")">
+                        @(character.IsArchived ? "Restore" : "Archive")
                     </button>
                 </form>
             }
-            <a class="btn btn-outline-secondary btn-sm" href="campaigns/@CampaignId/characters/@character.Id/edit">Redigera</a>
+            <a class="btn btn-outline-secondary btn-sm" href="campaigns/@CampaignId/characters/@character.Id/edit">Edit</a>
         </div>
     }
 </div>
@@ -86,14 +86,14 @@
     @if (character.GmNote is not null)
     {
         <div class="card border-warning gm-note">
-            <div class="card-header small">Anteckning – bara du som GM ser den</div>
+            <div class="card-header small">Note – only you as GM can see it</div>
             <div class="card-body post-content">@((MarkupString)Markdown.ToSafeHtml(character.GmNote))</div>
         </div>
     }
 }
 else if (character.Sheet.Length == 0)
 {
-    <p class="text-secondary">Karaktärsdokumentet är inte ifyllt än.</p>
+    <p class="text-secondary">The character sheet hasn't been filled in yet.</p>
 }
 else
 {

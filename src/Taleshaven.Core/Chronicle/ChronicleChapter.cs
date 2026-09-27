@@ -43,15 +43,15 @@ public class ChronicleChapter
     {
         title = title?.Trim() ?? "";
         if (title.Length == 0)
-            throw new CampaignRuleException("Kapitlet måste ha en titel.");
+            throw new CampaignRuleException("The chapter needs a title.");
         if (title.Length > ChronicleLimits.TitleMaxLength)
-            throw new CampaignRuleException($"Titeln får vara högst {ChronicleLimits.TitleMaxLength} tecken.");
+            throw new CampaignRuleException($"The title can be at most {ChronicleLimits.TitleMaxLength} characters.");
 
         content = content?.Trim() ?? "";
         if (content.Length == 0)
-            throw new CampaignRuleException("Kapitlet är tomt.");
+            throw new CampaignRuleException("The chapter is empty.");
         if (content.Length > ChronicleLimits.ContentMaxLength)
-            throw new CampaignRuleException($"Kapitlet får vara högst {ChronicleLimits.ContentMaxLength} tecken.");
+            throw new CampaignRuleException($"The chapter can be at most {ChronicleLimits.ContentMaxLength} characters.");
 
         Title = title;
         Content = content;
@@ -116,7 +116,7 @@ public static class ChronicleOrdering
         var ordered = Normalize(chapters);
         var index = ordered.IndexOf(chapter);
         if (index < 0)
-            throw new CampaignRuleException("Kapitlet finns inte.");
+            throw new CampaignRuleException("The chapter doesn't exist.");
 
         var target = index + direction;
         if (target < 0 || target >= ordered.Count)

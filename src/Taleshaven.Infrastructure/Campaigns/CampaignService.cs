@@ -135,7 +135,7 @@ internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbF
         var campaign = await LoadManagedCampaignAsync(db, campaignId, userId, cancellationToken);
 
         if (!string.Equals(confirmationName?.Trim(), campaign.Name, StringComparison.Ordinal))
-            throw new CampaignRuleException("Skriv kampanjens namn exakt för att bekräfta att den ska raderas.");
+            throw new CampaignRuleException("Type the campaign's name exactly to confirm that it should be deleted.");
 
         // Databasen raderar allt som hör till kampanjen i samma sats (kaskad): kanaler, inlägg, historik,
         // krönika, karaktärer, ansökningar, medlemskap och läspositioner. Porträtten ligger kvar i biblioteket (B19).
@@ -147,10 +147,10 @@ internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbF
         var campaign = await db.Campaigns
             .Include(c => c.Memberships)
             .SingleOrDefaultAsync(c => c.Id == campaignId, cancellationToken)
-            ?? throw new CampaignRuleException("Kampanjen finns inte.");
+            ?? throw new CampaignRuleException("The campaign doesn't exist.");
 
         if (!CampaignPermissions.CanManageCampaign(campaign.IsGameMaster(userId) ? CampaignRole.GameMaster : CampaignRole.None))
-            throw new CampaignRuleException("Endast kampanjens GM kan ändra kampanjen.");
+            throw new CampaignRuleException("Only the campaign's GM can change the campaign.");
 
         return campaign;
     }

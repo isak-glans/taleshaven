@@ -6,10 +6,10 @@
 
     private string Text => Status switch
     {
-        CampaignStatus.OpenForApplications => "Öppen för ansökningar",
-        CampaignStatus.Ongoing => "Pågående",
-        CampaignStatus.Closed => "Stängd",
-        CampaignStatus.Archived => "Arkiverad",
+        CampaignStatus.OpenForApplications => "Open for applications",
+        CampaignStatus.Ongoing => "Ongoing",
+        CampaignStatus.Closed => "Closed",
+        CampaignStatus.Archived => "Archived",
         _ => Status.ToString(),
     };
 

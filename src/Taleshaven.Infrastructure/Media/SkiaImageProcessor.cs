@@ -21,13 +21,13 @@ internal sealed class SkiaImageProcessor : IImageProcessor
         buffer.Position = 0;
 
         using var codec = SKCodec.Create(buffer)
-            ?? throw new CampaignRuleException("Filen är ingen bild som kan läsas. Använd JPG, PNG eller WebP.");
+            ?? throw new CampaignRuleException("The file isn't a readable image. Use JPG, PNG or WebP.");
 
         if (codec.Info.Width > ImageLimits.MaxSourceDimension || codec.Info.Height > ImageLimits.MaxSourceDimension)
-            throw new CampaignRuleException($"Bilden är för stor. Den får vara högst {ImageLimits.MaxSourceDimension} bildpunkter bred och hög.");
+            throw new CampaignRuleException($"The image is too large. It can be at most {ImageLimits.MaxSourceDimension} pixels wide and high.");
 
         using var decoded = SKBitmap.Decode(codec)
-            ?? throw new CampaignRuleException("Bilden kunde inte läsas.");
+            ?? throw new CampaignRuleException("The image couldn't be read.");
         using var oriented = ApplyOrientation(decoded, codec.EncodedOrigin);
 
         // Centrerad kvadrat ur originalet.

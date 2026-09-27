@@ -11,11 +11,11 @@
                     @if (character.IsHidden)
                     {
                         @* Dolda NPC:er skickas bara till GM (B16). *@
-                        <span class="badge text-bg-warning align-middle">Dold</span>
+                        <span class="badge text-bg-warning align-middle">Hidden</span>
                     }
                 </div>
                 <div class="small text-secondary">
-                    @(character.IsNpc ? "NPC" : $"Spelas av {character.OwnerName}")
+                    @(character.IsNpc ? "NPC" : $"Played by {character.OwnerName}")
                     @if (character.RuleSystem is not null)
                     {
                         <text> · @character.RuleSystem</text>

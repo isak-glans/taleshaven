@@ -9,9 +9,9 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Profil</PageTitle>
+<PageTitle>Profile</PageTitle>
 
-<h3>Profil</h3>
+<h3>Profile</h3>
 <StatusMessage />
 
 <div class="row">
@@ -20,15 +20,15 @@
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
-                <input type="text" value="@username" id="username" class="form-control" placeholder="E-post" disabled />
-                <label for="username" class="form-label">E-post</label>
+                <input type="text" value="@username" id="username" class="form-control" placeholder="Email" disabled />
+                <label for="username" class="form-label">Email</label>
             </div>
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.DisplayName" id="Input.DisplayName" class="form-control" placeholder="Visningsnamn" />
-                <label for="Input.DisplayName" class="form-label">Visningsnamn</label>
+                <InputText @bind-Value="Input.DisplayName" id="Input.DisplayName" class="form-control" placeholder="Display name" />
+                <label for="Input.DisplayName" class="form-label">Display name</label>
                 <ValidationMessage For="() => Input.DisplayName" class="text-danger" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Spara</button>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
         </EditForm>
     </div>
 </div>
@@ -74,21 +74,21 @@
             var result = await UserManager.UpdateAsync(user);
             if (!result.Succeeded)
             {
-                RedirectManager.RedirectToCurrentPageWithStatus("Error: Kunde inte spara profilen.", HttpContext);
+                RedirectManager.RedirectToCurrentPageWithStatus("Error: Your profile could not be saved.", HttpContext);
                 return;
             }
         }
 
         // Förnyar inloggningskakan så att det nya visningsnamnet syns direkt.
         await SignInManager.RefreshSignInAsync(user);
-        RedirectManager.RedirectToCurrentPageWithStatus("Profilen har sparats.", HttpContext);
+        RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been saved.", HttpContext);
     }
 
     private sealed class InputModel
     {
-        [Required(ErrorMessage = "Ange ett visningsnamn.")]
+        [Required(ErrorMessage = "Enter a display name.")]
         [StringLength(UserLimits.DisplayNameMaxLength, MinimumLength = UserLimits.DisplayNameMinLength,
-            ErrorMessage = "Visningsnamnet måste vara {2}–{1} tecken.")]
+            ErrorMessage = "The display name must be {2}–{1} characters.")]
         public string? DisplayName { get; set; }
     }
 }

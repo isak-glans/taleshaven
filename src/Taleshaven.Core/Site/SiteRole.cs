@@ -16,7 +16,7 @@ public static class SiteRoles
 
     public static string DisplayName(SiteRole role) => role switch
     {
-        SiteRole.Administrator => "Administratör",
+        SiteRole.Administrator => "Administrator",
         SiteRole.Manager => "Manager",
         _ => role.ToString(),
     };
@@ -46,8 +46,8 @@ public static class SitePermissions
     public static void EnsureCanRevoke(string adminId, string userId, SiteRole role, bool fromConfiguration)
     {
         if (role == SiteRole.Administrator && fromConfiguration)
-            throw new CampaignRuleException("Administratören anges i konfigurationen (Admin:Emails) och kan inte tas bort här.");
+            throw new CampaignRuleException("This administrator is set in the configuration (Admin:Emails) and can't be removed here.");
         if (role == SiteRole.Administrator && adminId == userId)
-            throw new CampaignRuleException("Du kan inte ta bort din egen administratörsroll.");
+            throw new CampaignRuleException("You can't remove your own administrator role.");
     }
 }

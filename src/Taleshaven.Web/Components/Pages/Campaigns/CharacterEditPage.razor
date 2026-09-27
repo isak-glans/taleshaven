@@ -23,7 +23,7 @@
 @if (!CanEdit)
 {
     <div class="alert alert-warning">
-        @(LoadedCharacter is null ? "Endast kampanjens deltagare kan skapa karaktärer." : "Du kan inte ändra den här karaktären.")
+        @(LoadedCharacter is null ? "Only the campaign's participants can create characters." : "You can't change this character.")
     </div>
     return;
 }
@@ -38,18 +38,18 @@
 
     <div class="row g-3 mb-3">
         <div class="col-md-6">
-            <label for="character-name" class="form-label">Namn</label>
+            <label for="character-name" class="form-label">Name</label>
             <input id="character-name" class="form-control" maxlength="@CharacterLimits.NameMaxLength" @bind="name" />
         </div>
         @if (!IsNpc)
         {
             <div class="col-md-6">
-                <label for="character-rules" class="form-label">Regelsystem <span class="text-secondary">(valfritt)</span></label>
+                <label for="character-rules" class="form-label">Rule system <span class="text-secondary">(optional)</span></label>
                 <input id="character-rules" class="form-control" maxlength="@CharacterLimits.RuleSystemMaxLength"
-                       placeholder="T.ex. D&D 5e" @bind="ruleSystem" />
+                       placeholder="E.g. D&D 5e" @bind="ruleSystem" />
             </div>
             <div class="col-12">
-                <label for="character-url" class="form-label">Länk till fullständigt rollformulär <span class="text-secondary">(valfritt)</span></label>
+                <label for="character-url" class="form-label">Link to full character sheet <span class="text-secondary">(optional)</span></label>
                 <input id="character-url" type="url" class="form-control" maxlength="@CharacterLimits.SheetUrlMaxLength"
                        placeholder="https://…" @bind="sheetUrl" />
             </div>
@@ -60,16 +60,16 @@
             <div class="col-md-6 d-flex align-items-end">
                 <div class="form-check mb-2">
                     <input id="character-hidden" type="checkbox" class="form-check-input" @bind="hidden" />
-                    <label for="character-hidden" class="form-check-label">Dold för spelarna</label>
+                    <label for="character-hidden" class="form-check-label">Hidden from players</label>
                 </div>
             </div>
             @if (hidden)
             {
                 <div class="col-md-6">
-                    <label for="character-alias" class="form-label">Alias <span class="text-secondary">(det spelarna ser)</span></label>
+                    <label for="character-alias" class="form-label">Alias <span class="text-secondary">(what players see)</span></label>
                     <input id="character-alias" class="form-control" maxlength="@CharacterLimits.NameMaxLength"
                            placeholder="@Character.UnknownName" @bind="alias" />
-                    <div class="form-text">Utan alias visas "@Character.UnknownName". När du tar bort markeringen syns det riktiga namnet och porträttet, även i gamla inlägg.</div>
+                    <div class="form-text">Without an alias, "@Character.UnknownName" is shown. When you uncheck this, the real name and portrait appear, also in old posts.</div>
                 </div>
             }
         }
@@ -78,35 +78,35 @@
     @if (IsNpc)
     {
         @* NPC:er har inget karaktärsdokument, bara en anteckning som aldrig visas för spelarna (B15). *@
-        <label class="form-label">Anteckning <span class="text-secondary">(bara du som GM ser den)</span></label>
+        <label class="form-label">Note <span class="text-secondary">(only you as GM can see it)</span></label>
         <MarkdownEditor @key="CharacterId" MaxLength="CharacterLimits.GmNoteMaxLength" DraftKey="@DraftKey"
                         InitialText="@LoadedCharacter?.GmNote" OnSubmit="SaveAsync" AllowEmpty="true"
-                        SubmitText="Spara NPC" ShortcutHint="Ctrl+Enter sparar" Label="Anteckning" Rows="6"
-                        Placeholder="T.ex. vet var nyckeln till kryptan finns, ljuger om sitt namn…" />
+                        SubmitText="Save NPC" ShortcutHint="Ctrl+Enter saves" Label="Note" Rows="6"
+                        Placeholder="E.g. knows where the crypt key is, lies about their name…" />
     }
     else
     {
-        <label class="form-label">Karaktärsdokument</label>
+        <label class="form-label">Character sheet</label>
         <MarkdownEditor @key="CharacterId" MaxLength="CharacterLimits.SheetMaxLength" DraftKey="@DraftKey"
                         InitialText="@LoadedCharacter?.Sheet" OnSubmit="SaveAsync" AllowEmpty="true"
-                        SubmitText="Spara karaktär" ShortcutHint="Ctrl+Enter sparar" Label="Karaktärsdokument" Rows="12"
-                        Placeholder="Beskrivning, aktuell HP, resurser, utrustning, tillstånd och anteckningar…" />
+                        SubmitText="Save character" ShortcutHint="Ctrl+Enter saves" Label="Character sheet" Rows="12"
+                        Placeholder="Description, current HP, resources, equipment, conditions and notes…" />
     }
 
     <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
-        <a class="btn btn-link px-0" href="@BackLink">Avbryt</a>
+        <a class="btn btn-link px-0" href="@BackLink">Cancel</a>
 
         @if (LoadedCharacter is not null)
         {
             @if (!confirmDelete)
             {
-                <button type="button" class="btn btn-outline-danger ms-auto" @onclick="() => confirmDelete = true">Ta bort karaktär</button>
+                <button type="button" class="btn btn-outline-danger ms-auto" @onclick="() => confirmDelete = true">Delete character</button>
             }
             else
             {
-                <span class="ms-auto">Ta bort @LoadedCharacter.Name för gott?</span>
-                <button type="button" class="btn btn-danger" @onclick="DeleteAsync">Ja, ta bort</button>
-                <button type="button" class="btn btn-outline-secondary" @onclick="() => confirmDelete = false">Avbryt</button>
+                <span class="ms-auto">Delete @LoadedCharacter.Name for good?</span>
+                <button type="button" class="btn btn-danger" @onclick="DeleteAsync">Yes, delete</button>
+                <button type="button" class="btn btn-outline-secondary" @onclick="() => confirmDelete = false">Cancel</button>
             }
         }
     </div>
@@ -154,8 +154,8 @@
     private bool CanEdit => LoadedCharacter?.CanEdit
         ?? CampaignPermissions.CanCreateCharacter(LoadedCampaign?.ViewerRole ?? CampaignRole.None);
 
-    private string Heading => LoadedCharacter is not null ? $"Redigera {LoadedCharacter.Name}"
-        : IsGameMaster ? "Ny NPC" : "Ny karaktär";
+    private string Heading => LoadedCharacter is not null ? $"Edit {LoadedCharacter.Name}"
+        : IsGameMaster ? "New NPC" : "New character";
 
     private string DraftKey => CharacterId is null ? $"character-new-{CampaignId}" : $"character-{CharacterId}";
 

@@ -16,25 +16,25 @@
     return;
 }
 
-<PageTitle>Roller</PageTitle>
+<PageTitle>Roles</PageTitle>
 
-<h1 class="h3 mb-1">Roller</h1>
+<h1 class="h3 mb-1">Roles</h1>
 <p class="text-secondary">
-    <strong>Administratörer</strong> får allt, även dela ut roller. <strong>Managers</strong> sköter porträttbiblioteket.
+    <strong>Administrators</strong> can do everything, including granting roles. <strong>Managers</strong> look after the portrait library.
 </p>
 
 <StatusMessage Message="@errorMessage" />
 
 <form method="post" @formname="grant" @onsubmit="GrantAsync" class="card card-body mb-4 role-grant">
     <AntiforgeryToken />
-    <h2 class="h6">Ge en roll</h2>
+    <h2 class="h6">Grant a role</h2>
     <div class="row g-2 align-items-end">
         <div class="col-sm-6">
-            <label for="grant-email" class="form-label small">E-postadress</label>
+            <label for="grant-email" class="form-label small">Email address</label>
             <input id="grant-email" name="Grant.Email" type="email" class="form-control" required value="@Grant?.Email" />
         </div>
         <div class="col-sm-3">
-            <label for="grant-role" class="form-label small">Roll</label>
+            <label for="grant-role" class="form-label small">Role</label>
             <select id="grant-role" name="Grant.Role" class="form-select">
                 @foreach (var role in SiteRoles.All)
                 {
@@ -43,7 +43,7 @@
             </select>
         </div>
         <div class="col-sm-3">
-            <button type="submit" class="btn btn-primary w-100">Ge roll</button>
+            <button type="submit" class="btn btn-primary w-100">Grant role</button>
         </div>
     </div>
 </form>
@@ -51,10 +51,10 @@
 @foreach (var role in SiteRoles.All)
 {
     var inRole = holders.Where(h => h.Role == role).ToList();
-    <h2 class="h5">@(role == SiteRole.Administrator ? "Administratörer" : "Managers")</h2>
+    <h2 class="h5">@(role == SiteRole.Administrator ? "Administrators" : "Managers")</h2>
     @if (inRole.Count == 0)
     {
-        <p class="text-secondary">Ingen ännu.</p>
+        <p class="text-secondary">None yet.</p>
         continue;
     }
 
@@ -68,11 +68,11 @@
                 </div>
                 @if (holder.FromConfiguration)
                 {
-                    <span class="badge text-bg-light border ms-auto" title="Anges i Admin:Emails i konfigurationen">Konfiguration</span>
+                    <span class="badge text-bg-light border ms-auto" title="Set in Admin:Emails in the configuration">Configuration</span>
                 }
                 else if (holder.Role == SiteRole.Administrator && holder.UserId == userId)
                 {
-                    <span class="small text-secondary ms-auto">Det här är du</span>
+                    <span class="small text-secondary ms-auto">This is you</span>
                 }
                 else
                 {
@@ -80,7 +80,7 @@
                         <AntiforgeryToken />
                         <input type="hidden" name="Revoke.UserId" value="@holder.UserId" />
                         <input type="hidden" name="Revoke.Role" value="@holder.Role" />
-                        <button type="submit" class="btn btn-sm btn-outline-danger">Ta bort roll</button>
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Remove role</button>
                     </form>
                 }
             </li>
@@ -133,7 +133,7 @@
             return;
         }
 
-        RedirectManager.RedirectToWithStatus("admin/roles", $"{Grant.Email?.Trim()} är nu {SiteRoles.DisplayName(role).ToLowerInvariant()}.", HttpContext);
+        RedirectManager.RedirectToWithStatus("admin/roles", $"{Grant.Email?.Trim()} is now {SiteRoles.DisplayName(role).ToLowerInvariant()}.", HttpContext);
     }
 
     private async Task RevokeAsync()
@@ -141,7 +141,7 @@
         if (Revoke is not { UserId.Length: > 0, Role: { } role })
             return;
 
-        var name = holders?.FirstOrDefault(h => h.UserId == Revoke.UserId)?.DisplayName ?? "Användaren";
+        var name = holders?.FirstOrDefault(h => h.UserId == Revoke.UserId)?.DisplayName ?? "The user";
         try
         {
             await RoleService.RevokeAsync(userId, Revoke.UserId, role);
@@ -152,7 +152,7 @@
             return;
         }
 
-        RedirectManager.RedirectToWithStatus("admin/roles", $"{name} är inte längre {SiteRoles.DisplayName(role).ToLowerInvariant()}.", HttpContext);
+        RedirectManager.RedirectToWithStatus("admin/roles", $"{name} is no longer {SiteRoles.DisplayName(role).ToLowerInvariant()}.", HttpContext);
     }
 
     private sealed class GrantModel

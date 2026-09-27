@@ -1,12 +1,12 @@
 namespace Taleshaven.Core.Dice;
 
 /// <summary>
-/// Tärningskommandot i chatten: <c>/slå 2d6+3 anfall mot orchen</c> eller <c>/roll 1d20</c> (arbetsförslag F13).
+/// Tärningskommandot i chatten: <c>/roll 2d6+3 attack the orc</c> (F13, B24).
 /// Text efter notationen blir en valfri beskrivning av kastet.
 /// </summary>
 public static class DiceCommand
 {
-    private static readonly string[] Prefixes = ["/slå", "/roll"];
+    private const string Prefix = "/roll";
 
     /// <summary>
     /// Avgör om texten är ett tärningskommando. Returnerar false för vanlig text.
@@ -19,18 +19,17 @@ public static class DiceCommand
         error = null;
 
         var trimmed = text?.Trim() ?? "";
-        var prefix = Prefixes.FirstOrDefault(p =>
-            trimmed.StartsWith(p, StringComparison.OrdinalIgnoreCase)
-            && (trimmed.Length == p.Length || char.IsWhiteSpace(trimmed[p.Length])));
+        var isCommand = trimmed.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase)
+            && (trimmed.Length == Prefix.Length || char.IsWhiteSpace(trimmed[Prefix.Length]));
 
-        if (prefix is null)
+        if (!isCommand)
             return false;
 
-        var arguments = trimmed[prefix.Length..].Trim();
+        var arguments = trimmed[Prefix.Length..].Trim();
         var parts = arguments.Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 0)
         {
-            error = "Ange vilken tärning du vill slå, t.ex. /slå 2d6+3.";
+            error = "Say which dice to roll, e.g. /roll 2d6+3.";
             return true;
         }
 
@@ -39,7 +38,7 @@ public static class DiceCommand
 
         label = parts.Length > 1 ? parts[1].Trim() : null;
         if (label?.Length > DiceRoll.LabelMaxLength)
-            error = $"Beskrivningen får vara högst {DiceRoll.LabelMaxLength} tecken.";
+            error = $"The description can be at most {DiceRoll.LabelMaxLength} characters.";
 
         return true;
     }

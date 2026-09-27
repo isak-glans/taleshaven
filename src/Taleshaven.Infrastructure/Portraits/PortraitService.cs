@@ -98,10 +98,10 @@ internal sealed class PortraitService(
     private async Task EnsureCanManageAsync(string userId, CancellationToken cancellationToken)
     {
         if (!SitePermissions.CanManagePortraits(await siteRoles.GetRolesAsync(userId, cancellationToken)))
-            throw new CampaignRuleException("Endast administratörer och managers kan hantera porträttbiblioteket.");
+            throw new CampaignRuleException("Only administrators and managers can manage the portrait library.");
     }
 
     private static async Task<Portrait> LoadAsync(TaleshavenDbContext db, int portraitId, CancellationToken cancellationToken) =>
         await db.Portraits.SingleOrDefaultAsync(p => p.Id == portraitId, cancellationToken)
-        ?? throw new CampaignRuleException("Porträttet finns inte.");
+        ?? throw new CampaignRuleException("The portrait doesn't exist.");
 }

@@ -65,7 +65,7 @@ internal sealed class CampaignApplicationService(IDbContextFactory<TaleshavenDbC
             .Include(c => c.Applications.Where(a => a.Status == ApplicationStatus.Pending))
             .AsSplitQuery()
             .SingleOrDefaultAsync(c => c.Id == campaignId, cancellationToken)
-        ?? throw new CampaignRuleException("Kampanjen finns inte.");
+        ?? throw new CampaignRuleException("The campaign doesn't exist.");
 
     private static async Task SaveAsync(TaleshavenDbContext db, CancellationToken cancellationToken)
     {
@@ -76,7 +76,7 @@ internal sealed class CampaignApplicationService(IDbContextFactory<TaleshavenDbC
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
             // Två samtidiga anrop, t.ex. en dubbelklickad knapp.
-            throw new CampaignRuleException("Ansökan har redan skickats eller behandlats. Ladda om sidan.");
+            throw new CampaignRuleException("The application has already been sent or handled. Reload the page.");
         }
     }
 }

@@ -18,36 +18,36 @@
     return;
 }
 
-<PageTitle>Porträtt</PageTitle>
+<PageTitle>Portraits</PageTitle>
 
-<h1 class="h3 mb-1">Porträtt</h1>
-<p class="text-secondary">Porträtten kan väljas till alla karaktärer och NPC:er på sajten.</p>
+<h1 class="h3 mb-1">Portraits</h1>
+<p class="text-secondary">The portraits can be chosen for any character or NPC on the site.</p>
 
 <section class="card card-body mb-4 portrait-upload">
-    <h2 class="h6">Lägg till porträtt</h2>
+    <h2 class="h6">Add a portrait</h2>
     <div class="d-flex flex-wrap gap-3">
         @if (preview is not null)
         {
-            <img class="portrait-preview" src="@preview" alt="Förhandsvisning" width="128" height="128" />
+            <img class="portrait-preview" src="@preview" alt="Preview" width="128" height="128" />
         }
         <div class="flex-grow-1 d-flex flex-column gap-2">
             <div>
-                <label for="portrait-file" class="form-label small mb-1">Bild</label>
+                <label for="portrait-file" class="form-label small mb-1">Image</label>
                 <InputFile id="portrait-file" @key="fileInputKey" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp" OnChange="OnImageSelectedAsync" />
-                <div class="form-text">JPG, PNG eller WebP, högst 5 MB. Bilden beskärs till en kvadrat.</div>
+                <div class="form-text">JPG, PNG or WebP, at most 5 MB. The image is cropped to a square.</div>
             </div>
             <div>
-                <label for="portrait-tags" class="form-label small mb-1">Taggar</label>
-                <input id="portrait-tags" class="form-control form-control-sm" placeholder="#dvärg #krigare" @bind="newTags" @bind:event="oninput" />
+                <label for="portrait-tags" class="form-label small mb-1">Tags</label>
+                <input id="portrait-tags" class="form-control form-control-sm" placeholder="#dwarf #warrior" @bind="newTags" @bind:event="oninput" />
                 <TagSuggestions Tags="tags" Current="@newTags" OnPick="tag => newTags = AppendTag(newTags, tag)" />
             </div>
             <div>
-                <label for="portrait-source" class="form-label small mb-1">Källa och licens <span class="text-secondary">(valfritt)</span></label>
+                <label for="portrait-source" class="form-label small mb-1">Source and licence <span class="text-secondary">(optional)</span></label>
                 <input id="portrait-source" class="form-control form-control-sm" maxlength="@PortraitTags.SourceMaxLength"
-                       placeholder="T.ex. Egen bild, CC BY 4.0" @bind="newSource" />
+                       placeholder="E.g. Own image, CC BY 4.0" @bind="newSource" />
             </div>
             <div>
-                <button type="button" class="btn btn-primary btn-sm" disabled="@(image is null || busy)" @onclick="UploadAsync">Lägg till i biblioteket</button>
+                <button type="button" class="btn btn-primary btn-sm" disabled="@(image is null || busy)" @onclick="UploadAsync">Add to library</button>
             </div>
             @if (uploadError is not null)
             {
@@ -62,14 +62,14 @@
 </section>
 
 <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-    <h2 class="h5 mb-0 me-auto">Biblioteket</h2>
-    <input type="search" class="form-control form-control-sm w-auto" placeholder="Sök på taggar" aria-label="Sök porträtt på taggar"
+    <h2 class="h5 mb-0 me-auto">Library</h2>
+    <input type="search" class="form-control form-control-sm w-auto" placeholder="Search tags" aria-label="Search portraits by tag"
            @bind="query" @bind:event="oninput" @bind:after="OnQueryChangedAsync" />
 </div>
 
 @if (page is { Portraits.Count: 0 })
 {
-    <p class="text-secondary">@(string.IsNullOrWhiteSpace(query) ? "Biblioteket är tomt." : "Inga porträtt har de taggarna.")</p>
+    <p class="text-secondary">@(string.IsNullOrWhiteSpace(query) ? "The library is empty." : "No portraits have those tags.")</p>
 }
 else if (page is not null)
 {
@@ -81,17 +81,17 @@ else if (page is not null)
                 <div class="card-body p-2 small">
                     @if (editingId == portrait.Id)
                     {
-                        <label class="form-label small mb-1" for="edit-tags-@portrait.Id">Taggar</label>
+                        <label class="form-label small mb-1" for="edit-tags-@portrait.Id">Tags</label>
                         <input id="edit-tags-@portrait.Id" class="form-control form-control-sm mb-1 edit-tags" @bind="editTags" @bind:event="oninput" />
-                        <label class="form-label small mb-1" for="edit-source-@portrait.Id">Källa och licens</label>
+                        <label class="form-label small mb-1" for="edit-source-@portrait.Id">Source and licence</label>
                         <input id="edit-source-@portrait.Id" class="form-control form-control-sm mb-2" maxlength="@PortraitTags.SourceMaxLength" @bind="editSource" />
                         @if (editError is not null)
                         {
                             <div class="text-danger mb-1" role="alert">@editError</div>
                         }
                         <div class="d-flex gap-1">
-                            <button type="button" class="btn btn-sm btn-primary" @onclick="SaveEditAsync">Spara</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => editingId = null">Avbryt</button>
+                            <button type="button" class="btn btn-sm btn-primary" @onclick="SaveEditAsync">Save</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => editingId = null">Cancel</button>
                         </div>
                     }
                     else
@@ -106,22 +106,22 @@ else if (page is not null)
                         @if (deletingId == portrait.Id)
                         {
                             <div class="mt-2" role="alert">
-                                Ta bort porträttet?
+                                Delete the portrait?
                                 @if (portrait.UsageCount > 0)
                                 {
-                                    <text> @UsageText(portrait.UsageCount) och får initialer i stället.</text>
+                                    <text> @UsageText(portrait.UsageCount) and will get initials instead.</text>
                                 }
                             </div>
                             <div class="d-flex gap-1 mt-1">
-                                <button type="button" class="btn btn-sm btn-danger" @onclick="() => DeleteAsync(portrait.Id)">Ja, ta bort</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => deletingId = null">Avbryt</button>
+                                <button type="button" class="btn btn-sm btn-danger" @onclick="() => DeleteAsync(portrait.Id)">Yes, delete</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => deletingId = null">Cancel</button>
                             </div>
                         }
                         else
                         {
                             <div class="d-flex gap-1 mt-2">
-                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => StartEdit(portrait)">Ändra</button>
-                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => { deletingId = portrait.Id; editingId = null; }">Ta bort</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => StartEdit(portrait)">Edit</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => { deletingId = portrait.Id; editingId = null; }">Delete</button>
                             </div>
                         }
                     }
@@ -131,7 +131,7 @@ else if (page is not null)
     </div>
     @if (page.HasMore)
     {
-        <button type="button" class="btn btn-link px-0 mt-2" @onclick="ShowMoreAsync">Visa fler</button>
+        <button type="button" class="btn btn-link px-0 mt-2" @onclick="ShowMoreAsync">Show more</button>
     }
 }
 
@@ -213,7 +213,7 @@ else if (page is not null)
         preview = null;
         if (e.File.Size > ImageLimits.MaxUploadBytes)
         {
-            uploadError = "Bilden får vara högst 5 MB.";
+            uploadError = "The image can be at most 5 MB.";
             return;
         }
 
@@ -233,7 +233,7 @@ else if (page is not null)
         }
         catch (IOException)
         {
-            uploadError = "Bilden kunde inte läsas.";
+            uploadError = "The image couldn't be read.";
         }
     }
 
@@ -262,7 +262,7 @@ else if (page is not null)
         image = null;
         preview = null;
         fileInputKey++;
-        uploadStatus = "Porträttet har lagts till.";
+        uploadStatus = "The portrait has been added.";
         await RefreshAsync();
     }
 
@@ -311,9 +311,9 @@ else if (page is not null)
 
     private static string UsageText(int count) => count switch
     {
-        0 => "Används inte",
-        1 => "Används av 1 karaktär",
-        _ => $"Används av {count} karaktärer",
+        0 => "Not used",
+        1 => "Used by 1 character",
+        _ => $"Used by {count} characters",
     };
 
     // Ett påbörjat ord ("#dv") ersätts av den valda taggen.

@@ -104,7 +104,7 @@ internal sealed class CharacterService(
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var access = await CampaignAccess.GetAsync(db, campaignId, userId, cancellationToken);
         if (!CampaignPermissions.CanCreateCharacter(access.Role))
-            throw new CampaignRuleException("Endast kampanjens deltagare kan skapa karaktärer.");
+            throw new CampaignRuleException("Only the campaign's participants can create characters.");
         await EnsurePortraitExistsAsync(db, portraitId, cancellationToken);
 
         // GM:s karaktärer är alltid NPC:er, spelares aldrig.
@@ -143,7 +143,7 @@ internal sealed class CharacterService(
         var character = await LoadEditableAsync(db, campaignId, characterId, userId, cancellationToken);
 
         if (await db.Posts.AnyAsync(p => p.CharacterId == characterId, cancellationToken))
-            throw new CampaignRuleException("Karaktären har skrivit inlägg och kan inte tas bort.");
+            throw new CampaignRuleException("The character has written posts and can't be deleted.");
 
         // Porträttet ligger kvar i biblioteket.
         db.Characters.Remove(character);
@@ -155,10 +155,10 @@ internal sealed class CharacterService(
     {
         var access = await CampaignAccess.GetAsync(db, campaignId, userId, cancellationToken);
         var character = await db.Characters.SingleOrDefaultAsync(c => c.CampaignId == campaignId && c.Id == characterId, cancellationToken)
-            ?? throw new CampaignRuleException("Karaktären finns inte.");
+            ?? throw new CampaignRuleException("The character doesn't exist.");
 
         if (!CampaignPermissions.CanEditCharacter(access.Role, userId, character.OwnerId))
-            throw new CampaignRuleException("Du kan inte ändra den här karaktären.");
+            throw new CampaignRuleException("You can't change this character.");
 
         return character;
     }
@@ -166,7 +166,7 @@ internal sealed class CharacterService(
     private static async Task EnsurePortraitExistsAsync(TaleshavenDbContext db, int? portraitId, CancellationToken cancellationToken)
     {
         if (portraitId is { } id && !await db.Portraits.AnyAsync(p => p.Id == id, cancellationToken))
-            throw new CampaignRuleException("Porträttet finns inte längre i biblioteket. Välj ett annat.");
+            throw new CampaignRuleException("The portrait is no longer in the library. Choose another one.");
     }
 
 

@@ -36,7 +36,7 @@ public class Campaign
     {
         var validatedMax = ValidateMaxPlayers(maxPlayers);
         if (validatedMax < Memberships.Count)
-            throw new CampaignRuleException($"Kampanjen har redan {Memberships.Count} spelare. Ta bort spelare först eller välj ett högre antal.");
+            throw new CampaignRuleException($"The campaign already has {Memberships.Count} players. Remove players first or choose a higher number.");
 
         Name = ValidateName(name);
         Description = ValidateDescription(description);
@@ -47,7 +47,7 @@ public class Campaign
     public void ChangeStatus(CampaignStatus status)
     {
         if (!Enum.IsDefined(status))
-            throw new CampaignRuleException("Okänd status.");
+            throw new CampaignRuleException("Unknown status.");
 
         Status = status;
     }
@@ -56,7 +56,7 @@ public class Campaign
     public void RemovePlayer(string userId)
     {
         var membership = Memberships.SingleOrDefault(m => m.UserId == userId)
-            ?? throw new CampaignRuleException("Spelaren deltar inte i kampanjen.");
+            ?? throw new CampaignRuleException("The player is not in the campaign.");
 
         Memberships.Remove(membership);
     }
@@ -77,17 +77,17 @@ public class Campaign
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
 
         if (IsGameMaster(userId))
-            throw new CampaignRuleException("Du är GM i den här kampanjen.");
+            throw new CampaignRuleException("You are the GM of this campaign.");
         if (IsPlayer(userId))
-            throw new CampaignRuleException("Du deltar redan i kampanjen.");
+            throw new CampaignRuleException("You are already in the campaign.");
         if (Applications.Any(a => a.UserId == userId && a.Status == ApplicationStatus.Pending))
-            throw new CampaignRuleException("Du har redan en ansökan som väntar på svar.");
+            throw new CampaignRuleException("You already have an application waiting for an answer.");
         if (!AcceptsApplications)
-            throw new CampaignRuleException("Kampanjen tar inte emot ansökningar just nu.");
+            throw new CampaignRuleException("The campaign is not accepting applications right now.");
 
         message = message?.Trim() ?? "";
         if (message.Length > CampaignLimits.ApplicationMessageMaxLength)
-            throw new CampaignRuleException($"Meddelandet får vara högst {CampaignLimits.ApplicationMessageMaxLength} tecken.");
+            throw new CampaignRuleException($"The message can be at most {CampaignLimits.ApplicationMessageMaxLength} characters.");
 
         var application = new CampaignApplication(userId, message, now);
         Applications.Add(application);
@@ -99,7 +99,7 @@ public class Campaign
         var application = GetPendingApplicationForGameMaster(applicationId, gameMasterId);
 
         if (IsFull)
-            throw new CampaignRuleException("Kampanjen är fullsatt.");
+            throw new CampaignRuleException("The campaign is full.");
 
         application.Decide(ApplicationStatus.Approved, gameMasterId, now);
         Memberships.Add(new CampaignMembership(application.UserId, now));
@@ -114,10 +114,10 @@ public class Campaign
     private CampaignApplication GetPendingApplicationForGameMaster(Guid applicationId, string gameMasterId)
     {
         if (!IsGameMaster(gameMasterId))
-            throw new CampaignRuleException("Endast kampanjens GM kan hantera ansökningar.");
+            throw new CampaignRuleException("Only the campaign's GM can handle applications.");
 
         return Applications.SingleOrDefault(a => a.Id == applicationId && a.Status == ApplicationStatus.Pending)
-            ?? throw new CampaignRuleException("Ansökan finns inte eller är redan behandlad.");
+            ?? throw new CampaignRuleException("The application doesn't exist or has already been handled.");
     }
 
     // Valideringsfelen är CampaignRuleException så att de kan visas för GM som redigerar kampanjen.
@@ -125,9 +125,9 @@ public class Campaign
     {
         name = name?.Trim() ?? "";
         if (name.Length == 0)
-            throw new CampaignRuleException("Kampanjen måste ha ett namn.");
+            throw new CampaignRuleException("The campaign needs a name.");
         if (name.Length > CampaignLimits.NameMaxLength)
-            throw new CampaignRuleException($"Namnet får vara högst {CampaignLimits.NameMaxLength} tecken.");
+            throw new CampaignRuleException($"The name can be at most {CampaignLimits.NameMaxLength} characters.");
         return name;
     }
 
@@ -135,14 +135,14 @@ public class Campaign
     {
         description = description?.Trim() ?? "";
         if (description.Length > CampaignLimits.DescriptionMaxLength)
-            throw new CampaignRuleException($"Beskrivningen får vara högst {CampaignLimits.DescriptionMaxLength} tecken.");
+            throw new CampaignRuleException($"The description can be at most {CampaignLimits.DescriptionMaxLength} characters.");
         return description;
     }
 
     private static int? ValidateMaxPlayers(int? maxPlayers)
     {
         if (maxPlayers is < CampaignLimits.MinPlayers or > CampaignLimits.MaxPlayers)
-            throw new CampaignRuleException($"Max antal spelare måste vara mellan {CampaignLimits.MinPlayers} och {CampaignLimits.MaxPlayers}.");
+            throw new CampaignRuleException($"Max players must be between {CampaignLimits.MinPlayers} and {CampaignLimits.MaxPlayers}.");
         return maxPlayers;
     }
 }

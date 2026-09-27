@@ -56,13 +56,13 @@ internal sealed class SiteRoleService(IDbContextFactory<TaleshavenDbContext> dbF
 
         var normalizedEmail = email?.Trim().ToUpperInvariant() ?? "";
         if (normalizedEmail.Length == 0)
-            throw new CampaignRuleException("Ange en e-postadress.");
+            throw new CampaignRuleException("Enter an email address.");
 
         var user = await db.Users.SingleOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail, cancellationToken)
-            ?? throw new CampaignRuleException("Det finns ingen användare med den e-postadressen.");
+            ?? throw new CampaignRuleException("There is no user with that email address.");
 
         if ((await GetRolesAsync(db, user.Id, cancellationToken)).Contains(role))
-            throw new CampaignRuleException($"{user.DisplayName} är redan {SiteRoles.DisplayName(role).ToLowerInvariant()}.");
+            throw new CampaignRuleException($"{user.DisplayName} is already {SiteRoles.DisplayName(role).ToLowerInvariant()}.");
 
         db.UserRoles.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = SiteRoleIds.All[role] });
         await db.SaveChangesAsync(cancellationToken);
@@ -79,7 +79,7 @@ internal sealed class SiteRoleService(IDbContextFactory<TaleshavenDbContext> dbF
 
         var roleId = SiteRoleIds.All[role];
         var grant = await db.UserRoles.SingleOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == roleId, cancellationToken)
-            ?? throw new CampaignRuleException("Användaren har inte den rollen.");
+            ?? throw new CampaignRuleException("The user doesn't have that role.");
 
         db.UserRoles.Remove(grant);
         await db.SaveChangesAsync(cancellationToken);
@@ -119,6 +119,6 @@ internal sealed class SiteRoleService(IDbContextFactory<TaleshavenDbContext> dbF
     private async Task EnsureAdminAsync(TaleshavenDbContext db, string adminId, CancellationToken cancellationToken)
     {
         if (!SitePermissions.CanManageRoles(await GetRolesAsync(db, adminId, cancellationToken)))
-            throw new CampaignRuleException("Endast administratörer kan hantera roller.");
+            throw new CampaignRuleException("Only administrators can manage roles.");
     }
 }

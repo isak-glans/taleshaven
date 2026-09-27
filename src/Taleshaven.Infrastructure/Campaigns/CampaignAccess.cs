@@ -21,7 +21,7 @@ internal static class CampaignAccess
                     : CampaignRole.None,
             })
             .SingleOrDefaultAsync(cancellationToken)
-            ?? throw new CampaignRuleException("Kampanjen finns inte.");
+            ?? throw new CampaignRuleException("The campaign doesn't exist.");
 
         return (access.Role, access.Status);
     }

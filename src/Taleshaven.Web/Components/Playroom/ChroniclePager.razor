@@ -1,17 +1,17 @@
-﻿@using Taleshaven.Core.Chronicle
+@using Taleshaven.Core.Chronicle
 
 @* Sidnavigering längst ner i krönikan (B14). Fler än två kapitel: klassisk navigering som i ett forum.
    Två kapitel: bara föregående och nästa. Länkarna framåt/bakåt används också av tangenterna ← → (page-keys.js). *@
 
 @if (PageCount > 1)
 {
-    <nav class="chronicle-pager" aria-label="Kapitel i krönikan">
+    <nav class="chronicle-pager" aria-label="Chronicle chapters">
         <ul class="pagination pagination-sm justify-content-center flex-wrap mb-1">
             @if (PageCount > 2)
             {
-                @PageItem(1, "«", " Första", Page > 1, ariaLabel: "Första kapitlet")
+                @PageItem(1, "«", " First", Page > 1, ariaLabel: "First chapter")
             }
-            @PageItem(Page - 1, "‹", " Föregående", Page > 1, ariaLabel: "Föregående kapitel", prev: true)
+            @PageItem(Page - 1, "‹", " Previous", Page > 1, ariaLabel: "Previous chapter", prev: true)
 
             @if (PageCount > 2)
             {
@@ -30,14 +30,14 @@
                 }
             }
 
-            @PageItem(Page + 1, "›", "Nästa ", Page < PageCount, ariaLabel: "Nästa kapitel", next: true, labelFirst: true)
+            @PageItem(Page + 1, "›", "Next ", Page < PageCount, ariaLabel: "Next chapter", next: true, labelFirst: true)
             @if (PageCount > 2)
             {
-                @PageItem(PageCount, "»", "Sista ", Page < PageCount, ariaLabel: "Sista kapitlet", labelFirst: true)
+                @PageItem(PageCount, "»", "Last ", Page < PageCount, ariaLabel: "Last chapter", labelFirst: true)
             }
         </ul>
         <p class="text-center text-secondary small mb-0">
-            Kapitel @Page av @PageCount<span class="pager-keys"> · ← → bläddrar</span>
+            Chapter @Page of @PageCount<span class="pager-keys"> · ← → to turn pages</span>
         </p>
     </nav>
 }

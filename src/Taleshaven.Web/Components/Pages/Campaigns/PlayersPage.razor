@@ -1,4 +1,4 @@
-﻿@page "/campaigns/{CampaignId:int}/players"
+@page "/campaigns/{CampaignId:int}/players"
 @attribute [Authorize]
 
 @using System.ComponentModel.DataAnnotations
@@ -17,7 +17,7 @@
     return;
 }
 
-<PageTitle>Spelare · @campaign.Name</PageTitle>
+<PageTitle>Players · @campaign.Name</PageTitle>
 
 <CampaignHeader Campaign="campaign" Active="CampaignTab.Players" />
 
@@ -28,10 +28,10 @@
         @switch (campaign.ViewerRole)
         {
             case CampaignRole.GameMaster:
-                <h2 class="h4">Ansökningar</h2>
+                <h2 class="h4">Applications</h2>
                 @if (pendingApplications.Count == 0)
                 {
-                    <p class="text-secondary">Inga ansökningar väntar på svar.</p>
+                    <p class="text-secondary">No applications are waiting for an answer.</p>
                 }
                 else
                 {
@@ -50,8 +50,8 @@
                                 <form method="post" @formname="@($"decide-{application.Id}")" @onsubmit="DecideAsync" class="d-flex gap-2 mt-2">
                                     <AntiforgeryToken />
                                     <input type="hidden" name="Decision.ApplicationId" value="@application.Id" />
-                                    <button type="submit" name="Decision.Action" value="@ApproveAction" class="btn btn-sm btn-success">Godkänn</button>
-                                    <button type="submit" name="Decision.Action" value="@RejectAction" class="btn btn-sm btn-outline-danger">Avslå</button>
+                                    <button type="submit" name="Decision.Action" value="@ApproveAction" class="btn btn-sm btn-success">Approve</button>
+                                    <button type="submit" name="Decision.Action" value="@RejectAction" class="btn btn-sm btn-outline-danger">Reject</button>
                                 </form>
                             </li>
                         }
@@ -60,15 +60,15 @@
                 break;
 
             case CampaignRole.Player:
-                <div class="alert alert-info">Du deltar i den här kampanjen.</div>
+                <div class="alert alert-info">You are playing in this campaign.</div>
                 break;
 
             default:
-                <h2 class="h4" id="ansok">Ansökan</h2>
+                <h2 class="h4" id="apply">Application</h2>
                 @if (campaign.ViewerApplication is { Status: ApplicationStatus.Pending } pending)
                 {
                     <div class="alert alert-info">
-                        Din ansökan skickades @Dates.DateTime(pending.SubmittedAt) och väntar på svar från GM.
+                        Your application was sent @Dates.DateTime(pending.SubmittedAt) and is waiting for an answer from the GM.
                     </div>
                 }
                 else
@@ -76,7 +76,7 @@
                     @if (campaign.ViewerApplication is { Status: ApplicationStatus.Rejected, DecidedAt: { } rejectedAt })
                     {
                         <div class="alert alert-secondary">
-                            Din tidigare ansökan avslogs @Dates.Date(rejectedAt).
+                            Your previous application was rejected @Dates.Date(rejectedAt).
                         </div>
                     }
 
@@ -85,19 +85,19 @@
                         <EditForm Model="ApplyInput" method="post" OnValidSubmit="ApplyAsync" FormName="apply">
                             <DataAnnotationsValidator />
                             <div class="mb-3">
-                                <label for="ApplyInput.Message" class="form-label">Meddelande till GM</label>
+                                <label for="ApplyInput.Message" class="form-label">Message to the GM</label>
                                 <InputTextArea @bind-Value="ApplyInput.Message" id="ApplyInput.Message" class="form-control" rows="5"
                                                maxlength="@CampaignLimits.ApplicationMessageMaxLength"
-                                               placeholder="Berätta gärna lite om dig själv och karaktären du vill spela." />
-                                <div class="form-text">Valfritt. Högst @CampaignLimits.ApplicationMessageMaxLength tecken.</div>
+                                               placeholder="Tell the GM a little about yourself and the character you want to play." />
+                                <div class="form-text">Optional. At most @CampaignLimits.ApplicationMessageMaxLength characters.</div>
                                 <ValidationMessage For="() => ApplyInput.Message" class="text-danger" />
                             </div>
-                            <button type="submit" class="btn btn-primary">Skicka ansökan</button>
+                            <button type="submit" class="btn btn-primary">Send application</button>
                         </EditForm>
                     }
                     else
                     {
-                        <p class="text-secondary">Kampanjen tar inte emot ansökningar just nu.</p>
+                        <p class="text-secondary">The campaign is not accepting applications right now.</p>
                     }
                 }
                 break;
@@ -105,10 +105,10 @@
     </div>
 
     <div class="col-lg-5">
-        <h2 class="h4">Spelare</h2>
+        <h2 class="h4">Players</h2>
         @if (campaign.Players.Count == 0)
         {
-            <p class="text-secondary">Inga spelare ännu.</p>
+            <p class="text-secondary">No players yet.</p>
         }
         else
         {
@@ -118,18 +118,18 @@
                     <li class="list-group-item">
                         <div class="d-flex justify-content-between">
                             <span>@player.DisplayName</span>
-                            <span class="text-secondary small">sedan @Dates.Date(player.JoinedAt)</span>
+                            <span class="text-secondary small">since @Dates.Date(player.JoinedAt)</span>
                         </div>
                         @if (campaign.ViewerRole == CampaignRole.GameMaster)
                         {
                             @* Två steg (öppna, sedan bekräfta) så att ingen tas bort av misstag. Fungerar utan JavaScript. *@
                             <details class="remove-player mt-1">
-                                <summary class="small text-danger">Ta bort ur kampanjen</summary>
+                                <summary class="small text-danger">Remove from campaign</summary>
                                 <form method="post" @formname="@($"remove-{player.UserId}")" @onsubmit="RemovePlayerAsync" class="mt-1">
                                     <AntiforgeryToken />
                                     <input type="hidden" name="Removal.PlayerId" value="@player.UserId" />
-                                    <p class="small mb-1">@player.DisplayName kan inte längre skriva. Inlägg och karaktärer finns kvar.</p>
-                                    <button type="submit" class="btn btn-sm btn-danger">Ta bort @player.DisplayName</button>
+                                    <p class="small mb-1">@player.DisplayName will no longer be able to post. Posts and characters remain.</p>
+                                    <button type="submit" class="btn btn-sm btn-danger">Remove @player.DisplayName</button>
                                 </form>
                             </details>
                         }
@@ -215,7 +215,7 @@
             return;
         }
 
-        RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}/players", "Din ansökan har skickats till GM.", HttpContext);
+        RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}/players", "Your application has been sent to the GM.", HttpContext);
     }
 
     private async Task DecideAsync()
@@ -230,11 +230,11 @@
             {
                 case ApproveAction:
                     await ApplicationService.ApproveAsync(CampaignId, applicationId, userId);
-                    status = "Ansökan godkändes. Spelaren är nu med i kampanjen.";
+                    status = "Application approved. The player is now in the campaign.";
                     break;
                 case RejectAction:
                     await ApplicationService.RejectAsync(CampaignId, applicationId, userId);
-                    status = "Ansökan avslogs.";
+                    status = "Application rejected.";
                     break;
                 default:
                     return;
@@ -254,7 +254,7 @@
         if (Removal?.PlayerId is not { Length: > 0 } playerId)
             return;
 
-        var name = campaign?.Players.FirstOrDefault(p => p.UserId == playerId)?.DisplayName ?? "Spelaren";
+        var name = campaign?.Players.FirstOrDefault(p => p.UserId == playerId)?.DisplayName ?? "The player";
         try
         {
             await CampaignService.RemovePlayerAsync(CampaignId, userId, playerId);
@@ -265,7 +265,7 @@
             return;
         }
 
-        RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}/players", $"{name} är borttagen ur kampanjen.", HttpContext);
+        RedirectManager.RedirectToWithStatus($"campaigns/{CampaignId}/players", $"{name} has been removed from the campaign.", HttpContext);
     }
 
     private sealed class RemovalModel
@@ -275,7 +275,7 @@
 
     private sealed class ApplyInputModel
     {
-        [StringLength(CampaignLimits.ApplicationMessageMaxLength, ErrorMessage = "Meddelandet får vara högst {1} tecken.")]
+        [StringLength(CampaignLimits.ApplicationMessageMaxLength, ErrorMessage = "The message can be at most {1} characters.")]
         public string? Message { get; set; }
     }
 

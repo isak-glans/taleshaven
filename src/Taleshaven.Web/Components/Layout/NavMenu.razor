@@ -17,7 +17,7 @@
     <nav class="nav flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Kampanjer
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Campaigns
             </NavLink>
         </div>
 
@@ -25,14 +25,14 @@
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="campaigns/new">
-                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Skapa kampanj
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Create campaign
                     </NavLink>
                 </div>
                 @if (SitePermissions.CanManagePortraits(siteRoles))
                 {
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="portraits">
-                            <span class="bi bi-image-nav-menu" aria-hidden="true"></span> Porträtt
+                            <span class="bi bi-image-nav-menu" aria-hidden="true"></span> Portraits
                         </NavLink>
                     </div>
                 }
@@ -40,7 +40,7 @@
                 {
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="admin/roles">
-                            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Roller
+                            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Roles
                         </NavLink>
                     </div>
                 }
@@ -54,7 +54,7 @@
                         <AntiforgeryToken />
                         <input type="hidden" name="ReturnUrl" value="@currentUrl" />
                         <button type="submit" class="nav-link">
-                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logga ut
+                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Log out
                         </button>
                     </form>
                 </div>
@@ -62,12 +62,12 @@
             <NotAuthorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Register">
-                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Skapa konto
+                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Create account
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Login">
-                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Logga in
+                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Log in
                     </NavLink>
                 </div>
             </NotAuthorized>

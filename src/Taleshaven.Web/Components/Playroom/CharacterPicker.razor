@@ -23,10 +23,10 @@
         <div class="character-picker-menu border rounded shadow" @onkeydown="OnKeyDownAsync">
             @if (ShowSearch)
             {
-                <input type="search" class="form-control form-control-sm" placeholder="Sök…" aria-label="Sök karaktär"
+                <input type="search" class="form-control form-control-sm" placeholder="Search…" aria-label="Search characters"
                        @ref="searchInput" @bind="query" @bind:event="oninput" @bind:after="ResetHighlight" autocomplete="off" />
             }
-            <div class="character-picker-list" role="listbox" tabindex="-1" @ref="listElement" aria-label="Skriv som">
+            <div class="character-picker-list" role="listbox" tabindex="-1" @ref="listElement" aria-label="Post as">
                 @{ var index = 0; }
                 @foreach (var group in visibleGroups)
                 {
@@ -51,14 +51,14 @@
                             <span class="character-picker-name">@entry.Name</span>
                             @if (entry.IsHidden)
                             {
-                                <span class="badge text-bg-warning ms-auto">Dold</span>
+                                <span class="badge text-bg-warning ms-auto">Hidden</span>
                             }
                         </div>
                     }
                 }
                 @if (index == 0)
                 {
-                    <div class="character-picker-empty">Ingen karaktär heter så.</div>
+                    <div class="character-picker-empty">No character has that name.</div>
                 }
             </div>
         </div>
@@ -200,8 +200,8 @@
             groups.Add(new Group(null, [none]));
         if (recent.Count > 0 && rest.Count > 0)
         {
-            groups.Add(new Group("Senast använda", recent.Select(ToEntry).ToList()));
-            groups.Add(new Group("Alla", rest.Select(ToEntry).ToList()));
+            groups.Add(new Group("Recently used", recent.Select(ToEntry).ToList()));
+            groups.Add(new Group("All", rest.Select(ToEntry).ToList()));
         }
         else
         {

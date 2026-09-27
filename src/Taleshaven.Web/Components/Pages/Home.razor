@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 
 @inject ICampaignService CampaignService
 @inject IUnreadService Unread
@@ -8,17 +8,17 @@
 <AuthorizeView>
     <Authorized>
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h1 class="mb-0">Kampanjer</h1>
-            <a class="btn btn-primary" href="campaigns/new">Skapa kampanj</a>
+            <h1 class="mb-0">Campaigns</h1>
+            <a class="btn btn-primary" href="campaigns/new">Create campaign</a>
         </div>
 
         @if (campaigns is null)
         {
-            <p>Laddar…</p>
+            <p>Loading…</p>
         }
         else if (campaigns.Count == 0)
         {
-            <p>Det finns inga kampanjer än. Bli den första att <a href="campaigns/new">skapa en</a>!</p>
+            <p>There are no campaigns yet. Be the first to <a href="campaigns/new">create one</a>!</p>
         }
         else
         {
@@ -32,12 +32,12 @@
                                     <a href="campaigns/@campaign.Id">@campaign.Name</a>
                                     @if (unreadTotals.TryGetValue(campaign.Id, out var unreadCount))
                                     {
-                                        <span class="badge rounded-pill text-bg-primary align-middle ms-1 unread-count">@UnreadDisplay.Format(unreadCount) nya</span>
+                                        <span class="badge rounded-pill text-bg-primary align-middle ms-1 unread-count">@UnreadDisplay.Format(unreadCount) new</span>
                                     }
                                 </h2>
                                 <div class="text-secondary small mb-1">
                                     GM: @campaign.GameMasterName
-                                    · @campaign.PlayerCount@(campaign.MaxPlayers is { } max ? $"/{max}" : "") spelare
+                                    · @campaign.PlayerCount@(campaign.MaxPlayers is { } max ? $"/{max}" : "") players
                                 </div>
                                 @if (campaign.Description.Length > 0)
                                 {
@@ -49,23 +49,23 @@
                                 <div class="small text-secondary mt-1">
                                     @if (campaign.ViewerRole == CampaignRole.GameMaster)
                                     {
-                                        <span>Du är GM</span>
+                                        <span>You are the GM</span>
                                     }
                                     else if (campaign.ViewerRole == CampaignRole.Player)
                                     {
-                                        <span>Du deltar</span>
+                                        <span>You are playing</span>
                                     }
                                     else if (campaign.ViewerHasPendingApplication)
                                     {
-                                        <span>Ansökan skickad</span>
+                                        <span>Application sent</span>
                                     }
                                     else if (campaign.CanViewerApply)
                                     {
-                                        <a class="btn btn-sm btn-outline-primary" href="campaigns/@(campaign.Id)/players#ansok">Ansök</a>
+                                        <a class="btn btn-sm btn-outline-primary" href="campaigns/@(campaign.Id)/players#apply">Apply</a>
                                     }
                                     else if (campaign.Status == CampaignStatus.OpenForApplications && !campaign.AcceptsApplications)
                                     {
-                                        <span>Fullt</span>
+                                        <span>Full</span>
                                     }
                                 </div>
                             </div>
@@ -76,11 +76,11 @@
         }
     </Authorized>
     <NotAuthorized>
-        <h1>Välkommen till Taleshaven</h1>
-        <p class="lead">En plats för rollspel i play-by-post-format, oavsett regelsystem.</p>
+        <h1>Welcome to Taleshaven</h1>
+        <p class="lead">A place for play-by-post roleplaying, whatever the rule system.</p>
         <p>
-            <a class="btn btn-primary" href="Account/Login">Logga in</a>
-            <a class="btn btn-outline-primary ms-2" href="Account/Register">Skapa konto</a>
+            <a class="btn btn-primary" href="Account/Login">Log in</a>
+            <a class="btn btn-outline-primary ms-2" href="Account/Register">Create account</a>
         </p>
     </NotAuthorized>
 </AuthorizeView>

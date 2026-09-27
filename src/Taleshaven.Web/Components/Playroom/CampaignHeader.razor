@@ -1,4 +1,4 @@
-﻿@* Kampanjens rubrik och flikar, gemensamt för alla delar av spelrummet. Flikarna RPG och OOC visar antal olästa
+@* Kampanjens rubrik och flikar, gemensamt för alla delar av spelrummet. Flikarna RPG och OOC visar antal olästa
    för deltagare; i interaktiva sidor uppdateras antalet när någon skriver. *@
 
 @implements IDisposable
@@ -6,25 +6,25 @@
 @inject IUnreadService Unread
 @inject PostNotifier Notifier
 
-<p class="mb-2 small"><a href="">← Kampanjer</a></p>
+<p class="mb-2 small"><a href="">← Campaigns</a></p>
 
 <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
     <h1 class="h2 mb-0">@Campaign.Name</h1>
     <CampaignStatusBadge Status="Campaign.Status" />
     @if (CampaignPermissions.CanManageCampaign(Campaign.ViewerRole) && Active != CampaignTab.Settings)
     {
-        <a class="btn btn-sm btn-outline-secondary ms-auto" href="campaigns/@(Campaign.Id)/settings">Inställningar</a>
+        <a class="btn btn-sm btn-outline-secondary ms-auto" href="campaigns/@(Campaign.Id)/settings">Settings</a>
     }
 </div>
 <p class="text-secondary mb-2">
     GM: @Campaign.GameMasterName
-    · @Campaign.Players.Count@(Campaign.MaxPlayers is { } max ? $"/{max}" : "") spelare
+    · @Campaign.Players.Count@(Campaign.MaxPlayers is { } max ? $"/{max}" : "") players
 </p>
 
 @if (Campaign.Description.Length > 0)
 {
     <details class="mb-3">
-        <summary class="text-secondary">Om kampanjen</summary>
+        <summary class="text-secondary">About the campaign</summary>
         <p class="campaign-description mt-2 mb-0">@Campaign.Description</p>
     </details>
 }
@@ -32,10 +32,10 @@
 @if (Campaign.ViewerRole == CampaignRole.None && Active != CampaignTab.Players)
 {
     <div class="alert alert-light border d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
-        <span>Du deltar inte i kampanjen och kan bara läsa.</span>
+        <span>You are not in this campaign and can only read.</span>
         @if (Campaign.CanViewerApply)
         {
-            <a class="btn btn-sm btn-primary" href="campaigns/@(Campaign.Id)/players#ansok">Ansök</a>
+            <a class="btn btn-sm btn-primary" href="campaigns/@(Campaign.Id)/players#apply">Apply</a>
         }
     </div>
 }
@@ -51,7 +51,7 @@
                     @* Den aktiva fliken läses just nu, så dess antal visas inte. *@
                     @if (tab != Active && UnreadFor(tab) is > 0 and var count)
                     {
-                        <span class="badge rounded-pill text-bg-primary ms-1 unread-count" title="@count olästa">@UnreadDisplay.Format(count)</span>
+                        <span class="badge rounded-pill text-bg-primary ms-1 unread-count" title="@count unread">@UnreadDisplay.Format(count)</span>
                     }
                 </a>
             </li>
@@ -64,9 +64,9 @@
     [
         (CampaignTab.Rpg, "RPG", ""),
         (CampaignTab.Ooc, "OOC", "/ooc"),
-        (CampaignTab.Chronicle, "Krönika", "/chronicle"),
-        (CampaignTab.Characters, "Karaktärer", "/characters"),
-        (CampaignTab.Players, "Spelare", "/players"),
+        (CampaignTab.Chronicle, "Chronicle", "/chronicle"),
+        (CampaignTab.Characters, "Characters", "/characters"),
+        (CampaignTab.Players, "Players", "/players"),
     ];
 
     [Parameter, EditorRequired]

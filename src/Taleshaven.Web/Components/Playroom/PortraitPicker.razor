@@ -9,29 +9,29 @@
     <div class="d-flex flex-wrap align-items-center gap-3">
         <Avatar Name="@(string.IsNullOrWhiteSpace(Name) ? "?" : Name)" ImageUrl="@Url" ColorKey="@ColorKey" Size="96" />
         <div class="d-flex flex-column align-items-start gap-1">
-            <span class="form-label mb-0">Porträtt</span>
+            <span class="form-label mb-0">Portrait</span>
             <div class="d-flex flex-wrap gap-2">
                 <button type="button" class="btn btn-outline-primary btn-sm" aria-expanded="@(open ? "true" : "false")" @onclick="ToggleAsync">
-                    @(open ? "Stäng biblioteket" : Value is null ? "Välj porträtt" : "Byt porträtt")
+                    @(open ? "Close library" : Value is null ? "Choose portrait" : "Change portrait")
                 </button>
                 @if (Value is not null)
                 {
-                    <button type="button" class="btn btn-link btn-sm px-0 text-danger" @onclick="() => SelectAsync(null)">Ta bort porträtt</button>
+                    <button type="button" class="btn btn-link btn-sm px-0 text-danger" @onclick="() => SelectAsync(null)">Remove portrait</button>
                 }
             </div>
-            <div class="form-text mt-0">Utan porträtt visas initialer.</div>
+            <div class="form-text mt-0">Without a portrait, initials are shown.</div>
         </div>
     </div>
 
     @if (open)
     {
         <div class="portrait-library border rounded p-2 mt-2">
-            <input type="search" class="form-control form-control-sm" placeholder="Sök på taggar, t.ex. dvärg krigare" aria-label="Sök porträtt på taggar"
+            <input type="search" class="form-control form-control-sm" placeholder="Search tags, e.g. dwarf warrior" aria-label="Search portraits by tag"
                    @ref="searchInput" @bind="query" @bind:event="oninput" @bind:after="OnQueryChangedAsync" autocomplete="off" />
 
             @if (tags.Count > 0)
             {
-                <div class="portrait-tags mt-2" aria-label="Vanliga taggar">
+                <div class="portrait-tags mt-2" aria-label="Common tags">
                     @foreach (var tag in tags.Take(SuggestedTagCount))
                     {
                         <button type="button" class="btn btn-sm btn-light border portrait-tag" @onclick="() => AddTagAsync(tag.Tag)">#@tag.Tag</button>
@@ -41,19 +41,19 @@
 
             @if (page is null)
             {
-                <p class="text-secondary small mt-2 mb-0">Laddar…</p>
+                <p class="text-secondary small mt-2 mb-0">Loading…</p>
             }
             else if (page.Portraits.Count == 0)
             {
                 <p class="text-secondary small mt-2 mb-0">
                     @(string.IsNullOrWhiteSpace(query)
-                        ? "Biblioteket är tomt. Administratörer och managers lägger till porträtt."
-                        : "Inga porträtt har de taggarna.")
+                        ? "The library is empty. Administrators and managers add portraits."
+                        : "No portraits have those tags.")
                 </p>
             }
             else
             {
-                <div class="portrait-grid mt-2" role="listbox" aria-label="Porträtt">
+                <div class="portrait-grid mt-2" role="listbox" aria-label="Portraits">
                     @foreach (var portrait in page.Portraits)
                     {
                         <button type="button" role="option" aria-selected="@(portrait.Id == Value ? "true" : "false")"
@@ -65,7 +65,7 @@
                 </div>
                 @if (page.HasMore)
                 {
-                    <button type="button" class="btn btn-link btn-sm px-0 mt-1" @onclick="ShowMoreAsync">Visa fler</button>
+                    <button type="button" class="btn btn-link btn-sm px-0 mt-1" @onclick="ShowMoreAsync">Show more</button>
                 }
             }
         </div>

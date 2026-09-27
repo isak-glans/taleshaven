@@ -31,7 +31,7 @@ public class DiceRoll
 
         label = string.IsNullOrWhiteSpace(label) ? null : label.Trim();
         if (label?.Length > LabelMaxLength)
-            throw new CampaignRuleException($"Beskrivningen får vara högst {LabelMaxLength} tecken.");
+            throw new CampaignRuleException($"The description can be at most {LabelMaxLength} characters.");
 
         var results = new List<int>(notation.Count);
         for (var i = 0; i < notation.Count; i++)

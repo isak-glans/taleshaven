@@ -49,6 +49,10 @@ public class ThreadTests
         Post.Create(3, "anna", new string('a', ThreadLimits.PostMaxLength), Now);
 
         Assert.Throws<CampaignRuleException>(() => Post.Create(3, "anna", new string('a', ThreadLimits.PostMaxLength + 1), Now));
+
+        // B23: 5 000 tecken, men databasen rymmer äldre inlägg på upp till 10 000.
+        Assert.Equal(5_000, ThreadLimits.PostMaxLength);
+        Assert.True(ThreadLimits.PostStorageMaxLength >= 10_000);
     }
 
     [Theory]

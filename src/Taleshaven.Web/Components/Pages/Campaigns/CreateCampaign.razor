@@ -1,4 +1,4 @@
-﻿@page "/campaigns/new"
+@page "/campaigns/new"
 @attribute [Authorize]
 
 @using System.ComponentModel.DataAnnotations
@@ -6,9 +6,9 @@
 @inject ICampaignService CampaignService
 @inject NavigationManager NavigationManager
 
-<PageTitle>Skapa kampanj</PageTitle>
+<PageTitle>Create campaign</PageTitle>
 
-<h1>Skapa kampanj</h1>
+<h1>Create campaign</h1>
 
 <div class="row">
     <div class="col-lg-8">
@@ -21,28 +21,28 @@
             }
 
             <div class="mb-3">
-                <label for="Input.Name" class="form-label">Namn</label>
+                <label for="Input.Name" class="form-label">Name</label>
                 <InputText @bind-Value="Input.Name" id="Input.Name" class="form-control" maxlength="@CampaignLimits.NameMaxLength" />
                 <ValidationMessage For="() => Input.Name" class="text-danger" />
             </div>
 
             <div class="mb-3">
-                <label for="Input.Description" class="form-label">Beskrivning</label>
+                <label for="Input.Description" class="form-label">Description</label>
                 <InputTextArea @bind-Value="Input.Description" id="Input.Description" class="form-control" rows="6" maxlength="@CampaignLimits.DescriptionMaxLength" />
-                <div class="form-text">Högst @CampaignLimits.DescriptionMaxLength tecken. Visas i kampanjlistan.</div>
+                <div class="form-text">At most @CampaignLimits.DescriptionMaxLength characters. Shown in the campaign list.</div>
                 <ValidationMessage For="() => Input.Description" class="text-danger" />
             </div>
 
             <div class="mb-3">
-                <label for="Input.MaxPlayers" class="form-label">Max antal spelare</label>
+                <label for="Input.MaxPlayers" class="form-label">Max players</label>
                 <InputNumber @bind-Value="Input.MaxPlayers" id="Input.MaxPlayers" class="form-control" style="max-width: 10rem"
                              min="@CampaignLimits.MinPlayers" max="@CampaignLimits.MaxPlayers" />
-                <div class="form-text">Lämna tomt för obegränsat.</div>
+                <div class="form-text">Leave empty for no limit.</div>
                 <ValidationMessage For="() => Input.MaxPlayers" class="text-danger" />
             </div>
 
-            <button type="submit" class="btn btn-primary">Skapa kampanj</button>
-            <a href="" class="btn btn-link">Avbryt</a>
+            <button type="submit" class="btn btn-primary">Create campaign</button>
+            <a href="" class="btn btn-link">Cancel</a>
         </EditForm>
     </div>
 </div>
@@ -82,14 +82,14 @@
 
     private sealed class InputModel
     {
-        [Required(ErrorMessage = "Ange ett namn.")]
-        [StringLength(CampaignLimits.NameMaxLength, ErrorMessage = "Namnet får vara högst {1} tecken.")]
+        [Required(ErrorMessage = "Enter a name.")]
+        [StringLength(CampaignLimits.NameMaxLength, ErrorMessage = "The name can be at most {1} characters.")]
         public string Name { get; set; } = "";
 
-        [StringLength(CampaignLimits.DescriptionMaxLength, ErrorMessage = "Beskrivningen får vara högst {1} tecken.")]
+        [StringLength(CampaignLimits.DescriptionMaxLength, ErrorMessage = "The description can be at most {1} characters.")]
         public string? Description { get; set; }
 
-        [Range(CampaignLimits.MinPlayers, CampaignLimits.MaxPlayers, ErrorMessage = "Ange ett värde mellan {1} och {2}.")]
+        [Range(CampaignLimits.MinPlayers, CampaignLimits.MaxPlayers, ErrorMessage = "Enter a value between {1} and {2}.")]
         public int? MaxPlayers { get; set; }
     }
 }

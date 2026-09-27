@@ -8,7 +8,7 @@ export function init(container, draftKey, sendOnEnter) {
     // På pekskärmar ger Enter alltid ny rad; man skickar med knappen.
     const isTouch = window.matchMedia('(pointer: coarse)').matches;
     const hint = container.querySelector('[data-md-hint]');
-    if (isTouch && hint) hint.textContent = 'Tryck på knappen för att skicka';
+    if (isTouch && hint) hint.textContent = 'Tap the button to send';
 
     // Blazor lyssnar på "change" (@bind), så ändringar gjorda från JS måste meddelas.
     const notifyBlazor = () => {
@@ -102,7 +102,7 @@ function applyFormat(textarea, action) {
         case 'ol': prefixLines(i => `${i + 1}. `); break;
         case 'quote': prefixLines(() => '> '); break;
         case 'link': {
-            const label = selected || 'länktext';
+            const label = selected || 'link text';
             const urlStart = start + label.length + 3;
             replace(textarea, start, end, `[${label}](https://)`, urlStart, urlStart + 'https://'.length);
             break;

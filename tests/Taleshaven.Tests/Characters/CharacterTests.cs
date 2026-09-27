@@ -172,7 +172,7 @@ public class CharacterTests
     [Theory]
     [InlineData(false, null, "Grok")]
     [InlineData(true, "Den maskerade", "Den maskerade")]
-    [InlineData(true, null, "Okänd")]
+    [InlineData(true, null, "Unknown")]
     public void NameForPlayers_UsesAliasWhileHidden(bool hidden, string? alias, string expected)
     {
         Assert.Equal(expected, Character.NameForPlayers("Grok", hidden, alias));

@@ -30,9 +30,9 @@ public class Post
 
         content = content?.Trim() ?? "";
         if (content.Length == 0)
-            throw new CampaignRuleException("Inlägget är tomt.");
+            throw new CampaignRuleException("The post is empty.");
         if (content.Length > ThreadLimits.PostMaxLength)
-            throw new CampaignRuleException($"Inlägget får vara högst {ThreadLimits.PostMaxLength} tecken.");
+            throw new CampaignRuleException($"The post can be at most {ThreadLimits.PostMaxLength} characters.");
 
         return new Post
         {
@@ -66,13 +66,13 @@ public class Post
     public PostRevision Edit(string? content, DateTimeOffset now)
     {
         if (Roll is not null)
-            throw new CampaignRuleException("Tärningskast kan inte redigeras.");
+            throw new CampaignRuleException("Dice rolls can't be edited.");
 
         content = content?.Trim() ?? "";
         if (content.Length == 0)
-            throw new CampaignRuleException("Inlägget är tomt.");
+            throw new CampaignRuleException("The post is empty.");
         if (content.Length > ThreadLimits.PostMaxLength)
-            throw new CampaignRuleException($"Inlägget får vara högst {ThreadLimits.PostMaxLength} tecken.");
+            throw new CampaignRuleException($"The post can be at most {ThreadLimits.PostMaxLength} characters.");
 
         var revision = new PostRevision(Id, Content, EditedAt ?? CreatedAt, now);
         Content = content;

@@ -4,7 +4,7 @@
 
 @if (Visible.Count > 0)
 {
-    <div class="tag-suggestions d-flex flex-wrap gap-1 mt-1" aria-label="Föreslagna taggar">
+    <div class="tag-suggestions d-flex flex-wrap gap-1 mt-1" aria-label="Suggested tags">
         @foreach (var tag in Visible)
         {
             <button type="button" class="btn btn-sm btn-light border py-0 px-2 small" @onclick="() => OnPick.InvokeAsync(tag.Tag)">#@tag.Tag</button>

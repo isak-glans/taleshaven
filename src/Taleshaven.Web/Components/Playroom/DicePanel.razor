@@ -4,15 +4,15 @@
 
 <div class="dice-panel border rounded p-2 mb-2">
     <div class="d-flex flex-wrap align-items-center gap-2">
-        <label class="small text-secondary" for="dice-count">Antal</label>
+        <label class="small text-secondary" for="dice-count">Number</label>
         <input id="dice-count" type="number" min="1" max="@DiceNotation.MaxCount" class="form-control form-control-sm dice-number" @bind="count" />
-        <label class="small text-secondary" for="dice-modifier">Modifierare</label>
+        <label class="small text-secondary" for="dice-modifier">Modifier</label>
         <input id="dice-modifier" type="number" min="-@DiceNotation.MaxModifier" max="@DiceNotation.MaxModifier"
                class="form-control form-control-sm dice-number" @bind="modifier" />
         <input type="text" class="form-control form-control-sm dice-label" maxlength="@DiceRoll.LabelMaxLength"
-               placeholder="Vad slår du för? (valfritt)" aria-label="Beskrivning av kastet" @bind="label" />
+               placeholder="What are you rolling for? (optional)" aria-label="Roll description" @bind="label" />
     </div>
-    <div class="d-flex flex-wrap gap-1 mt-2" role="group" aria-label="Slå tärning">
+    <div class="d-flex flex-wrap gap-1 mt-2" role="group" aria-label="Roll a die">
         @foreach (var sides in DiceNotation.AllowedSides)
         {
             <button type="button" class="btn btn-sm btn-outline-primary" data-dice="@sides" disabled="@busy" @onclick="() => RollAsync(sides)">
@@ -20,7 +20,7 @@
             </button>
         }
     </div>
-    <div class="small text-secondary mt-1">Du kan också skriva <code>/slå 2d6+3 anfall</code> i chatten.</div>
+    <div class="small text-secondary mt-1">You can also type <code>/roll 2d6+3 attack</code> in the chat.</div>
     @if (error is not null)
     {
         <div class="text-danger small mt-1" role="alert">@error</div>

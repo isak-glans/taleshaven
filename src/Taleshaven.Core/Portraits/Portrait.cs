@@ -42,7 +42,7 @@ public class Portrait
 
         var trimmedSource = string.IsNullOrWhiteSpace(source) ? null : source.Trim();
         if (trimmedSource?.Length > PortraitTags.SourceMaxLength)
-            throw new CampaignRuleException($"Källa och licens får vara högst {PortraitTags.SourceMaxLength} tecken.");
+            throw new CampaignRuleException($"Source and licence can be at most {PortraitTags.SourceMaxLength} characters.");
 
         Tags = [.. parsed];
         Source = trimmedSource;
@@ -68,17 +68,17 @@ public static class PortraitTags
         foreach (var tag in Split(input))
         {
             if (tag.Length > TagMaxLength)
-                throw new CampaignRuleException($"Taggen \"{tag}\" är för lång (högst {TagMaxLength} tecken).");
+                throw new CampaignRuleException($"The tag \"{tag}\" is too long (at most {TagMaxLength} characters).");
             if (!tag.All(c => char.IsLetterOrDigit(c) || c == '-'))
-                throw new CampaignRuleException($"Taggen \"{tag}\" får bara innehålla bokstäver, siffror och bindestreck.");
+                throw new CampaignRuleException($"The tag \"{tag}\" can only contain letters, digits and hyphens.");
             if (!tags.Contains(tag))
                 tags.Add(tag);
         }
 
         if (tags.Count == 0)
-            throw new CampaignRuleException("Ange minst en tagg, t.ex. #dvärg #krigare.");
+            throw new CampaignRuleException("Enter at least one tag, e.g. #dwarf #warrior.");
         if (tags.Count > MaxTags)
-            throw new CampaignRuleException($"Ett porträtt kan ha högst {MaxTags} taggar.");
+            throw new CampaignRuleException($"A portrait can have at most {MaxTags} tags.");
 
         return tags;
     }

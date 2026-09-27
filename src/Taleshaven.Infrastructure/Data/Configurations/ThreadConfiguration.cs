@@ -47,7 +47,7 @@ internal sealed class PostConfiguration : IEntityTypeConfiguration<Post>
     {
         builder.Property(p => p.Content)
             .IsRequired()
-            .HasMaxLength(ThreadLimits.PostMaxLength);
+            .HasMaxLength(ThreadLimits.PostStorageMaxLength);
 
         // En karaktär som har skrivit inlägg kan inte tas bort, så att gamla inlägg behåller sin karaktär.
         // NO ACTION (inte RESTRICT) kontrolleras först när hela satsen är klar, så att en raderad kampanj
@@ -99,7 +99,7 @@ internal sealed class PostRevisionConfiguration : IEntityTypeConfiguration<PostR
     {
         builder.Property(r => r.Content)
             .IsRequired()
-            .HasMaxLength(ThreadLimits.PostMaxLength);
+            .HasMaxLength(ThreadLimits.PostStorageMaxLength);
 
         builder.HasOne<Post>()
             .WithMany()
