@@ -1,0 +1,151 @@
+@page "/campaigns/{CampaignId:int}"
+@attribute [Authorize]
+
+@* Kampanjens startsida: trådarna (B26, B27). Kompakta textrader utan bilder; aktiva trådar först. *@
+
+@inject ICampaignService CampaignService
+@inject IThreadService ThreadService
+@inject NavigationManager NavigationManager
+
+@if (campaign is null || threads is null)
+{
+    return;
+}
+
+<PageTitle>@campaign.Name</PageTitle>
+
+<CampaignHeader Campaign="campaign" Active="CampaignTab.Threads" />
+
+@if (errorMessage is not null)
+{
+    <div class="alert alert-danger py-2" role="alert">@errorMessage</div>
+}
+
+@if (canManage)
+{
+    <a class="btn btn-primary btn-sm mb-3" href="@ThreadLinks.New(CampaignId)">+ New thread</a>
+}
+
+@if (threads.Count == 0)
+{
+    <p class="text-secondary">
+        No threads yet.@(canManage ? " Create a story thread for the first scene, and perhaps a discussion thread for out-of-character talk." : " The GM hasn't started any threads.")
+    </p>
+}
+
+@foreach (var group in threads.GroupBy(t => t.Status))
+{
+    var list = group.ToList();
+    <h2 class="h6 text-uppercase text-secondary thread-group mt-3">@(group.Key == ThreadStatus.Active ? "Active" : "Completed")</h2>
+    <ul class="list-group mb-3 thread-list">
+        @for (var i = 0; i < list.Count; i++)
+        {
+            var thread = list[i];
+            <li class="list-group-item thread-row @(thread.UnreadCount > 0 ? "has-unread" : "")" data-thread-id="@thread.Id">
+                <div class="d-flex flex-wrap align-items-baseline gap-2">
+                    @if (thread.UnreadCount > 0)
+                    {
+                        <span class="unread-dot" aria-hidden="true">●</span>
+                    }
+                    <a class="thread-title fw-semibold" href="@ThreadLinks.Thread(CampaignId, thread.Id)">@thread.Title</a>
+                    <span class="badge @(thread.Kind == ThreadKind.Story ? "text-bg-primary" : "text-bg-secondary") thread-kind">@KindText(thread.Kind)</span>
+                    @if (thread.UnreadCount > 0)
+                    {
+                        <a class="badge rounded-pill text-bg-danger unread-count" href="@ThreadLinks.Thread(CampaignId, thread.Id)">
+                            @UnreadDisplay.Format(thread.UnreadCount) new @(thread.UnreadCount == 1 ? "post" : "posts")
+                        </a>
+                    }
+                    @if (canManage)
+                    {
+                        @* Ordningen styrs av GM (B27). Statisk sida, så varje knapp är ett eget formulär. *@
+                        <form method="post" @formname="@($"move-{thread.Id}")" @onsubmit="MoveAsync" class="ms-auto d-flex gap-1">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="Move.ThreadId" value="@thread.Id" />
+                            <button type="submit" name="Move.Direction" value="-1" class="btn btn-sm btn-outline-secondary py-0"
+                                    title="Move up" aria-label="Move @thread.Title up" disabled="@(i == 0)">↑</button>
+                            <button type="submit" name="Move.Direction" value="1" class="btn btn-sm btn-outline-secondary py-0"
+                                    title="Move down" aria-label="Move @thread.Title down" disabled="@(i == list.Count - 1)">↓</button>
+                        </form>
+                    }
+                </div>
+                @if (thread.Excerpt.Length > 0)
+                {
+                    <div class="text-secondary small thread-excerpt">@thread.Excerpt</div>
+                }
+                <div class="d-flex flex-wrap align-items-center gap-2 small text-secondary mt-1 thread-meta">
+                    <span>@thread.PostCount @(thread.PostCount == 1 ? "post" : "posts") · @thread.ParticipantCount @(thread.ParticipantCount == 1 ? "participant" : "participants")</span>
+                    @if (thread.LastPostAuthor is { } author && thread.LastPostAt is { } at)
+                    {
+                        <span class="ms-sm-auto d-flex align-items-center gap-1 thread-last">
+                            Latest:
+                            <Avatar Name="@author.Name" ImageUrl="@author.AvatarUrl" ColorKey="@author.ColorKey" Silhouette="author.IsHiddenNpc" Size="18" />
+                            <span class="thread-last-name">@author.Name</span>
+                            · <time datetime="@at.ToString("o")" title="@Dates.DateTime(at)">@Dates.Relative(at, now)</time>
+                        </span>
+                    }
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter]
+    public int CampaignId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    // Binds från GM:ns flytta-formulär.
+    [SupplyParameterFromForm]
+    private MoveModel? Move { get; set; }
+
+    private string userId = "";
+    private CampaignDetails? campaign;
+    private IReadOnlyList<ThreadSummary>? threads;
+    private bool canManage;
+    private string? errorMessage;
+    private DateTimeOffset now;
+
+    protected override async Task OnInitializedAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+        now = DateTimeOffset.UtcNow;
+
+        campaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
+        if (campaign is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        canManage = CampaignPermissions.CanManageThreads(campaign.ViewerRole);
+        threads = await ThreadService.GetThreadsAsync(CampaignId, userId);
+    }
+
+    private async Task MoveAsync()
+    {
+        if (Move is not { ThreadId: { } threadId, Direction: -1 or 1 })
+            return;
+
+        try
+        {
+            await ThreadService.MoveThreadAsync(CampaignId, threadId, userId, Move.Direction.Value);
+        }
+        catch (CampaignRuleException ex)
+        {
+            errorMessage = ex.Message;
+            return;
+        }
+
+        NavigationManager.NavigateTo(ThreadLinks.Threads(CampaignId));
+    }
+
+    private static string KindText(ThreadKind kind) => kind == ThreadKind.Story ? "Story" : "Discussion";
+
+    private sealed class MoveModel
+    {
+        public int? ThreadId { get; set; }
+        public int? Direction { get; set; }
+    }
+}

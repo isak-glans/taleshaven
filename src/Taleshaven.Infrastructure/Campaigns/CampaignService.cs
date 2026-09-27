@@ -91,17 +91,10 @@ internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbF
         var entity = Campaign.Create(gameMasterId, campaign.Name, campaign.Description, campaign.MaxPlayers, now);
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
+        // En ny kampanj har inga trådar; GM skapar dem själv (B25).
         db.Campaigns.Add(entity);
         await db.SaveChangesAsync(cancellationToken);
-
-        // Varje kampanj har en RPG- och en OOC-kanal från start.
-        db.Threads.Add(CampaignThread.CreateChannel(entity.Id, ThreadKind.Rpg, gameMasterId, now));
-        db.Threads.Add(CampaignThread.CreateChannel(entity.Id, ThreadKind.Ooc, gameMasterId, now));
-        await db.SaveChangesAsync(cancellationToken);
-
-        await transaction.CommitAsync(cancellationToken);
         return entity.Id;
     }
 

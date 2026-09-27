@@ -1,0 +1,679 @@
+@page "/campaigns/{CampaignId:int}/threads/{ThreadId:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+
+@using Taleshaven.Core.Characters
+@using Taleshaven.Core.Dice
+
+@* En tråd (B28–B33): introduktion eller krönika överst, inläggen 25 per sida med sidnavigering längst ner och
+   skrivfältet under sista sidan. Ingen automatisk scroll: sidan hoppar bara till ett inlägg som man bett om
+   (fast länk eller första olästa). Nya inlägg läggs till direkt bara för den som står på sista sidan. *@
+
+@inject ICampaignService CampaignService
+@inject IThreadService ThreadService
+@inject ICharacterService CharacterService
+@inject IUnreadService Unread
+@inject IMarkdownRenderer Markdown
+@inject PostNotifier Notifier
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject ILogger<ThreadPage> Logger
+
+@if (campaign is null || thread is null || page is null)
+{
+    return;
+}
+
+<PageTitle>@thread.Title · @campaign.Name</PageTitle>
+
+<CampaignHeader @ref="header" Campaign="campaign" Active="CampaignTab.Threads" />
+
+<div class="thread-head mb-2">
+    <p class="small mb-1"><a href="@ThreadLinks.Threads(CampaignId)">← Threads</a></p>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <h2 class="h4 mb-0 thread-title">@thread.Title</h2>
+        <span class="badge @(thread.Kind == ThreadKind.Story ? "text-bg-primary" : "text-bg-secondary")">@(thread.Kind == ThreadKind.Story ? "Story" : "Discussion")</span>
+        <span class="badge @(thread.Status == ThreadStatus.Active ? "text-bg-success" : "text-bg-light border") thread-status">@(thread.Status == ThreadStatus.Active ? "Active" : "Completed")</span>
+        @if (thread.CanManage)
+        {
+            <div class="ms-auto d-flex flex-wrap gap-1 thread-actions">
+                <a class="btn btn-sm btn-outline-secondary" href="@ThreadLinks.Edit(CampaignId, ThreadId)">Edit thread</a>
+                @if (thread.Status == ThreadStatus.Active)
+                {
+                    <a class="btn btn-sm btn-outline-primary" href="@ThreadLinks.Complete(CampaignId, ThreadId)">Complete thread</a>
+                }
+                else
+                {
+                    @if (thread.Kind == ThreadKind.Story)
+                    {
+                        <a class="btn btn-sm btn-outline-secondary" href="@ThreadLinks.Chronicle(CampaignId, ThreadId)">@(thread.Chronicle is null ? "Write chronicle" : "Edit chronicle")</a>
+                    }
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ReopenAsync">Reopen</button>
+                }
+            </div>
+        }
+    </div>
+    <div class="small text-secondary mt-1">
+        @thread.PostCount @(thread.PostCount == 1 ? "post" : "posts") · @thread.ParticipantCount @(thread.ParticipantCount == 1 ? "participant" : "participants")
+        @if (firstUnreadId is { } unreadId)
+        {
+            <text> · </text><a href="@ThreadLinks.Post(CampaignId, ThreadId, unreadId)">First unread</a>
+        }
+        · <a href="@ThreadLinks.Latest(CampaignId, ThreadId)">Latest</a>
+    </div>
+    @if (actionError is not null)
+    {
+        <div class="alert alert-danger py-2 mt-2 mb-0" role="alert">@actionError</div>
+    }
+</div>
+
+@* Krönikan ersätter introduktionen när en Story-tråd är avslutad (B33); introduktionen finns kvar under Thread info. *@
+@if (ShowChronicle)
+{
+    <section class="thread-intro card mb-3 chronicle">
+        <div class="card-header small d-flex flex-wrap gap-2">
+            <strong>Chronicle</strong>
+            @if (thread.ChronicleEditedAt is { } editedAt)
+            {
+                <span class="text-secondary ms-auto">Last edited by @thread.ChronicleEditedByName · @Dates.Relative(editedAt, DateTimeOffset.UtcNow)</span>
+            }
+        </div>
+        <div class="card-body post-content">@((MarkupString)Markdown.ToSafeHtml(thread.Chronicle!))</div>
+    </section>
+}
+else if (thread.Introduction.Length > 0)
+{
+    <section class="thread-intro card mb-3">
+        <div class="card-header small"><strong>Introduction</strong></div>
+        <div class="card-body post-content">@((MarkupString)Markdown.ToSafeHtml(thread.Introduction))</div>
+    </section>
+}
+
+@if (ShowChronicle && thread.Introduction.Length > 0)
+{
+    <details class="thread-info mb-3">
+        <summary class="small text-secondary">Thread info and introduction</summary>
+        <div class="small text-secondary mt-1">Started @Dates.Date(thread.CreatedAt).</div>
+        <div class="post-content border rounded p-2 mt-1">@((MarkupString)Markdown.ToSafeHtml(thread.Introduction))</div>
+    </details>
+}
+else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Completed && thread.CanManage)
+{
+    <p class="small text-secondary">This thread has no chronicle yet. <a href="@ThreadLinks.Chronicle(CampaignId, ThreadId)">Write one</a> so new players can catch up.</p>
+}
+
+@if (page.TotalCount == 0)
+{
+    <p class="text-secondary py-3">No posts yet.@(thread.CanWrite ? " Write the first one!" : "")</p>
+}
+
+<div class="thread-posts">
+    @foreach (var post in posts)
+    {
+        <div @key="post.Id">
+            @if (post.Id == firstUnreadId)
+            {
+                <div class="thread-unread" id="first-unread" role="separator"><span>New posts</span></div>
+            }
+            @PostView(post)
+        </div>
+    }
+</div>
+
+@if (newPostsElsewhere > 0)
+{
+    <div class="alert alert-info py-2 d-flex flex-wrap align-items-center gap-2 new-posts-banner" role="status">
+        @newPostsElsewhere new @(newPostsElsewhere == 1 ? "post" : "posts")
+        <a href="@ThreadLinks.Latest(CampaignId, ThreadId)">– go to latest</a>
+    </div>
+}
+
+<Pager Page="page.Page" PageCount="page.PageCount" Href="@(p => ThreadLinks.Page(CampaignId, ThreadId, p))" />
+
+<div class="thread-composer mt-3" id="composer">
+    @if (!thread.CanWrite)
+    {
+        <p class="text-secondary fst-italic mb-0">
+            @(thread.Status == ThreadStatus.Completed ? "This thread is completed." : "You can read but not post here.")
+        </p>
+    }
+    else if (!OnLastPage)
+    {
+        <p class="text-secondary mb-0"><a href="@ThreadLinks.Latest(CampaignId, ThreadId)">Go to the latest page</a> to post.</p>
+    }
+    else
+    {
+        @if (replyTo is { } reply)
+        {
+            <div class="small text-secondary mb-1 reply-indicator">
+                ↪ Replying to <a href="@ThreadLinks.Post(CampaignId, ThreadId, reply.PostId)">@reply.Name</a>
+                <button type="button" class="btn btn-link btn-sm p-0 ms-1" aria-label="Cancel reply" @onclick="() => replyTo = null">✕</button>
+            </div>
+        }
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            @if (thread.Kind == ThreadKind.Story && postingOptions.Count > 0)
+            {
+                <label for="post-as" class="small text-secondary">Post as</label>
+                <CharacterPicker Id="post-as" Options="postingOptions" @bind-Value="selectedCharacterId"
+                                 NoneLabel="@(campaign.ViewerRole == CampaignRole.GameMaster ? "GM (narrator)" : "Myself, no character")"
+                                 NoneFirst="campaign.ViewerRole == CampaignRole.GameMaster" />
+            }
+            else if (thread.Kind == ThreadKind.Story && campaign.ViewerRole == CampaignRole.Player)
+            {
+                <span class="small text-secondary">
+                    Create a character under <a href="campaigns/@CampaignId/characters">Characters</a> to post as it.
+                </span>
+            }
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" aria-expanded="@showDice" @onclick="() => showDice = !showDice">🎲 Dice</button>
+        </div>
+        @if (showDice)
+        {
+            <DicePanel OnInsert="InsertAsync" />
+        }
+        <MarkdownEditor @ref="composer" MaxLength="ThreadLimits.PostMaxLength" DraftKey="@($"thread-{ThreadId}")" OnSubmit="SubmitAsync"
+                        SubmitText="Post" Label="New post" Placeholder="Write your post…" Rows="5"
+                        RenderPreview="@(text => PostHtml.Preview(Markdown, text))" />
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int CampaignId { get; set; }
+
+    [Parameter]
+    public int ThreadId { get; set; }
+
+    /// <summary>Sidnummer, eller "last" för sista sidan.</summary>
+    [SupplyParameterFromQuery(Name = "page")]
+    public string? PageQuery { get; set; }
+
+    /// <summary>Fast länk till ett inlägg (B30).</summary>
+    [SupplyParameterFromQuery(Name = "post")]
+    public long? PostQuery { get; set; }
+
+    /// <summary>Svar eller citat som påbörjades på en tidigare sida.</summary>
+    [SupplyParameterFromQuery(Name = "reply")]
+    public long? ReplyQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "quote")]
+    public long? QuoteQuery { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private string userId = "";
+    private CampaignDetails? campaign;
+    private ThreadDetails? thread;
+    private PostPage? page;
+    private readonly List<PostItem> posts = [];
+    private List<CharacterOption> postingOptions = [];
+    private int? selectedCharacterId;
+    private long? firstUnreadId;
+    private PostReference? replyTo;
+    private long? editingPostId;
+    private long? confirmDeleteId;
+    private bool showDice;
+    private string? actionError;
+    private int newPostsElsewhere;
+    private string? scrollTarget;
+    private bool scrollToTop;
+    private long? pendingQuote;
+    private long markedReadUpTo;
+    private bool subscribed;
+    private string? loadedKey;
+    private CampaignHeader? header;
+    private MarkdownEditor? composer;
+    private IJSObjectReference? module;
+
+    private bool ShowChronicle => thread is { Status: ThreadStatus.Completed, Chronicle: not null };
+
+    private bool OnLastPage => page is not null && page.Page >= page.PageCount;
+
+    private bool TracksReading => campaign?.ViewerRole is CampaignRole.Player or CampaignRole.GameMaster;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+
+        // Samma adress ska inte ladda om (t.ex. när förrenderingen blir interaktiv behövs ingen ny hämtning i onödan).
+        var key = $"{CampaignId}/{ThreadId}?{PageQuery}/{PostQuery}/{ReplyQuery}/{QuoteQuery}";
+        if (key == loadedKey)
+            return;
+        loadedKey = key;
+
+        if (campaign?.Id != CampaignId)
+            campaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
+        thread = campaign is null ? null : await ThreadService.GetThreadAsync(CampaignId, ThreadId, userId);
+        if (thread is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        firstUnreadId = TracksReading ? await Unread.GetFirstUnreadPostIdAsync(ThreadId, userId) : null;
+
+        // Vilken sida? Fast länk till ett inlägg, en angiven sida, annars första olästa eller sista sidan (B28).
+        int target;
+        scrollTarget = null;
+        scrollToTop = false;
+        if (PostQuery is { } postId && await ThreadService.GetPageOfPostAsync(ThreadId, postId) is { } postPage)
+        {
+            target = postPage;
+            scrollTarget = $"post-{postId}";
+        }
+        else if (PageQuery == "last" || ReplyQuery is not null || QuoteQuery is not null)
+        {
+            target = int.MaxValue;
+            scrollTarget = ReplyQuery is not null || QuoteQuery is not null ? "composer" : null;
+            scrollToTop = scrollTarget is null;
+        }
+        else if (int.TryParse(PageQuery, out var number))
+        {
+            target = number;
+            scrollToTop = true;
+        }
+        else if (firstUnreadId is { } unread && await ThreadService.GetPageOfPostAsync(ThreadId, unread) is { } unreadPage)
+        {
+            target = unreadPage;
+            scrollTarget = "first-unread";
+        }
+        else
+        {
+            target = int.MaxValue;
+        }
+
+        page = await ThreadService.GetPostsPageAsync(ThreadId, target, userId);
+        posts.Clear();
+        posts.AddRange(page.Posts);
+        newPostsElsewhere = 0;
+        editingPostId = null;
+        confirmDeleteId = null;
+        actionError = null;
+
+        if (thread.Kind == ThreadKind.Story && thread.CanWrite && postingOptions.Count == 0)
+        {
+            postingOptions = [.. await CharacterService.GetPostingOptionsAsync(CampaignId, userId)];
+            if (campaign!.ViewerRole == CampaignRole.Player && postingOptions.Count > 0)
+                selectedCharacterId ??= postingOptions[0].Id;
+        }
+
+        if (ReplyQuery is { } replyId && await ThreadService.GetPostAsync(ThreadId, replyId, userId) is { } replied)
+            replyTo = new PostReference(replied.Id, DisplayName(replied));
+        pendingQuote = QuoteQuery;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Pages/Campaigns/ThreadPage.razor.js");
+            Notifier.PostCreated += OnPostCreated;
+            Notifier.PostChanged += OnPostChanged;
+            subscribed = true;
+        }
+
+        if (module is null || page is null)
+            return;
+
+        if (pendingQuote is { } quoteId && composer is not null && await ThreadService.GetPostAsync(ThreadId, quoteId, userId) is { } quoted)
+        {
+            pendingQuote = null;
+            await composer.InsertAsync(QuoteText(quoted));
+        }
+
+        if (scrollTarget is { } target)
+        {
+            scrollTarget = null;
+            await module.InvokeVoidAsync("scrollToElement", target);
+        }
+        else if (scrollToTop)
+        {
+            scrollToTop = false;
+            await module.InvokeVoidAsync("scrollToTop");
+        }
+
+        await MarkReadAsync();
+    }
+
+    // Allt som visas på sidan räknas som läst.
+    private async Task MarkReadAsync()
+    {
+        if (!TracksReading || posts.Count == 0)
+            return;
+
+        var last = posts[^1].Id;
+        if (last <= markedReadUpTo)
+            return;
+
+        markedReadUpTo = last;
+        try
+        {
+            await Unread.MarkReadAsync(ThreadId, userId, last);
+            if (header is not null)
+                await header.RefreshUnreadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Kunde inte markera tråd {ThreadId} som läst", ThreadId);
+        }
+    }
+
+    private async Task<string?> SubmitAsync(string content)
+    {
+        // "/roll 1d20 attack" är en genväg för ett inlägg med bara ett slag (B31).
+        if (DiceCommand.IsCommand(content, out var notation, out var label, out var commandError))
+        {
+            if (commandError is not null)
+                return commandError;
+            content = InlineDice.Tag(notation.ToString()) + (label is null ? "" : " " + label);
+        }
+
+        var characterId = thread!.Kind == ThreadKind.Story ? selectedCharacterId : null;
+        PostItem created;
+        try
+        {
+            created = await ThreadService.CreatePostAsync(CampaignId, ThreadId, userId, content, characterId, replyTo?.PostId);
+        }
+        catch (CampaignRuleException ex)
+        {
+            return ex.Message;
+        }
+
+        replyTo = null;
+        showDice = false;
+        Notifier.NotifyPostCreated(CampaignId, ThreadId);
+
+        // Karaktären flyttar upp bland "Recently used" i väljaren (B17).
+        if (postingOptions.FindIndex(o => o.Id == characterId) is var index and >= 0)
+            postingOptions[index] = postingOptions[index] with { LastUsedAt = DateTimeOffset.UtcNow };
+
+        // Hamnar inlägget på en ny sida går vi dit; annars läggs det till här utan att sidan hoppar.
+        if (posts.Count >= ThreadLimits.PostsPerPage)
+        {
+            NavigationManager.NavigateTo(ThreadLinks.Post(CampaignId, ThreadId, created.Id));
+            return null;
+        }
+
+        await AppendNewPostsAsync();
+        StateHasChanged();
+        return null;
+    }
+
+    private async Task AppendNewPostsAsync()
+    {
+        var after = posts.Count > 0 ? posts[^1].Id : 0;
+        var newer = await ThreadService.GetPostsAfterAsync(ThreadId, after, userId);
+
+        // Egna inlägg kommer både härifrån och via notifieringen; samma inlägg får bara läggas till en gång.
+        posts.AddRange(newer.Where(n => posts.All(p => p.Id != n.Id)));
+        thread = await ThreadService.GetThreadAsync(CampaignId, ThreadId, userId) ?? thread;
+        page = page! with { TotalCount = thread!.PostCount };
+        await MarkReadAsync();
+    }
+
+    private async Task InsertAsync(string text)
+    {
+        if (composer is not null)
+            await composer.InsertAsync(text);
+    }
+
+    private async Task ReplyAsync(PostItem post)
+    {
+        if (!OnLastPage)
+        {
+            NavigationManager.NavigateTo($"{ThreadLinks.Thread(CampaignId, ThreadId)}?reply={post.Id}");
+            return;
+        }
+
+        replyTo = new PostReference(post.Id, DisplayName(post));
+        if (module is not null)
+            await module.InvokeVoidAsync("scrollToElement", "composer");
+    }
+
+    private async Task QuoteAsync(PostItem post)
+    {
+        if (!OnLastPage || composer is null)
+        {
+            NavigationManager.NavigateTo($"{ThreadLinks.Thread(CampaignId, ThreadId)}?quote={post.Id}");
+            return;
+        }
+
+        await composer.InsertAsync(QuoteText(post));
+        if (module is not null)
+            await module.InvokeVoidAsync("scrollToElement", "composer");
+    }
+
+    // Citatet får slagens resultat som text, så att det inte pekar på det nya inläggets egna slag.
+    private static string QuoteText(PostItem post)
+    {
+        var text = InlineDice.ReplaceReferences(post.Content, post.Rolls.Count, number => "🎲 " + PostHtml.Describe(post.Rolls[number - 1]));
+        var lines = text.Split('\n').Select(line => "> " + line.TrimEnd('\r'));
+        return $"> **{DisplayName(post)}** wrote:\n{string.Join("\n", lines)}\n\n";
+    }
+
+    private static string DisplayName(PostItem post) => post.Character?.Name ?? post.AuthorName;
+
+    private async Task<string?> SaveEditAsync(long postId, string content)
+    {
+        try
+        {
+            var updated = await ThreadService.EditPostAsync(CampaignId, postId, userId, content);
+            Replace(updated);
+            editingPostId = null;
+            Notifier.NotifyPostChanged(ThreadId, postId);
+            StateHasChanged();
+            return null;
+        }
+        catch (CampaignRuleException ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    private async Task DeleteAsync(long postId)
+    {
+        actionError = null;
+        try
+        {
+            await ThreadService.DeletePostAsync(CampaignId, postId, userId);
+        }
+        catch (CampaignRuleException ex)
+        {
+            actionError = ex.Message;
+            return;
+        }
+
+        confirmDeleteId = null;
+        if (await ThreadService.GetPostAsync(ThreadId, postId, userId) is { } deleted)
+            Replace(deleted);
+        Notifier.NotifyPostChanged(ThreadId, postId);
+    }
+
+    private async Task ReopenAsync()
+    {
+        actionError = null;
+        try
+        {
+            await ThreadService.ReopenThreadAsync(CampaignId, ThreadId, userId);
+        }
+        catch (CampaignRuleException ex)
+        {
+            actionError = ex.Message;
+            return;
+        }
+
+        thread = await ThreadService.GetThreadAsync(CampaignId, ThreadId, userId) ?? thread;
+        loadedKey = null;
+        NavigationManager.NavigateTo(ThreadLinks.Latest(CampaignId, ThreadId));
+    }
+
+    private void Replace(PostItem updated)
+    {
+        var index = posts.FindIndex(p => p.Id == updated.Id);
+        if (index >= 0)
+            posts[index] = updated;
+    }
+
+    private void OnPostCreated(int campaignId, int threadId)
+    {
+        if (threadId != ThreadId)
+            return;
+
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                // Bara den som står på sista sidan får inläggen direkt; andra ser en rad om nya inlägg (B28).
+                if (OnLastPage && posts.Count < ThreadLimits.PostsPerPage)
+                    await AppendNewPostsAsync();
+                else
+                    newPostsElsewhere++;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Kunde inte hämta nya inlägg i tråd {ThreadId}", ThreadId);
+            }
+        });
+    }
+
+    private void OnPostChanged(int threadId, long postId)
+    {
+        if (threadId != ThreadId || posts.All(p => p.Id != postId) || editingPostId == postId)
+            return;
+
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                if (await ThreadService.GetPostAsync(ThreadId, postId, userId) is { } updated)
+                {
+                    Replace(updated);
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Kunde inte hämta ändrat inlägg {PostId}", postId);
+            }
+        });
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (subscribed)
+        {
+            Notifier.PostCreated -= OnPostCreated;
+            Notifier.PostChanged -= OnPostChanged;
+        }
+
+        if (module is not null)
+        {
+            try
+            {
+                await module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Kretsen är redan nedkopplad.
+            }
+        }
+    }
+
+    private RenderFragment PostView(PostItem post) =>
+        @<article id="post-@post.Id" class="thread-post @(post.AuthorIsGameMaster ? "post-gm" : "") @(post.Id == PostQuery ? "post-target" : "")">
+            <div class="post-avatar">
+                @if (post.IsDeleted)
+                {
+                    <span class="post-avatar-deleted" aria-hidden="true"></span>
+                }
+                else if (post.Character is { } character)
+                {
+                    <Avatar Name="@character.Name" ImageUrl="@character.AvatarUrl" ColorKey="@($"character-{character.Id}")"
+                            Silhouette="@(character.IsHidden && campaign!.ViewerRole != CampaignRole.GameMaster)" />
+                }
+                else
+                {
+                    <Avatar Name="@post.AuthorName" ColorKey="@post.AuthorId" />
+                }
+            </div>
+            <div class="post-body">
+                @if (post.IsDeleted)
+                {
+                    <div class="text-secondary fst-italic post-deleted">This post was deleted.</div>
+                }
+                else
+                {
+                    <header class="post-header">
+                        <strong class="post-author">@(post.Character?.Name ?? post.AuthorName)</strong>
+                        @if (post.Character is { IsNpc: true } npc)
+                        {
+                            <span class="badge text-bg-secondary">NPC</span>
+                            @if (npc.IsHidden && campaign!.ViewerRole == CampaignRole.GameMaster)
+                            {
+                                <span class="badge text-bg-warning" title="Players see: @(npc.Alias ?? Character.UnknownName)">Hidden</span>
+                            }
+                        }
+                        else if (post.Character is not null)
+                        {
+                            <span class="small text-secondary post-player">@post.AuthorName</span>
+                        }
+                        else if (post.AuthorIsGameMaster)
+                        {
+                            <span class="badge text-bg-dark">GM</span>
+                        }
+                        <a class="text-secondary small post-time" href="@ThreadLinks.Post(CampaignId, ThreadId, post.Id)" title="@Dates.DateTime(post.CreatedAt)">
+                            <time datetime="@post.CreatedAt.ToString("o")">@Dates.DateTime(post.CreatedAt)</time>
+                        </a>
+                        @if (post.EditedAt is { } editedAt)
+                        {
+                            <span class="small text-secondary post-edited" title="Edited @Dates.DateTime(editedAt)">(edited)</span>
+                        }
+                    </header>
+                    @if (post.ReplyTo is { } reply)
+                    {
+                        <div class="small text-secondary post-reply">↪ Replying to <a href="@ThreadLinks.Post(CampaignId, ThreadId, reply.PostId)">@reply.Name</a></div>
+                    }
+                    @if (editingPostId == post.Id)
+                    {
+                        <MarkdownEditor @key="post.Id" MaxLength="ThreadLimits.PostMaxLength" DraftKey="" InitialText="@post.Content"
+                                        OnSubmit="@(content => SaveEditAsync(post.Id, content))" SubmitText="Save"
+                                        ShortcutHint="Ctrl+Enter saves" Label="Edit post" Rows="5"
+                                        RenderPreview="@(text => PostHtml.Preview(Markdown, text, post.Rolls))" />
+                        <button type="button" class="btn btn-sm btn-link px-0" @onclick="() => editingPostId = null">Cancel</button>
+                    }
+                    else
+                    {
+                        <div class="post-content">@PostHtml.Render(Markdown, post.Content, post.Rolls)</div>
+                        @if (confirmDeleteId == post.Id)
+                        {
+                            <div class="small post-confirm-delete">
+                                Delete this post?
+                                <button type="button" class="btn btn-sm btn-danger py-0 ms-1" @onclick="() => DeleteAsync(post.Id)">Yes, delete</button>
+                                <button type="button" class="btn btn-sm btn-link py-0" @onclick="() => confirmDeleteId = null">Cancel</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="post-actions small">
+                                @if (thread!.CanWrite)
+                                {
+                                    <button type="button" class="btn btn-link btn-sm p-0" @onclick="() => ReplyAsync(post)">Reply</button>
+                                    <button type="button" class="btn btn-link btn-sm p-0" @onclick="() => QuoteAsync(post)">Quote</button>
+                                }
+                                @if (post.CanEdit)
+                                {
+                                    <button type="button" class="btn btn-link btn-sm p-0" @onclick="() => { editingPostId = post.Id; confirmDeleteId = null; }">Edit</button>
+                                }
+                                @if (post.CanDelete)
+                                {
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-danger" @onclick="() => { confirmDeleteId = post.Id; editingPostId = null; }">Delete</button>
+                                }
+                            </div>
+                        }
+                    }
+                }
+            </div>
+        </article>;
+}

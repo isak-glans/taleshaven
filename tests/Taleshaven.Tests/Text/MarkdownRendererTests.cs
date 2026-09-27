@@ -7,6 +7,16 @@ public class MarkdownRendererTests
     private readonly MarkdownRenderer renderer = new();
 
     [Fact]
+    public void KeepsDiceTagsAndReferencesAsText()
+    {
+        // Tärningarna sätts in efter renderingen (B31), så taggarna måste överleva Markdown och saneringen oförändrade.
+        var html = renderer.ToSafeHtml("Anfall [dice]1d20+5[/dice] och [dice:1].");
+
+        Assert.Contains("[dice]1d20+5[/dice]", html);
+        Assert.Contains("[dice:1]", html);
+    }
+
+    [Fact]
     public void RendersBasicFormatting()
     {
         var html = renderer.ToSafeHtml("**fet** och *kursiv* och ~~struken~~");

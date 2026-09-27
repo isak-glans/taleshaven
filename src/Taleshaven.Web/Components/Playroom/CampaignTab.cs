@@ -1,10 +1,9 @@
 namespace Taleshaven.Web.Components.Playroom;
 
+/// <summary>Kampanjens flikar (B26).</summary>
 public enum CampaignTab
 {
-    Rpg,
-    Ooc,
-    Chronicle,
+    Threads,
     Characters,
     Players,
 

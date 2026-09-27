@@ -69,21 +69,42 @@ public class PostEditTests
     }
 
     [Fact]
-    public void DiceRollsCannotBeEdited()
+    public void DiceRollsCannotBeRemovedByEditing()
     {
-        var roll = DiceRoll.Roll(new DiceNotation(1, 20), null, new FixedRoller(20));
-        var post = Post.CreateDiceRoll(3, "anna", roll, Now);
+        var post = Post.Create(3, "anna", "I swing [dice]1d20[/dice] at the orc.", Now, roller: new FixedRoller(2));
 
-        Assert.Throws<CampaignRuleException>(() => post.Edit("🎲 1d20: [20] = 20 (fusk)", Now));
+        Assert.Equal("I swing [dice:1] at the orc.", post.Content);
+        Assert.Throws<CampaignRuleException>(() => post.Edit("I swing at the orc and hit.", Now));
+        Assert.Equal(2, post.Rolls[0].Total);
+    }
+
+    [Fact]
+    public void NewDiceCannotBeAddedByEditing()
+    {
+        var post = Post.Create(3, "anna", "I swing [dice]1d20[/dice].", Now, roller: new FixedRoller(2));
+
+        Assert.Throws<CampaignRuleException>(() => post.Edit("I swing [dice:1]. Again: [dice]1d20[/dice]", Now));
+        Assert.Single(post.Rolls);
+    }
+
+    [Fact]
+    public void TextAroundDiceCanBeEdited()
+    {
+        var post = Post.Create(3, "anna", "I swing [dice]1d20[/dice].", Now, roller: new FixedRoller(15));
+
+        post.Edit("Sigrun swings her hammer [dice:1] and grins.", Now.AddMinutes(1));
+
+        Assert.Equal("Sigrun swings her hammer [dice:1] and grins.", post.Content);
+        Assert.Equal(15, post.Rolls[0].Total);
     }
 
     [Theory]
-    [InlineData(CampaignRole.Player, "anna", "anna", CampaignStatus.Ongoing, ThreadStatus.Open, true)]     // eget inlägg
-    [InlineData(CampaignRole.Player, "anna", "bertil", CampaignStatus.Ongoing, ThreadStatus.Open, false)]  // annans inlägg
-    [InlineData(CampaignRole.GameMaster, "gm", "anna", CampaignStatus.Ongoing, ThreadStatus.Open, false)]  // GM redigerar inte andras
-    [InlineData(CampaignRole.GameMaster, "gm", "gm", CampaignStatus.Archived, ThreadStatus.Open, true)]    // GM skriver även i arkiverad
-    [InlineData(CampaignRole.Player, "anna", "anna", CampaignStatus.Archived, ThreadStatus.Open, false)]   // arkiverad kampanj
-    [InlineData(CampaignRole.None, "anna", "anna", CampaignStatus.Ongoing, ThreadStatus.Open, false)]      // lämnat kampanjen
+    [InlineData(CampaignRole.Player, "anna", "anna", CampaignStatus.Ongoing, ThreadStatus.Active, true)]     // eget inlägg
+    [InlineData(CampaignRole.Player, "anna", "bertil", CampaignStatus.Ongoing, ThreadStatus.Active, false)]  // annans inlägg
+    [InlineData(CampaignRole.GameMaster, "gm", "anna", CampaignStatus.Ongoing, ThreadStatus.Active, true)]   // GM redigerar allas (B30)
+    [InlineData(CampaignRole.GameMaster, "gm", "gm", CampaignStatus.Archived, ThreadStatus.Active, true)]    // GM skriver även i arkiverad
+    [InlineData(CampaignRole.Player, "anna", "anna", CampaignStatus.Archived, ThreadStatus.Active, false)]   // arkiverad kampanj
+    [InlineData(CampaignRole.None, "anna", "anna", CampaignStatus.Ongoing, ThreadStatus.Active, false)]      // lämnat kampanjen
     public void CanEditPost(CampaignRole role, string userId, string authorId, CampaignStatus campaignStatus, ThreadStatus threadStatus, bool expected)
     {
         Assert.Equal(expected, CampaignPermissions.CanEditPost(role, campaignStatus, threadStatus, userId, authorId));

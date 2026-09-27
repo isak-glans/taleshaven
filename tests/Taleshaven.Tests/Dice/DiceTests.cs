@@ -174,20 +174,44 @@ public class DiceRollTests
     }
 
     [Fact]
-    public void DiceRollPostCarriesRollAndReadableContent()
+    public void InlineDiceAreRolledWhenPostIsCreated()
     {
-        var roll = DiceRoll.Roll(new DiceNotation(1, 20), null, new FixedRoller(17));
+        var post = Post.Create(3, "anna", "Attack [dice]1d20+5[/dice], damage [DICE] 2d6 [/dice]!", Now, roller: new FixedRoller(17, 3, 4));
 
-        var post = Post.CreateDiceRoll(3, "anna", roll, Now);
-
-        Assert.Same(roll, post.Roll);
-        Assert.Equal("🎲 1d20: [17] = 17", post.Content);
-        Assert.Equal("anna", post.AuthorId);
+        Assert.Equal("Attack [dice:1], damage [dice:2]!", post.Content);
+        Assert.Equal(2, post.Rolls.Count);
+        Assert.Equal(22, post.Rolls[0].Total);
+        Assert.Equal([3, 4], post.Rolls[1].Results);
+        Assert.True(post.HasRolls);
     }
 
     [Fact]
-    public void OrdinaryPostHasNoRoll()
+    public void OrdinaryPostHasNoRolls()
     {
-        Assert.Null(Post.Create(3, "anna", "Hej", Now).Roll);
+        Assert.Empty(Post.Create(3, "anna", "Hej", Now).Rolls);
+    }
+
+    [Fact]
+    public void InvalidInlineDiceAreRejected()
+    {
+        Assert.Throws<CampaignRuleException>(() => Post.Create(3, "anna", "[dice]3d7[/dice]", Now, roller: new FixedRoller(1)));
+        Assert.Throws<CampaignRuleException>(() => Post.Create(3, "anna", "[dice]lots[/dice]", Now, roller: new FixedRoller(1)));
+    }
+
+    [Fact]
+    public void AtMostTenRollsPerPost()
+    {
+        var content = string.Concat(Enumerable.Repeat("[dice]1d6[/dice] ", ThreadLimits.MaxRollsPerPost + 1));
+
+        Assert.Throws<CampaignRuleException>(() =>
+            Post.Create(3, "anna", content, Now, roller: new FixedRoller(Enumerable.Repeat(1, 20).ToArray())));
+    }
+
+    [Fact]
+    public void ReferencesAreReplacedOnlyForExistingRolls()
+    {
+        var html = InlineDice.ReplaceReferences("<p>[dice:1] and [dice:2] and [dice:9]</p>", 2, n => $"<b>{n}</b>");
+
+        Assert.Equal("<p><b>1</b> and <b>2</b> and [dice:9]</p>", html);
     }
 }

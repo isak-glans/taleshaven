@@ -32,7 +32,7 @@
             }
             else
             {
-                @((MarkupString)Markdown.ToSafeHtml(text))
+                @(RenderPreview is null ? (MarkupString)Markdown.ToSafeHtml(text) : RenderPreview(text))
             }
         </div>
     }
@@ -100,6 +100,23 @@
     /// <summary>Ersätter standardtipset om kortkommando, t.ex. "Ctrl+Enter sparar".</summary>
     [Parameter]
     public string? ShortcutHint { get; set; }
+
+    /// <summary>Egen rendering av förhandsgranskningen, t.ex. för att visa tärningar som "rolls when posted" (B31).</summary>
+    [Parameter]
+    public Func<string, MarkupString>? RenderPreview { get; set; }
+
+    /// <summary>Lägger in text där markören står (eller sist) och flyttar fokus till fältet, t.ex. en tärning eller ett citat.</summary>
+    public async Task InsertAsync(string insertion)
+    {
+        preview = false;
+        if (module is null || !initialized)
+        {
+            text = string.IsNullOrEmpty(text) ? insertion : text + insertion;
+            return;
+        }
+
+        text = await module.InvokeAsync<string>("insert", container, DraftKey, insertion);
+    }
 
     protected override void OnInitialized()
     {

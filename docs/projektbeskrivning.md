@@ -486,18 +486,32 @@ Status: ✅ klart · ⏳ delvis · (tomt) inte påbörjat.
 Förslaget kom från `taleshaven-thread-system-todo.md` (2026-09-27) och besluten togs samma dag.
 Ordningen gör att sajten fungerar mellan stegen.
 
-24. Datamodell: trådar med typ, status, introduktion, krönika och position; inlägg med flera tärningsslag,
-    mjuk borttagning och svarsreferens. Ingenting flyttas över; gamla chattar och krönikekapitel tas bort (B34).
-25. Flikarna Threads · Characters · Players och trådlistan med olästa, senaste inlägg och ordning (B26, B27).
-26. Skapa och redigera trådar (GM), med ordning ↑/↓ (B25).
-27. Trådsidan: introduktion, 25 inlägg per sida, sidnavigering med Latest, skrivfält och skriva som;
-    nya inlägg direkt på sista sidan (B28, B29).
-28. Olästa: öppna vid första olästa, genväg till senaste, antal i trådlistan och i kampanjlistan.
-29. Reply, Quote, Edit och Delete (mjuk borttagning), fasta länkar till inlägg (B30).
-30. Tärningar i texten med `[dice]…[/dice]` (B31).
-31. Avsluta en tråd, skriva krönika per Story-tråd, krönikan i stället för introduktionen (B32, B33).
-32. Städning: ta bort chattarna, krönikefliken, gamla adresser och chattord (Send, message, RPG/OOC som
-    flikar); ny exempelkampanj i trådformatet.
+24. ✅ Datamodell: trådar med typ, status, introduktion, krönika och position; inlägg med flera tärningsslag,
+    mjuk borttagning och svarsreferens. Typerna heter Story/Discussion (tidigare Rpg/Ooc, samma värden) och
+    statusarna Active/Completed (tidigare Open/Locked); trådens beskrivning bytte namn till introduktion.
+    Regler för att avsluta och öppna trådar, krönika, borttagning och vem som får ta bort (GM allt, spelare
+    egna inlägg utan slag) finns i Core med tester. GM kan nu redigera alla inlägg (B30). Gränssnittet är
+    oförändrat tills punkt 25–27; gamla chattar och krönikekapitel tas bort i punkt 32 (B34).
+25. ✅ Flikarna Threads · Characters · Players och trådlistan (B26, B27): kompakta rader med typ, utdrag ur
+    introduktionen (eller krönikan), antal inlägg och deltagare, senaste inlägg med avatar och relativ tid,
+    olästmarkering med antal. Aktiva först, avslutade under Completed (senaste kapitlet överst).
+26. ✅ Skapa och redigera trådar (GM): titel, typ och introduktion; ordning med ↑/↓ i trådlistan (B25).
+    En ny kampanj har inga trådar.
+27. ✅ Trådsidan (B28, B29): introduktion eller krönika överst, 25 inlägg per sida, sidnavigering med
+    ← Previous, sidnummer med …, Next →, Latest och tangenterna ← →. Skrivfältet ("Post", Ctrl+Enter) under
+    sista sidan, "Post as" bara i Story-trådar. Nya inlägg läggs till direkt på sista sidan; andra ser
+    "N new posts – go to latest". Ingen automatisk scroll.
+28. ✅ Olästa per tråd: tråden öppnas vid första olästa med en linje "New posts", genvägar till första olästa
+    och senaste, antal i trådlistan, på fliken Threads och i kampanjlistan. Borttagna inlägg räknas inte.
+29. ✅ Reply ("Replying to …" med länk), Quote (citat med namn), Edit och Delete (mjuk: "This post was
+    deleted.") och fasta länkar `?post=N` (B30).
+30. ✅ Tärningar i texten med `[dice]…[/dice]`, tärningspanelen och `/roll` som genväg (B31). Slagen visas
+    på sin plats; förhandsgranskningen visar "rolls when posted".
+31. ✅ Avsluta en tråd, med krönika för Story-trådar; skriva och ändra krönikan i efterhand; öppna tråden
+    igen (B32, B33).
+32. ✅ Städning: chattarna, krönikefliken, `/ooc`- och `/chronicle`-adresserna, tabellen `ChronicleChapters`
+    och kolumnen `Roll` är borttagna. Exempelkampanjen är omskapad i trådformatet: *Chapter 1 – Arrival in
+    the fog* (avslutad, med krönika), *Chapter 2 – The empty boats* och *OOC*.
 
 ### Senare
 Social inloggning, privata meddelanden, notiser/e-postnotiser, privata
@@ -551,7 +565,7 @@ RPG- och OOC-chatten är var sin kanal i tabellen `Threads` (typ `Rpg` resp.
 liveuppdatering och olästmarkering. Fler RPG-kanaler kräver ingen ändring av
 datamodellen.
 
-**Efter fas 6 (planerat):**
+**Efter fas 6:**
 
 ```text
 Campaign ──< Thread (typ: Story | Discussion, status: Active | Completed) ──< Post
@@ -565,8 +579,7 @@ User ──< ReadMarker >── Thread
 | Thread | Id, CampaignId, titel, typ, status, introduktion, krönika, krönika ändrad av/när, position, skapad, ändrad |
 | Post | Id, ThreadId, författare, CharacterId?, innehåll, tärningsslag (jsonb-lista), svar på (PostId?), skapad, redigerad, borttagen (tid och av vem) |
 
-`ChronicleChapter` och den nuvarande kolumnen `Roll` (ett slag per inlägg) tas bort när den nya modellen
-fungerar (B34).
+`ChronicleChapter` och kolumnen `Roll` (ett slag per inlägg) är borttagna (B34).
 
 ---
 

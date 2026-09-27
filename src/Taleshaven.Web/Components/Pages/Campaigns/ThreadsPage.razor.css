@@ -1,0 +1,33 @@
+.thread-group {
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+}
+
+.thread-row {
+    padding: 0.6rem 0.9rem;
+}
+
+.thread-row.has-unread .thread-title {
+    font-weight: 700;
+}
+
+.unread-dot {
+    color: var(--bs-danger);
+    font-size: 0.7rem;
+}
+
+.thread-kind {
+    font-weight: 500;
+}
+
+.thread-excerpt {
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    display: -webkit-box;
+    line-clamp: 1;
+    overflow: hidden;
+}
+
+.thread-last-name {
+    color: var(--bs-body-color);
+}

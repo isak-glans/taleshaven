@@ -1,17 +1,18 @@
 namespace Taleshaven.Web;
 
 /// <summary>
-/// Meddelar öppna chattvyer (i alla anslutna kretsar) att ett inlägg har skapats eller redigerats.
+/// Meddelar öppna trådsidor (i alla anslutna kretsar) att ett inlägg har skapats, redigerats eller tagits bort.
 /// Fungerar inom en serverinstans; vid flera instanser behövs t.ex. Redis eller Postgres LISTEN/NOTIFY.
 /// </summary>
 public sealed class PostNotifier
 {
-    public event Action<int>? PostCreated;
+    /// <summary>Kampanjens id och trådens id.</summary>
+    public event Action<int, int>? PostCreated;
 
-    /// <summary>Kanalens id och inläggets id.</summary>
-    public event Action<int, long>? PostEdited;
+    /// <summary>Trådens id och inläggets id.</summary>
+    public event Action<int, long>? PostChanged;
 
-    public void NotifyPostCreated(int threadId) => PostCreated?.Invoke(threadId);
+    public void NotifyPostCreated(int campaignId, int threadId) => PostCreated?.Invoke(campaignId, threadId);
 
-    public void NotifyPostEdited(int threadId, long postId) => PostEdited?.Invoke(threadId, postId);
+    public void NotifyPostChanged(int threadId, long postId) => PostChanged?.Invoke(threadId, postId);
 }

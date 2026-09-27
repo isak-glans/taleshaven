@@ -3,45 +3,58 @@ namespace Taleshaven.Core.Threads;
 public static class ThreadLimits
 {
     public const int TitleMaxLength = 100;
-    public const int DescriptionMaxLength = 500;
+    public const int IntroductionMaxLength = 5_000;
+    public const int ChronicleMaxLength = 5_000;
+
     /// <summary>Längsta inlägg som kan skrivas eller redigeras (B23).</summary>
     public const int PostMaxLength = 5_000;
 
     /// <summary>Kolumnens storlek i databasen. Större än <see cref="PostMaxLength"/>, så att inlägg från tiden före B23 ligger kvar.</summary>
     public const int PostStorageMaxLength = 10_000;
+
+    /// <summary>Inlägg per sida i en tråd (B28).</summary>
+    public const int PostsPerPage = 25;
+
+    /// <summary>Högst så många tärningsslag i ett inlägg (B31).</summary>
+    public const int MaxRollsPerPost = 10;
 }
 
-/// <summary>
-/// Hur många inlägg chatten visar när den öppnas och hur många som hämtas när man scrollar uppåt (beslut B8).
-/// </summary>
-public static class ChatWindow
+/// <summary>Sidindelning av inläggen i en tråd (B28) och sidnavigeringen längst ner.</summary>
+public static class Paging
 {
-    public const int InitialDays = 7;
-    public const int InitialMinPosts = 20;
-    public const int InitialMaxPosts = 100;
-    public const int OlderPageSize = 20;
+    public static int PageCount(int itemCount, int perPage = ThreadLimits.PostsPerPage) =>
+        Math.Max(1, (itemCount + perPage - 1) / perPage);
+
+    /// <summary>Sidan där det n:te elementet (1-baserat) hamnar.</summary>
+    public static int PageOf(int position, int perPage = ThreadLimits.PostsPerPage) =>
+        Math.Max(1, (position + perPage - 1) / perPage);
+
+    public static int Clamp(int page, int pageCount) => Math.Clamp(page, 1, Math.Max(1, pageCount));
 
     /// <summary>
-    /// Antal inlägg att visa vid öppning: de från de senaste <see cref="InitialDays"/> dagarna,
-    /// men minst <see cref="InitialMinPosts"/> och högst <see cref="InitialMaxPosts"/> (och aldrig fler än som finns).
+    /// Sidnumren som visas i navigeringen: första, sista och några runt den aktuella. <c>null</c> betyder "…".
+    /// En lucka på en enda sida visas som sidan själv i stället för "…". Exempel: 1 2 3 … 12 13 14.
     /// </summary>
-    /// <param name="newestFirst">Tidpunkter för de senaste inläggen, nyast först.</param>
-    public static int InitialCount(IReadOnlyList<DateTimeOffset> newestFirst, DateTimeOffset now)
+    public static IReadOnlyList<int?> Window(int page, int pageCount, int neighbours = 2)
     {
-        var cutoff = now.AddDays(-InitialDays);
-        var recent = newestFirst.TakeWhile(createdAt => createdAt >= cutoff).Count();
+        var shown = new SortedSet<int> { 1, pageCount };
+        for (var p = page - neighbours; p <= page + neighbours; p++)
+        {
+            if (p >= 1 && p <= pageCount)
+                shown.Add(p);
+        }
 
-        return Math.Min(Math.Max(recent, InitialMinPosts), Math.Min(InitialMaxPosts, newestFirst.Count));
-    }
-
-    /// <summary>
-    /// Som <see cref="InitialCount(IReadOnlyList{DateTimeOffset}, DateTimeOffset)"/>, men tar även med alla olästa
-    /// plus ett läst inlägg ovanför för sammanhang, så att chatten kan öppnas vid första olästa (högst <see cref="InitialMaxPosts"/>).
-    /// </summary>
-    /// <param name="unreadCount">Antal inlägg bland <paramref name="newestFirst"/> som är nyare än läspositionen.</param>
-    public static int InitialCount(IReadOnlyList<DateTimeOffset> newestFirst, DateTimeOffset now, int unreadCount)
-    {
-        var withUnread = Math.Min(unreadCount + 1, InitialMaxPosts);
-        return Math.Min(Math.Max(InitialCount(newestFirst, now), withUnread), newestFirst.Count);
+        var result = new List<int?>();
+        int? previous = null;
+        foreach (var p in shown)
+        {
+            if (previous is { } prev && p - prev == 2)
+                result.Add(prev + 1);
+            else if (previous is not null && p - previous > 2)
+                result.Add(null);
+            result.Add(p);
+            previous = p;
+        }
+        return result;
     }
 }

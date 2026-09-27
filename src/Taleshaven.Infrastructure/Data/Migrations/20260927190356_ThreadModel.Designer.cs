@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Taleshaven.Infrastructure.Data;
@@ -12,9 +13,11 @@ using Taleshaven.Infrastructure.Data;
 namespace Taleshaven.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(TaleshavenDbContext))]
-    partial class TaleshavenDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260927190356_ThreadModel")]
+    partial class ThreadModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -360,6 +363,49 @@ namespace Taleshaven.Infrastructure.Data.Migrations
                     b.HasIndex("CampaignId", "OwnerId");
 
                     b.ToTable("Characters");
+                });
+
+            modelBuilder.Entity("Taleshaven.Core.Chronicle.ChronicleChapter", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AuthorId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("CampaignId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("CampaignId", "Position");
+
+                    b.ToTable("ChronicleChapters");
                 });
 
             modelBuilder.Entity("Taleshaven.Core.Portraits.Portrait", b =>
@@ -801,6 +847,21 @@ namespace Taleshaven.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
                 });
 
+            modelBuilder.Entity("Taleshaven.Core.Chronicle.ChronicleChapter", b =>
+                {
+                    b.HasOne("Taleshaven.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Taleshaven.Core.Campaigns.Campaign", null)
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Taleshaven.Core.Portraits.Portrait", b =>
                 {
                     b.HasOne("Taleshaven.Infrastructure.Identity.ApplicationUser", null)
@@ -859,6 +920,38 @@ namespace Taleshaven.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.OwnsOne("Taleshaven.Core.Dice.DiceRoll", "Roll", b1 =>
+                        {
+                            b1.Property<long>("PostId");
+
+                            b1.Property<int>("Count");
+
+                            b1.Property<string>("Label");
+
+                            b1.Property<int>("Modifier");
+
+                            b1.Property<string>("Notation")
+                                .IsRequired();
+
+                            b1.PrimitiveCollection<string>("Results")
+                                .IsRequired();
+
+                            b1.Property<int>("Sides");
+
+                            b1.Property<int>("Total");
+
+                            b1.HasKey("PostId");
+
+                            b1.ToTable("Posts");
+
+                            b1
+                                .ToJson("Roll")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PostId");
+                        });
+
                     b.OwnsMany("Taleshaven.Core.Dice.DiceRoll", "Rolls", b1 =>
                         {
                             b1.Property<long>("PostId");
@@ -893,6 +986,8 @@ namespace Taleshaven.Infrastructure.Data.Migrations
                             b1.WithOwner()
                                 .HasForeignKey("PostId");
                         });
+
+                    b.Navigation("Roll");
 
                     b.Navigation("Rolls");
                 });

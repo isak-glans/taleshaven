@@ -8,14 +8,28 @@ namespace Taleshaven.Infrastructure.Threads;
 
 internal sealed class UnreadService(IDbContextFactory<TaleshavenDbContext> dbFactory, TimeProvider timeProvider) : IUnreadService
 {
-    public async Task<long?> GetLastReadPostIdAsync(int threadId, string userId, CancellationToken cancellationToken = default)
+    public async Task<long?> GetFirstUnreadPostIdAsync(int threadId, string userId, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-        return await db.ReadMarkers.AsNoTracking()
+        var campaignId = await db.Threads.Where(t => t.Id == threadId).Select(t => (int?)t.CampaignId).SingleOrDefaultAsync(cancellationToken);
+        if (campaignId is null)
+            return null;
+
+        var access = await CampaignAccess.GetAsync(db, campaignId.Value, userId, cancellationToken);
+        if (access.Role == CampaignRole.None)
+            return null;
+
+        var lastRead = await db.ReadMarkers
             .Where(m => m.ThreadId == threadId && m.UserId == userId)
             .Select(m => (long?)m.LastReadPostId)
-            .SingleOrDefaultAsync(cancellationToken);
+            .SingleOrDefaultAsync(cancellationToken) ?? 0;
+
+        return await db.Posts
+            .Where(p => p.ThreadId == threadId && p.Id > lastRead && p.AuthorId != userId && p.DeletedAt == null)
+            .OrderBy(p => p.Id)
+            .Select(p => (long?)p.Id)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task MarkReadAsync(int threadId, string userId, long lastPostId, CancellationToken cancellationToken = default)
@@ -40,20 +54,17 @@ internal sealed class UnreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             """, cancellationToken);
     }
 
-    public async Task<UnreadCounts> GetUnreadCountsAsync(int campaignId, string userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyDictionary<int, int>> GetThreadUnreadAsync(int campaignId, string userId, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
         var access = await CampaignAccess.GetAsync(db, campaignId, userId, cancellationToken);
         if (access.Role == CampaignRole.None)
-            return UnreadCounts.None;
+            return new Dictionary<int, int>();
 
-        var rows = await CountUnread(db, userId, db.Threads.Where(t => t.CampaignId == campaignId))
+        var rows = await UnreadQueries.CountPerThread(db, userId, db.Threads.Where(t => t.CampaignId == campaignId))
             .ToListAsync(cancellationToken);
-
-        var rpg = rows.Where(r => r.Kind == ThreadKind.Rpg).OrderBy(r => r.ThreadId).FirstOrDefault();
-        var ooc = rows.Where(r => r.Kind == ThreadKind.Ooc).OrderBy(r => r.ThreadId).FirstOrDefault();
-        return new UnreadCounts(rpg?.ThreadId ?? 0, rpg?.Count ?? 0, ooc?.ThreadId ?? 0, ooc?.Count ?? 0);
+        return rows.Where(r => r.Count > 0).ToDictionary(r => r.ThreadId, r => r.Count);
     }
 
     public async Task<IReadOnlyDictionary<int, int>> GetUnreadTotalsAsync(string userId, CancellationToken cancellationToken = default)
@@ -66,7 +77,7 @@ internal sealed class UnreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             where c.GameMasterId == userId || c.Memberships.Any(m => m.UserId == userId)
             select t;
 
-        var rows = await CountUnread(db, userId, participating).ToListAsync(cancellationToken);
+        var rows = await UnreadQueries.CountPerThread(db, userId, participating).ToListAsync(cancellationToken);
 
         return rows
             .GroupBy(r => r.CampaignId)
@@ -74,9 +85,12 @@ internal sealed class UnreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             .Where(x => x.Count > 0)
             .ToDictionary(x => x.CampaignId, x => x.Count);
     }
+}
 
-    // Olästa = andras inlägg efter läspositionen. Utan läsposition räknas alla andras inlägg.
-    private static IQueryable<UnreadRow> CountUnread(TaleshavenDbContext db, string userId, IQueryable<CampaignThread> threads) =>
+internal static class UnreadQueries
+{
+    // Olästa = andras inlägg efter läspositionen som inte är borttagna. Utan läsposition räknas alla andras inlägg.
+    public static IQueryable<UnreadRow> CountPerThread(TaleshavenDbContext db, string userId, IQueryable<CampaignThread> threads) =>
         from t in threads
         let lastRead = db.ReadMarkers
             .Where(m => m.UserId == userId && m.ThreadId == t.Id)
@@ -85,17 +99,15 @@ internal sealed class UnreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         select new UnreadRow(
             t.Id,
             t.CampaignId,
-            t.Kind,
-            db.Posts.Count(p => p.ThreadId == t.Id && p.AuthorId != userId && p.Id > lastRead));
-
-    private sealed record UnreadRow(int ThreadId, int CampaignId, ThreadKind Kind, int Count);
+            db.Posts.Count(p => p.ThreadId == t.Id && p.AuthorId != userId && p.Id > lastRead && p.DeletedAt == null));
 }
 
+internal sealed record UnreadRow(int ThreadId, int CampaignId, int Count);
 /// <summary>Läspositioner som sätts av andra delar av systemet.</summary>
 internal static class ReadMarkers
 {
     /// <summary>
-    /// Markerar allt som redan finns i kampanjens kanaler som läst, t.ex. när en spelare godkänns.
+    /// Markerar allt som redan finns i kampanjens trådar som läst, t.ex. när en spelare godkänns.
     /// En ny spelare ska inte få hela kampanjens historik som "olästa".
     /// </summary>
     public static Task MarkAllReadAsync(TaleshavenDbContext db, int campaignId, string userId, DateTimeOffset now, CancellationToken cancellationToken) =>

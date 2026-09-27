@@ -56,6 +56,22 @@ export function init(container, draftKey, sendOnEnter) {
     updateCounter();
 }
 
+// Lägger in text vid markören och returnerar hela texten, så att Blazor får samma värde direkt.
+export function insert(container, draftKey, insertion) {
+    const textarea = container.querySelector('textarea');
+    if (!textarea) return insertion;
+
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? start;
+    textarea.setRangeText(insertion, start, end, 'end');
+    textarea.dispatchEvent(new Event('change', { bubbles: true }));
+    const counter = container.querySelector('[data-md-counter]');
+    if (counter) counter.textContent = textarea.value.length;
+    saveDraft(draftKey, textarea.value);
+    textarea.focus();
+    return textarea.value;
+}
+
 export function focus(container) {
     container.querySelector('textarea')?.focus();
 }

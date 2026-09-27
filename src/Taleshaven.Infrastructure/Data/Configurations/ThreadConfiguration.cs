@@ -17,9 +17,18 @@ internal sealed class CampaignThreadConfiguration : IEntityTypeConfiguration<Cam
             .IsRequired()
             .HasMaxLength(ThreadLimits.TitleMaxLength);
 
-        builder.Property(t => t.Description)
+        // Hette Description före fas 6.
+        builder.Property(t => t.Introduction)
             .IsRequired()
-            .HasMaxLength(ThreadLimits.DescriptionMaxLength);
+            .HasMaxLength(ThreadLimits.IntroductionMaxLength);
+
+        builder.Property(t => t.Chronicle)
+            .HasMaxLength(ThreadLimits.ChronicleMaxLength);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(t => t.ChronicleEditedById)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne<Campaign>()
             .WithMany()
@@ -31,13 +40,8 @@ internal sealed class CampaignThreadConfiguration : IEntityTypeConfiguration<Cam
             .HasForeignKey(t => t.CreatedById)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(t => new { t.CampaignId, t.Kind });
-
-        // Exakt en OOC-tråd per kampanj.
-        builder.HasIndex(t => t.CampaignId)
-            .IsUnique()
-            .HasFilter($"\"{nameof(CampaignThread.Kind)}\" = {(int)ThreadKind.Ooc}")
-            .HasDatabaseName("IX_Threads_CampaignId_Ooc");
+        // Trådlistan sorteras på position (B27). Det finns inga fasta trådar längre, så ingen unik OOC-tråd (B25).
+        builder.HasIndex(t => new { t.CampaignId, t.Position });
     }
 }
 
@@ -57,8 +61,19 @@ internal sealed class PostConfiguration : IEntityTypeConfiguration<Post>
             .HasForeignKey(p => p.CharacterId)
             .OnDelete(DeleteBehavior.NoAction);
 
-        // Tärningskastet lagras som jsonb i samma rad som inlägget (null för vanliga inlägg).
-        builder.OwnsOne(p => p.Roll, roll => roll.ToJson());
+        // Tärningsslagen i texten (B31) lagras som jsonb i samma rad som inlägget.
+        builder.OwnsMany(p => p.Rolls, roll => roll.ToJson());
+
+        // NO ACTION av samma skäl som för karaktären: en raderad kampanj tar med sig både svaret och originalet.
+        builder.HasOne<Post>()
+            .WithMany()
+            .HasForeignKey(p => p.ReplyToPostId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        builder.HasOne<ApplicationUser>()
+            .WithMany()
+            .HasForeignKey(p => p.DeletedById)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne<CampaignThread>()
             .WithMany()

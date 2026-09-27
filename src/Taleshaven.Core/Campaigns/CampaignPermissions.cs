@@ -14,21 +14,32 @@ public static class CampaignPermissions
     public static bool CanWritePost(CampaignRole role, CampaignStatus campaignStatus, ThreadStatus threadStatus) => role switch
     {
         CampaignRole.GameMaster => true,
-        CampaignRole.Player => threadStatus == ThreadStatus.Open && IsActive(campaignStatus),
+        CampaignRole.Player => threadStatus == ThreadStatus.Active && IsActive(campaignStatus),
         _ => false,
     };
 
     /// <summary>
-    /// Man redigerar bara sina egna inlägg, och bara så länge man får skriva i kanalen (B12).
+    /// Man redigerar sina egna inlägg så länge man får skriva i tråden (B12); GM redigerar alla inlägg i sin kampanj (B30).
     /// En spelare som lämnat kampanjen, eller en arkiverad kampanj, stänger alltså även redigering.
     /// </summary>
     public static bool CanEditPost(CampaignRole role, CampaignStatus campaignStatus, ThreadStatus threadStatus, string userId, string authorId) =>
-        userId == authorId && CanWritePost(role, campaignStatus, threadStatus);
+        (userId == authorId || role == CampaignRole.GameMaster) && CanWritePost(role, campaignStatus, threadStatus);
+
+    /// <summary>
+    /// Samma regel som för redigering (B30), men inlägg med tärningsslag kan bara GM ta bort (B31), så att ingen
+    /// kan ta bort ett dåligt slag.
+    /// </summary>
+    public static bool CanDeletePost(
+        CampaignRole role, CampaignStatus campaignStatus, ThreadStatus threadStatus, string userId, string authorId, bool hasRolls) =>
+        role == CampaignRole.GameMaster || (!hasRolls && CanEditPost(role, campaignStatus, threadStatus, userId, authorId));
+
+    /// <summary>Endast GM skapar, ändrar, ordnar och avslutar trådar i första versionen (B25, B32).</summary>
+    public static bool CanManageThreads(CampaignRole role) => role == CampaignRole.GameMaster;
 
     /// <summary>Endast GM administrerar kampanjen: inställningar, status, spelare och radering (A-2–A-4).</summary>
     public static bool CanManageCampaign(CampaignRole role) => role == CampaignRole.GameMaster;
 
-    /// <summary>Endast GM skriver krönikan (C-7). Gäller även stängda och arkiverade kampanjer.</summary>
+    /// <summary>Endast GM skriver krönikan (C-7, B33). Gäller även stängda och arkiverade kampanjer.</summary>
     public static bool CanEditChronicle(CampaignRole role) => role == CampaignRole.GameMaster;
 
     /// <summary>Deltagare skapar karaktärer: spelare egna, GM NPC:er (H-1, H-6).</summary>

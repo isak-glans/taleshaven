@@ -1,0 +1,54 @@
+@* Sidnavigering längst ner i en tråd (B28): Previous/Next, sidnummer med … och Latest.
+   Länkarna framåt/bakåt används också av tangenterna ← → (page-keys.js). *@
+
+@if (PageCount > 1)
+{
+    <nav class="thread-pager" aria-label="Pages">
+        <ul class="pagination pagination-sm justify-content-center flex-wrap mb-1">
+            @PageItem(Page - 1, "← Previous", Page > 1, prev: true)
+            @foreach (var p in Paging.Window(Page, PageCount))
+            {
+                if (p is { } number)
+                {
+                    <li class="page-item @(number == Page ? "active" : "")">
+                        <a class="page-link" href="@Href(number)" aria-current="@(number == Page ? "page" : null)">@number</a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                }
+            }
+            @PageItem(Page + 1, "Next →", Page < PageCount, next: true)
+            @PageItem(PageCount, "Latest", Page < PageCount)
+        </ul>
+        <p class="text-center text-secondary small mb-0">
+            Page @Page of @PageCount<span class="pager-keys"> · ← → to turn pages</span>
+        </p>
+    </nav>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public int Page { get; set; }
+
+    [Parameter, EditorRequired]
+    public int PageCount { get; set; }
+
+    /// <summary>Adressen till en sida.</summary>
+    [Parameter, EditorRequired]
+    public Func<int, string> Href { get; set; } = default!;
+
+    // Inaktiva steg (t.ex. Previous på första sidan) visas som text, inte som länk.
+    private RenderFragment PageItem(int target, string label, bool enabled, bool prev = false, bool next = false) =>
+        @<li class="page-item @(enabled ? "" : "disabled")">
+            @if (enabled)
+            {
+                <a class="page-link" href="@Href(target)" data-page-prev="@(prev ? "" : null)" data-page-next="@(next ? "" : null)">@label</a>
+            }
+            else
+            {
+                <span class="page-link">@label</span>
+            }
+        </li>;
+}
