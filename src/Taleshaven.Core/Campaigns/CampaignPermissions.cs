@@ -39,9 +39,6 @@ public static class CampaignPermissions
     /// <summary>Endast GM administrerar kampanjen: inställningar, status, spelare och radering (A-2–A-4).</summary>
     public static bool CanManageCampaign(CampaignRole role) => role == CampaignRole.GameMaster;
 
-    /// <summary>Endast GM skriver krönikan (C-7, B33). Gäller även stängda och arkiverade kampanjer.</summary>
-    public static bool CanEditChronicle(CampaignRole role) => role == CampaignRole.GameMaster;
-
     /// <summary>Deltagare skapar karaktärer: spelare egna, GM NPC:er (H-1, H-6).</summary>
     public static bool CanCreateCharacter(CampaignRole role) => role is CampaignRole.Player or CampaignRole.GameMaster;
 

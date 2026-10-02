@@ -1,6 +1,6 @@
 namespace Taleshaven.Web.Components.Playroom;
 
-/// <summary>Adresser till trådarna (B25–B33). Kampanjens startsida är trådlistan.</summary>
+/// <summary>Adresser till trådarna (B25–B30, B37). Kampanjens startsida är trådlistan.</summary>
 public static class ThreadLinks
 {
     public static string Threads(int campaignId) => $"campaigns/{campaignId}";
@@ -18,8 +18,4 @@ public static class ThreadLinks
     public static string New(int campaignId) => $"campaigns/{campaignId}/threads/new";
 
     public static string Edit(int campaignId, int threadId) => $"{Thread(campaignId, threadId)}/edit";
-
-    public static string Complete(int campaignId, int threadId) => $"{Thread(campaignId, threadId)}/complete";
-
-    public static string Chronicle(int campaignId, int threadId) => $"{Thread(campaignId, threadId)}/chronicle";
 }

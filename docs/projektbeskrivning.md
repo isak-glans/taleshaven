@@ -49,18 +49,20 @@ Besluten nedan ersätter B1, B3, B6–B10, B13, B14, F2 (delvis), F13 och F14 n�
 
 | # | Fråga | Beslut |
 |---|-------|--------|
-| B25 | Trådar | En kampanj består av **trådar** som GM skapar och namnger fritt, i valfritt antal. En tråd har titel, **typ** (*Story* eller *Discussion*), **status** (*Active* eller *Completed*), introduktion och, för Story-trådar, krönika. Det finns **inga fasta RPG- eller OOC-trådar**; OOC är en vanlig Discussion-tråd som GM skapar om hen vill. *Completed* är inte samma sak som arkiverad: tråden är avslutad men är fortfarande en del av kampanjens historia. Bara GM skapar trådar i första versionen. |
+| B25 | Trådar | *Typ, introduktion och krönika ersätts av B37.* En kampanj består av **trådar** som GM skapar och namnger fritt, i valfritt antal. En tråd har titel, **typ** (*Story* eller *Discussion*), **status** (*Active* eller *Completed*), introduktion och, för Story-trådar, krönika. Det finns **inga fasta RPG- eller OOC-trådar**; OOC är en vanlig Discussion-tråd som GM skapar om hen vill. *Completed* är inte samma sak som arkiverad: tråden är avslutad men är fortfarande en del av kampanjens historia. Bara GM skapar trådar i första versionen. |
 | B26 | Flikar | Kampanjens flikar blir **Threads · Characters · Players**. Flikarna RPG, OOC och Chronicle tas bort. Threads är kampanjens startsida. |
-| B27 | Trådlistan | Trådarna visas som **kompakta textrader** utan bilder och utan stora ikoner: titel, typ, status, antal inlägg, antal deltagare, senaste inlägg (vem och när, med avatar) och olästmarkering med antal ("3 new posts"). **Aktiva trådar ligger före avslutade.** GM styr ordningen med en position (flytta ↑/↓), eftersom kapitlens ordning inte alltid följer när de skapades. En dold NPC visas med sitt alias under "senaste inlägg" och räknas inte som deltagare (B16). |
-| B28 | Trådsidan | Överst titel, typ, status, antal inlägg och deltagare, och därunder **introduktionen** (eller krönikan, B33). Inläggen är **sidindelade, 25 per sida**, med sidnavigering längst ner: Previous/Next, sidnummer med … för långa trådar, och **Latest**. **Ingen oändlig scroll och ingen automatisk scroll.** Sidan scrollar som en vanlig webbsida (ersätter B8 och B13). En tråd öppnas vid **första olästa inlägget**. Nya inlägg läggs till direkt bara för den som står på sista sidan; andra ser en rad "N new posts – go to latest". Skrivfältet ligger under sista sidan och knappen heter **Post**. Enter ger ny rad och Ctrl+Enter publicerar i alla trådar (ersätter B9). En liten trådinformation visar typ, status, deltagare, introduktionen (när krönikan visas) och genvägar till första olästa och senaste inlägget. |
-| B29 | Skriva som | I **Story-trådar** skriver man som karaktär, NPC eller berättare, som i dagens RPG-chatt. I **Discussion-trådar** skriver man som sig själv. |
+| B27 | Trådlistan | *Typ och utdrag tas bort i B37.* Trådarna visas som **kompakta textrader** utan bilder och utan stora ikoner: titel, typ, status, antal inlägg, antal deltagare, senaste inlägg (vem och när, med avatar) och olästmarkering med antal ("3 new posts"). **Aktiva trådar ligger före avslutade.** GM styr ordningen med en position (flytta ↑/↓), eftersom kapitlens ordning inte alltid följer när de skapades. En dold NPC visas med sitt alias under "senaste inlägg" och räknas inte som deltagare (B16). |
+| B28 | Trådsidan | *Introduktion, krönika och typ tas bort i B37; 20 per sida enligt B35.* Överst titel, typ, status, antal inlägg och deltagare, och därunder **introduktionen** (eller krönikan, B33). Inläggen är **sidindelade, 25 per sida**, med sidnavigering längst ner: Previous/Next, sidnummer med … för långa trådar, och **Latest**. **Ingen oändlig scroll och ingen automatisk scroll.** Sidan scrollar som en vanlig webbsida (ersätter B8 och B13). En tråd öppnas vid **första olästa inlägget**. Nya inlägg läggs till direkt bara för den som står på sista sidan; andra ser en rad "N new posts – go to latest". Skrivfältet ligger under sista sidan och knappen heter **Post**. Enter ger ny rad och Ctrl+Enter publicerar i alla trådar (ersätter B9). En liten trådinformation visar typ, status, deltagare, introduktionen (när krönikan visas) och genvägar till första olästa och senaste inlägget. |
+| B29 | Skriva som | *Ersätts av B37.* I **Story-trådar** skriver man som karaktär, NPC eller berättare, som i dagens RPG-chatt. I **Discussion-trådar** skriver man som sig själv. |
 | B30 | Svara, citera, redigera, ta bort | Varje inlägg har **Reply, Quote, Edit och Delete** (vid hovring eller i en `…`-meny). Trådarna är **platta**, utan nästlade svar. **Quote** lägger in det citerade som ett citat med namn. **Reply** visar en rad "Replying to …" med länk till originalet. Varje inlägg har en fast länk (`?post=N`) som hittar rätt sida. Man redigerar och tar bort sina egna inlägg; **GM kan redigera och ta bort alla inlägg i sin kampanj.** Redigerade inlägg visas med "(edited)". Borttagning är **mjuk**: inlägget ligger kvar på sin plats med texten "This post was deleted.", och innehållet sparas i historiken. |
 | B31 | Tärningar i texten | Tärningar kan slås i **alla trådar**, mitt i texten: `[dice]1d20+3[/dice]`. Slaget görs **på servern när inlägget publiceras**, och resultatet visas där taggen stod. Förhandsgranskningen visar "rolls when posted" i stället för ett resultat. I den sparade texten byts taggen mot en referens (`[dice:N]`) till det sparade slaget. **Slag kan inte ändras eller tas bort genom redigering**, och nya taggar i en redigering slås inte. **Inlägg med slag kan bara tas bort av GM.** Högst 10 slag per inlägg. En knapp 🎲 och tärningspanelen lägger in taggen, och `/roll 1d20` finns kvar som genväg för ett inlägg med bara ett slag. Ersätter B3 och F13. |
-| B32 | Avsluta en tråd | GM sätter en tråd till *Completed*. För en Story-tråd **uppmanas GM att skriva krönikan** i samma steg, men kan hoppa över och skriva den senare. En avslutad tråd är **skrivskyddad för spelarna**. GM kan öppna den igen om den avslutades av misstag. Discussion-trådar kan också avslutas, men har ingen krönika. |
-| B33 | Krönika per Story-tråd | Den globala krönikan tas bort. **Varje Story-tråd har en egen krönika**: ett redigerbart dokument (Markdown, högst 5 000 tecken), inte en serie inlägg. När tråden är *Completed* **visas krönikan i stället för introduktionen**. Introduktionen raderas inte utan finns kvar under trådinformationen. Bara GM skriver och redigerar krönikan i första versionen. Den visar "Last edited by …". Syftet är att en ny spelare ska kunna läsa de avslutade kapitlens krönikor ("Previously on …") och sedan gå in i den aktiva tråden, utan att läsa varje gammalt inlägg. Ersätter B1, B10, B14 och F14. |
+| B32 | Avsluta en tråd | *Krönikesteget tas bort i B37.* GM sätter en tråd till *Completed*. För en Story-tråd **uppmanas GM att skriva krönikan** i samma steg, men kan hoppa över och skriva den senare. En avslutad tråd är **skrivskyddad för spelarna**. GM kan öppna den igen om den avslutades av misstag. Discussion-trådar kan också avslutas, men har ingen krönika. |
+| B33 | Krönika per Story-tråd | *Ersätts av B37.* Den globala krönikan tas bort. **Varje Story-tråd har en egen krönika**: ett redigerbart dokument (Markdown, högst 5 000 tecken), inte en serie inlägg. När tråden är *Completed* **visas krönikan i stället för introduktionen**. Introduktionen raderas inte utan finns kvar under trådinformationen. Bara GM skriver och redigerar krönikan i första versionen. Den visar "Last edited by …". Syftet är att en ny spelare ska kunna läsa de avslutade kapitlens krönikor ("Previously on …") och sedan gå in i den aktiva tråden, utan att läsa varje gammalt inlägg. Ersätter B1, B10, B14 och F14. |
 | B34 | Befintlig data | **Ingenting flyttas över**; det som finns är testdata. Gamla chattar och krönikekapitel tas bort, och en ny exempelkampanj skapas i trådformatet. Gamla databasfält tas bort först när den nya modellen fungerar. |
 | B35 | Trådsidans utseende (2026-09-27) | Inläggen visas som **ljusa kort** med **stående, rektangulära porträtt** (ca 64×80, rundade hörn; de kvadratiska biblioteksporträtten beskärs i visningen, initialer och siluett i samma form), namn, märkning (GM, NPC, Hidden) och **relativ tid** (exakt tid vid hovring). **20 inlägg per sida** (ändrat från 25 i B28). Åtgärderna är **små ikoner**: Reply, Quote och Edit syns, och Delete och Copy link ligger i en **"…"-meny** per inlägg. Uppe till höger syns **Complete thread**; Edit thread, Chronicle och Reopen ligger i en "…"-meny. Sidnavigeringen: Previous till vänster, sidnumren i mitten, Latest till höger. Inga flikar i tråden, och inga knappar för bilder eller emoji i skrivfältet (bilder i inlägg ligger under "Senare"). Gränssnittet är på engelska (B24). |
 | B36 | Läsbarhet, OOC och tärningsknapp (2026-09-27) | **Porträtten är runda igen**, men större: 56 px (ersätter de rektangulära i B35). Inläggstexten får en **maxbredd** (ca 72 tecken per rad) så att den blir lätt att läsa. **OOC-text i inlägg:** `[ooc]…[/ooc]` visas grå, kursiv och märkt "OOC" – mitt i ett stycke eller som ett eget block över flera stycken – så att den inte läses som in character. Verktygsraden får knapparna **🎲 Dice** och **OOC**, som lägger taggarna runt markerad text. Den separata tärningsknappen och tärningspanelen ovanför skrivfältet tas bort. Dice-knappen finns bara när man skriver ett nytt inlägg, eftersom nya slag inte görs vid redigering (B31). |
+| B37 | Bara trådar (2026-10-02) | **Trådtyperna Story och Discussion, introduktionen och krönikan per tråd tas bort.** En tråd har bara **titel** och **status** (*Active* eller *Completed*); statusen syns i trådlistan och på trådsidan. Vill gruppen ha en krönika skapar GM en vanlig tråd för den, t.ex. *Chronicle*, med ett inlägg per kapitel. GM avslutar en tråd med knappen **Complete thread** och en bekräftelse direkt i tråden, utan krönikesteg. **"Post as" finns i alla trådar** och minns valet: förvalt är det man senast skrev som i just den tråden, annars spelarens första karaktär eller GM som berättare. **Namn och porträtt på en karaktär eller NPC i ett inlägg länkar till karaktärens sida**, utom en dold NPC för spelarna (B16). Inlägg utan karaktär länkas inte. Ersätter B29 och B33 och delar av B25, B27, B28 och B32. |
+| B38 | Ny exempeldata (2026-10-02) | **Alla kampanjer raderas**, även testkampanjerna, och exempelkampanjen *The Salt Road* skapas om efter B37: en *Chronicle*-tråd med en sammanfattning per kapitel, kapitel 1 och 2 avslutade, kapitel 3 (en strid i cisternen med tärningsslag) pågående, samt *OOC* och *House rules*. |
 
 ### 1.2 Arbetsförslag (ej slutligt beslutade)
 
@@ -296,7 +298,11 @@ Exempel:
 
 ### 3.14 Trådar (fas 6)
 
-Målbilden för kampanjens innehåll efter fas 6:
+> **Ändrat i fas 8 (B37):** trådtyperna, introduktionen och krönikan per tråd är borttagna. En tråd har
+> titel och status; en krönika är en vanlig tråd. Kraven nedan gäller med de ändringar som står i
+> kursiv stil.
+
+Målbilden för kampanjens innehåll efter fas 6 (före B37):
 
 ```text
 Campaign
@@ -317,8 +323,8 @@ utanför berättelsen: OOC, regelfrågor, planering, karaktärsskapande osv.
 - TR-2: Aktiva trådar ligger före avslutade, och avslutade trådar ska vara lätta att nå. GM ändrar
   ordningen med ↑/↓.
 - TR-3: GM skapar trådar med **+ New thread**: titel, typ (Story/Discussion) och introduktion i
-  Markdown-editorn (B25).
-- TR-4: GM kan ändra titel, introduktion och status.
+  Markdown-editorn (B25). *Efter B37: bara titel.*
+- TR-4: GM kan ändra titel, introduktion och status. *Efter B37: titel och status.*
 
 Exempel:
 
@@ -337,7 +343,7 @@ Completed
 **Trådsidan**
 
 - TR-5: Överst titel, typ, status, antal inlägg och deltagare, och därunder introduktionen, eller
-  krönikan om tråden är avslutad (B28, B33).
+  krönikan om tråden är avslutad (B28, B33). *Efter B37: titel och status, ingen introduktion eller krönika.*
 - TR-6: Inläggen visas 25 per sida med sidnavigering längst ner: Previous (avstängd på första sidan),
   sidnummer med … (t.ex. `1 2 3 … 12 13 14`), Next (avstängd på sista sidan) och Latest.
 - TR-7: Tråden öppnas vid första olästa inlägget. Det finns genvägar till första olästa och senaste
@@ -346,11 +352,13 @@ Completed
 - TR-9: Inläggen behåller dagens kompakta stil: avatar, namn, karaktär, GM-märkning och tid, utan stora
   kort per inlägg.
 - TR-10: Skrivfältet ligger under sista sidan och knappen heter Post. I Story-trådar väljer man vem man
-  skriver som (B29).
+  skriver som (B29). *Efter B37: "Post as" i alla trådar, med senaste valet förvalt.*
 - TR-11: Reply, Quote, Edit och Delete per inlägg, med fast länk till varje inlägg (B30).
 - TR-12: Borttagna inlägg visas som "This post was deleted." på sin plats.
+- TR-22 (B37): Namn och porträtt på en karaktär eller NPC i ett inlägg länkar till karaktärens sida, utom en
+  dold NPC för spelarna.
 
-**Livscykel för en Story-tråd**
+**Livscykel för en Story-tråd** *(ersatt av B37: GM avslutar med en knapp och en bekräftelse; ingen krönika)*
 
 ```text
 Create → Active → inlägg skrivs → GM sätter Completed → krönikan skrivs → Completed
@@ -372,7 +380,7 @@ Create → Active → inlägg skrivs → GM sätter Completed → krönikan skri
 - TR-20: Högst 10 slag per inlägg. Knappen 🎲 och tärningspanelen lägger in taggen; `/roll 1d20` är en
   genväg för ett inlägg med bara ett slag.
 
-**Nya spelare**
+**Nya spelare** *(efter B37 löses detta med en vanlig Chronicle-tråd)*
 
 - TR-21: En ny spelare ska inte behöva läsa hundratals gamla inlägg. De avslutade Story-trådarna visar sina
   krönikor överst ("Previously on …"), så att man kan läsa dem och sedan gå in i den aktiva tråden.
@@ -411,13 +419,12 @@ Efter fas 6 (B25–B33) ersätts raderna om RPG, OOC och krönika av:
 
 | Funktion | Användare (ej deltagare) | Ansökande | Spelare | GM |
 |---|:-:|:-:|:-:|:-:|
-| Läsa trådar och krönikor | Ja¹ | Ja¹ | Ja | Ja |
+| Läsa trådar | Ja¹ | Ja¹ | Ja | Ja |
 | Skriva i aktiva trådar och slå tärningar | Nej | Nej | Ja | Ja |
 | Skriva i avslutade trådar | Nej | Nej | Nej | Ja |
 | Redigera och ta bort egna inlägg | Nej | Nej | Ja² | Ja |
 | Redigera och ta bort andras inlägg | Nej | Nej | Nej | Ja |
 | Skapa, redigera, ordna och avsluta trådar | Nej | Nej | Nej | Ja |
-| Skriva och redigera krönika | Nej | Nej | Nej | Ja |
 
 ² Inlägg med tärningsslag kan bara tas bort av GM (B31).
 
@@ -523,17 +530,24 @@ Ordningen gör att sajten fungerar mellan stegen.
 35. ✅ Ny exempelkampanj *The Salt Road* (GM Leif, spelare Gunnar och Freja): två kapitel (ett avslutat med krönika), OOC och
     House rules, 125 inlägg över fem veckor med tärningsslag och OOC-text, så att flera trådar har flera sidor.
 
+### Fas 8 – Bara trådar (B37, B38)
+36. ✅ Trådtyper, introduktion och krönika per tråd borttagna (B37), med migrering som tar bort kolumnerna. Trådlistan och
+    trådsidan visar status; trådformuläret har bara titel. Krönikesidan och `/complete` är borttagna.
+37. ✅ Complete thread är en knapp med bekräftelse i tråden; Reopen och Rename thread ligger i "…"-menyn.
+38. ✅ "Post as" i alla trådar med det senaste valet i tråden förvalt (B37).
+39. ✅ Namn och porträtt länkar till karaktärens sida, utom dolda NPC:er för spelarna (B37).
+40. ✅ Alla kampanjer raderade och *The Salt Road* omskapad (B38): Chronicle-tråd, kapitel 1–2 avslutade, kapitel 3
+    med en strid i cisternen, OOC och House rules, 162 inlägg.
+
 ### Senare
 Social inloggning, privata meddelanden, notiser/e-postnotiser, privata
 tärningskast, reaktioner, bilder i inlägg, sökning, bokmärken, export, dolda
 scener, mer avancerad tärningssyntax, PWA.
 
 Möjliga förbättringar att ta ställning till senare:
-- **"Story so far":** en läsvy som visar alla avslutade Story-trådars krönikor efter varandra, så att en
-  ny spelare kan läsa historien från början på en sida. Ingen egen flik, bara en länk från trådlistan.
-  Vänta (beslut 2026-09-27).
-- **Spelare skapar egna Discussion-trådar** och **spelare redigerar krönikan** (B25, B33 säger bara GM
-  i första versionen).
+- ~~"Story so far"~~: löses av en vanlig Chronicle-tråd (B37).
+- **Spelare skapar egna trådar** (B25 säger bara GM i första versionen).
+- **Förhandsvisning av karaktären** när man håller över namnet eller porträttet i en tråd (B37 börjar med en länk).
 - **Privata tärningskast:** GM slår dolt. Kan byggas ovanpå tärningarna i texten (B31).
 - **Export av kampanj:** behövs inte nu; säkerhetskopior av databasen räcker.
 - ~~Flera RPG-kanaler~~: löses av trådarna i fas 6.
@@ -578,7 +592,7 @@ datamodellen.
 **Efter fas 6:**
 
 ```text
-Campaign ──< Thread (typ: Story | Discussion, status: Active | Completed) ──< Post
+Campaign ──< Thread (status: Active | Completed) ──< Post
 Post ──< DiceRoll (0–10 slag, refereras från texten som [dice:N])
 Post ── ReplyTo? (Post)
 User ──< ReadMarker >── Thread
@@ -586,10 +600,11 @@ User ──< ReadMarker >── Thread
 
 | Entitet | Viktiga fält |
 |---|---|
-| Thread | Id, CampaignId, titel, typ, status, introduktion, krönika, krönika ändrad av/när, position, skapad, ändrad |
+| Thread | Id, CampaignId, titel, status, position, skapare, skapad, ändrad |
 | Post | Id, ThreadId, författare, CharacterId?, innehåll, tärningsslag (jsonb-lista), svar på (PostId?), skapad, redigerad, borttagen (tid och av vem) |
 
-`ChronicleChapter` och kolumnen `Roll` (ett slag per inlägg) är borttagna (B34).
+`ChronicleChapter` och kolumnen `Roll` (ett slag per inlägg) är borttagna (B34). Trådarnas typ, introduktion och krönika
+är borttagna (B37).
 
 ---
 

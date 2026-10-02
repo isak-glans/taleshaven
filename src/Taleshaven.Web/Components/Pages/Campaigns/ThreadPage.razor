@@ -6,8 +6,7 @@
 @using Taleshaven.Core.Characters
 @using Taleshaven.Core.Dice
 
-@* En tråd (B28–B33): introduktion eller krönika överst, inläggen 25 per sida med sidnavigering längst ner och
-   skrivfältet under sista sidan. Ingen automatisk scroll: sidan hoppar bara till ett inlägg som man bett om
+@* En tråd (B28–B37): inläggen 20 per sida med sidnavigering längst ner och skrivfältet under sista sidan. Ingen automatisk scroll: sidan hoppar bara till ett inlägg som man bett om
    (fast länk eller första olästa). Nya inlägg läggs till direkt bara för den som står på sista sidan. *@
 
 @inject ICampaignService CampaignService
@@ -34,16 +33,25 @@
     <div class="d-flex flex-wrap align-items-start gap-2">
         <div class="d-flex flex-wrap align-items-center gap-2 me-auto">
             <h2 class="h4 mb-0 thread-title">@thread.Title</h2>
-            <span class="badge rounded-pill @(thread.Kind == ThreadKind.Story ? "text-bg-primary" : "text-bg-secondary")">@(thread.Kind == ThreadKind.Story ? "Story" : "Discussion")</span>
             <span class="badge rounded-pill @(thread.Status == ThreadStatus.Active ? "text-bg-success" : "text-bg-light border") thread-status">@(thread.Status == ThreadStatus.Active ? "Active" : "Completed")</span>
         </div>
         @if (thread.CanManage)
         {
             @* Den vanligaste åtgärden syns; resten ligger i "…"-menyn (B35). *@
             <div class="d-flex gap-2 thread-actions">
-                @if (thread.Status == ThreadStatus.Active)
+                @if (thread.Status == ThreadStatus.Active && confirmComplete)
                 {
-                    <a class="btn btn-sm btn-outline-secondary" href="@ThreadLinks.Complete(CampaignId, ThreadId)"><Icon Name="check-circle" /> Complete thread</a>
+                    <span class="small align-self-center thread-confirm-complete">
+                        Complete this thread? Players can no longer post in it.
+                        <button type="button" class="btn btn-sm btn-success py-0 ms-1" @onclick="CompleteAsync">Yes, complete</button>
+                        <button type="button" class="btn btn-sm btn-link py-0" @onclick="() => confirmComplete = false">Cancel</button>
+                    </span>
+                }
+                else if (thread.Status == ThreadStatus.Active)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-secondary thread-complete" @onclick="() => { confirmComplete = true; openMenu = null; }">
+                        <Icon Name="check-circle" /> Complete thread
+                    </button>
                 }
                 <div class="menu-anchor">
                     <button type="button" class="btn btn-sm btn-outline-secondary" title="More" aria-label="More thread actions"
@@ -54,11 +62,7 @@
                     {
                         <div class="menu-backdrop" @onclick="CloseMenu"></div>
                         <div class="action-menu border rounded shadow-sm" role="menu">
-                            <a class="action-menu-item" role="menuitem" href="@ThreadLinks.Edit(CampaignId, ThreadId)"><Icon Name="pencil" /> Edit thread</a>
-                            @if (thread.Kind == ThreadKind.Story && (thread.Status == ThreadStatus.Completed || thread.Chronicle is not null))
-                            {
-                                <a class="action-menu-item" role="menuitem" href="@ThreadLinks.Chronicle(CampaignId, ThreadId)"><Icon Name="pencil" /> @(thread.Chronicle is null ? "Write chronicle" : "Edit chronicle")</a>
-                            }
+                            <a class="action-menu-item" role="menuitem" href="@ThreadLinks.Edit(CampaignId, ThreadId)"><Icon Name="pencil" /> Rename thread</a>
                             @if (thread.Status == ThreadStatus.Completed)
                             {
                                 <button type="button" class="action-menu-item" role="menuitem" @onclick="ReopenAsync"><Icon Name="arrow-clockwise" /> Reopen</button>
@@ -83,40 +87,6 @@
         <div class="alert alert-danger py-2 mt-2 mb-0" role="alert">@actionError</div>
     }
 </div>
-@* Krönikan ersätter introduktionen när en Story-tråd är avslutad (B33); introduktionen finns kvar under Thread info. *@
-@if (ShowChronicle)
-{
-    <section class="thread-intro card mb-3 chronicle">
-        <div class="card-header small d-flex flex-wrap gap-2">
-            <strong>Chronicle</strong>
-            @if (thread.ChronicleEditedAt is { } editedAt)
-            {
-                <span class="text-secondary ms-auto">Last edited by @thread.ChronicleEditedByName · @Dates.Relative(editedAt, DateTimeOffset.UtcNow)</span>
-            }
-        </div>
-        <div class="card-body post-content">@((MarkupString)Markdown.ToSafeHtml(thread.Chronicle!))</div>
-    </section>
-}
-else if (thread.Introduction.Length > 0)
-{
-    <section class="thread-intro card mb-3">
-        <div class="card-header small"><strong>Introduction</strong></div>
-        <div class="card-body post-content">@((MarkupString)Markdown.ToSafeHtml(thread.Introduction))</div>
-    </section>
-}
-
-@if (ShowChronicle && thread.Introduction.Length > 0)
-{
-    <details class="thread-info mb-3">
-        <summary class="small text-secondary">Thread info and introduction</summary>
-        <div class="small text-secondary mt-1">Started @Dates.Date(thread.CreatedAt).</div>
-        <div class="post-content border rounded p-2 mt-1">@((MarkupString)Markdown.ToSafeHtml(thread.Introduction))</div>
-    </details>
-}
-else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Completed && thread.CanManage)
-{
-    <p class="small text-secondary">This thread has no chronicle yet. <a href="@ThreadLinks.Chronicle(CampaignId, ThreadId)">Write one</a> so new players can catch up.</p>
-}
 
 @if (page.TotalCount == 0)
 {
@@ -167,14 +137,14 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
             </div>
         }
         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-            @if (thread.Kind == ThreadKind.Story && postingOptions.Count > 0)
+            @if (postingOptions.Count > 0)
             {
                 <label for="post-as" class="small text-secondary">Post as</label>
                 <CharacterPicker Id="post-as" Options="postingOptions" @bind-Value="selectedCharacterId"
                                  NoneLabel="@(campaign.ViewerRole == CampaignRole.GameMaster ? "GM (narrator)" : "Myself, no character")"
                                  NoneFirst="campaign.ViewerRole == CampaignRole.GameMaster" />
             }
-            else if (thread.Kind == ThreadKind.Story && campaign.ViewerRole == CampaignRole.Player)
+            else if (campaign.ViewerRole == CampaignRole.Player)
             {
                 <span class="small text-secondary">
                     Create a character under <a href="campaigns/@CampaignId/characters">Characters</a> to post as it.
@@ -223,6 +193,8 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
     private PostReference? replyTo;
     private long? editingPostId;
     private long? confirmDeleteId;
+    private bool confirmComplete;
+    private int? postingLoadedFor;
     private string? openMenu;
     private long? copiedPostId;
     private DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -237,8 +209,6 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
     private CampaignHeader? header;
     private MarkdownEditor? composer;
     private IJSObjectReference? module;
-
-    private bool ShowChronicle => thread is { Status: ThreadStatus.Completed, Chronicle: not null };
 
     private bool OnLastPage => page is not null && page.Page >= page.PageCount;
 
@@ -306,11 +276,21 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
         confirmDeleteId = null;
         actionError = null;
 
-        if (thread.Kind == ThreadKind.Story && thread.CanWrite && postingOptions.Count == 0)
+        confirmComplete = false;
+
+        if (thread.CanWrite && postingLoadedFor != ThreadId)
         {
+            postingLoadedFor = ThreadId;
             postingOptions = [.. await CharacterService.GetPostingOptionsAsync(CampaignId, userId)];
-            if (campaign!.ViewerRole == CampaignRole.Player && postingOptions.Count > 0)
-                selectedCharacterId ??= postingOptions[0].Id;
+
+            // Samma val som förra gången i tråden (B37); annars spelarens första karaktär, eller GM:n som berättare.
+            var last = await ThreadService.GetLastPostingChoiceAsync(ThreadId, userId);
+            if (last.HasPosted && (last.CharacterId is null || postingOptions.Any(o => o.Id == last.CharacterId)))
+                selectedCharacterId = last.CharacterId;
+            else if (campaign!.ViewerRole == CampaignRole.Player && postingOptions.Count > 0)
+                selectedCharacterId = postingOptions[0].Id;
+            else
+                selectedCharacterId = null;
         }
 
         if (ReplyQuery is { } replyId && await ThreadService.GetPostAsync(ThreadId, replyId, userId) is { } replied)
@@ -384,7 +364,7 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
             content = InlineDice.Tag(notation.ToString()) + (label is null ? "" : " " + label);
         }
 
-        var characterId = thread!.Kind == ThreadKind.Story ? selectedCharacterId : null;
+        var characterId = selectedCharacterId;
         PostItem created;
         try
         {
@@ -463,6 +443,12 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
 
     private static string DisplayName(PostItem post) => post.Character?.Name ?? post.AuthorName;
 
+    // Namn och porträtt leder till karaktärens sida (B37), utom för en dold NPC som spelarna inte får se.
+    private string? CharacterLink(PostCharacter character) =>
+        character.IsHidden && campaign!.ViewerRole != CampaignRole.GameMaster
+            ? null
+            : $"campaigns/{CampaignId}/characters/{character.Id}";
+
     private async Task<string?> SaveEditAsync(long postId, string content)
     {
         try
@@ -499,12 +485,17 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
         Notifier.NotifyPostChanged(ThreadId, postId);
     }
 
-    private async Task ReopenAsync()
+    private Task CompleteAsync() => ChangeStatusAsync(() => ThreadService.CompleteThreadAsync(CampaignId, ThreadId, userId));
+
+    private Task ReopenAsync() => ChangeStatusAsync(() => ThreadService.ReopenThreadAsync(CampaignId, ThreadId, userId));
+
+    private async Task ChangeStatusAsync(Func<Task> change)
     {
         actionError = null;
+        openMenu = null;
         try
         {
-            await ThreadService.ReopenThreadAsync(CampaignId, ThreadId, userId);
+            await change();
         }
         catch (CampaignRuleException ex)
         {
@@ -611,10 +602,16 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
                 {
                     <span class="post-avatar-deleted" aria-hidden="true"></span>
                 }
-                else if (post.Character is { } character)
+                else if (post.Character is { } character && CharacterLink(character) is { } avatarLink)
                 {
-                    <Avatar Name="@character.Name" ImageUrl="@character.AvatarUrl" ColorKey="@($"character-{character.Id}")" Size="56"
-                            Silhouette="@(character.IsHidden && campaign!.ViewerRole != CampaignRole.GameMaster)" />
+                    <a href="@avatarLink" class="post-avatar-link" tabindex="-1" aria-hidden="true">
+                        <Avatar Name="@character.Name" ImageUrl="@character.AvatarUrl" ColorKey="@($"character-{character.Id}")" Size="56" />
+                    </a>
+                }
+                else if (post.Character is { } hidden)
+                {
+                    <Avatar Name="@hidden.Name" ImageUrl="@hidden.AvatarUrl" ColorKey="@($"character-{hidden.Id}")" Size="56"
+                            Silhouette="@(hidden.IsHidden && campaign!.ViewerRole != CampaignRole.GameMaster)" />
                 }
                 else
                 {
@@ -629,7 +626,14 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
                 else
                 {
                     <header class="post-header">
-                        <strong class="post-author">@(post.Character?.Name ?? post.AuthorName)</strong>
+                        @if (post.Character is { } named && CharacterLink(named) is { } nameLink)
+                        {
+                            <a class="post-author post-author-link" href="@nameLink">@named.Name</a>
+                        }
+                        else
+                        {
+                            <strong class="post-author">@(post.Character?.Name ?? post.AuthorName)</strong>
+                        }
                         @if (post.Character is { IsNpc: true } npc)
                         {
                             <span class="badge rounded-pill text-bg-secondary">NPC</span>

@@ -16,18 +16,6 @@
     font-size: 0.7rem;
 }
 
-.thread-kind {
-    font-weight: 500;
-}
-
-.thread-excerpt {
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-    display: -webkit-box;
-    line-clamp: 1;
-    overflow: hidden;
-}
-
 .thread-last-name {
     color: var(--bs-body-color);
 }

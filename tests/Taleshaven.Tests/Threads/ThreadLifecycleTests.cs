@@ -5,32 +5,22 @@ using Taleshaven.Core.Threads;
 
 namespace Taleshaven.Tests.Threads;
 
-/// <summary>Trådar i fas 6 (B25, B30–B33).</summary>
+/// <summary>Trådar (B25, B30–B32, B37).</summary>
 public class ThreadLifecycleTests
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 27, 12, 0, 0, TimeSpan.Zero);
 
-    private static CampaignThread Story() =>
-        CampaignThread.Create(7, ThreadKind.Story, "Chapter 1 – Arrival", "The fog rolls in.", 1, "gm", Now);
+    private static CampaignThread Chapter() => CampaignThread.Create(7, "Chapter 1 – Arrival", 1, "gm", Now);
 
     [Fact]
     public void Create_TrimsAndStartsActive()
     {
-        var thread = CampaignThread.Create(7, ThreadKind.Discussion, "  OOC  ", "  Planning and rules.  ", 3, "gm", Now);
+        var thread = CampaignThread.Create(7, "  OOC  ", 3, "gm", Now);
 
-        Assert.Equal(ThreadKind.Discussion, thread.Kind);
         Assert.Equal("OOC", thread.Title);
-        Assert.Equal("Planning and rules.", thread.Introduction);
         Assert.Equal(ThreadStatus.Active, thread.Status);
         Assert.Equal(3, thread.Position);
-        Assert.Null(thread.Chronicle);
         Assert.Equal(Now, thread.UpdatedAt);
-    }
-
-    [Fact]
-    public void Create_AllowsEmptyIntroduction()
-    {
-        Assert.Equal("", CampaignThread.Create(7, ThreadKind.Story, "Chapter 2", null, 2, "gm", Now).Introduction);
     }
 
     [Theory]
@@ -38,90 +28,41 @@ public class ThreadLifecycleTests
     [InlineData("   ")]
     public void Create_RequiresTitle(string? title)
     {
-        Assert.Throws<CampaignRuleException>(() => CampaignThread.Create(7, ThreadKind.Story, title, null, 1, "gm", Now));
+        Assert.Throws<CampaignRuleException>(() => CampaignThread.Create(7, title, 1, "gm", Now));
     }
 
     [Fact]
-    public void Create_EnforcesLengths()
+    public void Title_HasMaxLength()
     {
         Assert.Throws<CampaignRuleException>(() =>
-            CampaignThread.Create(7, ThreadKind.Story, new string('a', ThreadLimits.TitleMaxLength + 1), null, 1, "gm", Now));
-        Assert.Throws<CampaignRuleException>(() =>
-            CampaignThread.Create(7, ThreadKind.Story, "Title", new string('a', ThreadLimits.IntroductionMaxLength + 1), 1, "gm", Now));
+            CampaignThread.Create(7, new string('a', ThreadLimits.TitleMaxLength + 1), 1, "gm", Now));
+        Assert.Throws<CampaignRuleException>(() => Chapter().Rename(new string('a', ThreadLimits.TitleMaxLength + 1), Now));
     }
 
     [Fact]
-    public void Complete_WithChronicleStoresItAndEditor()
+    public void Rename_ChangesTitle()
     {
-        var thread = Story();
+        var thread = Chapter();
 
-        thread.Complete("  The party arrived in Harrowmere.  ", "gm", Now.AddDays(3));
+        thread.Rename(" Chapter 1 – The Gate ", Now.AddDays(1));
 
+        Assert.Equal("Chapter 1 – The Gate", thread.Title);
+        Assert.Equal(Now.AddDays(1), thread.UpdatedAt);
+    }
+
+    [Fact]
+    public void Complete_AndReopen()
+    {
+        var thread = Chapter();
+
+        thread.Complete(Now.AddDays(3));
         Assert.Equal(ThreadStatus.Completed, thread.Status);
-        Assert.Equal("The party arrived in Harrowmere.", thread.Chronicle);
-        Assert.Equal("gm", thread.ChronicleEditedById);
-        Assert.Equal(Now.AddDays(3), thread.ChronicleEditedAt);
-        Assert.Equal("The fog rolls in.", thread.Introduction); // introduktionen ligger kvar (B33)
-    }
+        Assert.Throws<CampaignRuleException>(() => thread.Complete(Now));
 
-    [Fact]
-    public void Complete_WithoutChronicleLetsItBeWrittenLater()
-    {
-        var thread = Story();
-
-        thread.Complete(null, "gm", Now);
-        Assert.Null(thread.Chronicle);
-
-        thread.SetChronicle("Written afterwards.", "gm", Now.AddDays(1));
-        Assert.Equal("Written afterwards.", thread.Chronicle);
-    }
-
-    [Fact]
-    public void Reopen_KeepsChronicle()
-    {
-        var thread = Story();
-        thread.Complete("Summary.", "gm", Now);
-
-        thread.Reopen(Now.AddHours(1));
-
+        thread.Reopen(Now.AddDays(4));
         Assert.Equal(ThreadStatus.Active, thread.Status);
-        Assert.Equal("Summary.", thread.Chronicle);
+        Assert.Equal(Now.AddDays(4), thread.UpdatedAt);
         Assert.Throws<CampaignRuleException>(() => thread.Reopen(Now));
-    }
-
-    [Fact]
-    public void Complete_TwiceIsRejected()
-    {
-        var thread = Story();
-        thread.Complete(null, "gm", Now);
-
-        Assert.Throws<CampaignRuleException>(() => thread.Complete(null, "gm", Now));
-    }
-
-    [Fact]
-    public void DiscussionThreads_HaveNoChronicleButCanBeCompleted()
-    {
-        var thread = CampaignThread.Create(7, ThreadKind.Discussion, "OOC", null, 1, "gm", Now);
-
-        Assert.Throws<CampaignRuleException>(() => thread.SetChronicle("Nope.", "gm", Now));
-        Assert.Throws<CampaignRuleException>(() => thread.Complete("Nope.", "gm", Now));
-        Assert.Equal(ThreadStatus.Active, thread.Status);
-
-        thread.Complete(null, "gm", Now);
-        Assert.Equal(ThreadStatus.Completed, thread.Status);
-    }
-
-    [Fact]
-    public void Chronicle_HasMaxLengthAndEmptyTextRemovesIt()
-    {
-        var thread = Story();
-
-        Assert.Throws<CampaignRuleException>(() =>
-            thread.SetChronicle(new string('a', ThreadLimits.ChronicleMaxLength + 1), "gm", Now));
-
-        thread.SetChronicle("Summary.", "gm", Now);
-        thread.SetChronicle("   ", "gm", Now);
-        Assert.Null(thread.Chronicle);
     }
 
     [Fact]

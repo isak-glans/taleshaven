@@ -1,63 +1,48 @@
 @page "/campaigns/{CampaignId:int}/threads/new"
 @page "/campaigns/{CampaignId:int}/threads/{ThreadId:int}/edit"
 @attribute [Authorize]
-@rendermode InteractiveServer
 
-@* GM skapar och redigerar trådar (B25): titel, typ (bara när tråden skapas) och introduktion. *@
+@using System.ComponentModel.DataAnnotations
+
+@* GM skapar och döper om trådar (B25, B37). En tråd har bara en titel. *@
 
 @inject ICampaignService CampaignService
 @inject IThreadService ThreadService
 @inject NavigationManager NavigationManager
 
-@if (!loaded || LoadedCampaign is null)
+@if (campaign is null)
 {
     return;
 }
 
-<PageTitle>@Heading · @LoadedCampaign.Name</PageTitle>
+<PageTitle>@Heading · @campaign.Name</PageTitle>
 
-<CampaignHeader Campaign="LoadedCampaign" Active="CampaignTab.Threads" />
+<CampaignHeader Campaign="campaign" Active="CampaignTab.Threads" />
 
-@if (!CampaignPermissions.CanManageThreads(LoadedCampaign.ViewerRole))
+@if (!CampaignPermissions.CanManageThreads(campaign.ViewerRole))
 {
     <div class="alert alert-warning">Only the campaign's GM can manage threads.</div>
     return;
 }
 
-<div class="thread-editor">
+<div class="thread-editor" style="max-width: 36rem">
     <h2 class="h4 mb-3">@Heading</h2>
 
-    <div class="mb-3">
-        <label for="thread-title" class="form-label">Title</label>
-        <input id="thread-title" class="form-control" maxlength="@ThreadLimits.TitleMaxLength"
-               placeholder="E.g. Chapter 1 – Arrival, or OOC" @bind="title" />
-    </div>
-
-    @if (LoadedThread is null)
-    {
-        <fieldset class="mb-3">
-            <legend class="form-label fs-6">Type</legend>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="thread-kind" id="kind-story" checked="@(kind == ThreadKind.Story)"
-                       @onchange="() => kind = ThreadKind.Story" />
-                <label class="form-check-label" for="kind-story">Story <span class="text-secondary small">– part of the narrative, e.g. a chapter or a scene. Gets a chronicle when completed.</span></label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="thread-kind" id="kind-discussion" checked="@(kind == ThreadKind.Discussion)"
-                       @onchange="() => kind = ThreadKind.Discussion" />
-                <label class="form-check-label" for="kind-discussion">Discussion <span class="text-secondary small">– everything outside the story: OOC, rules questions, planning.</span></label>
-            </div>
-        </fieldset>
-    }
-
-    <label class="form-label">Introduction <span class="text-secondary">(optional)</span></label>
-    <MarkdownEditor @key="ThreadId" MaxLength="ThreadLimits.IntroductionMaxLength" DraftKey="@DraftKey"
-                    InitialText="@LoadedThread?.Introduction" OnSubmit="SaveAsync" AllowEmpty="true"
-                    SubmitText="@(LoadedThread is null ? "Create thread" : "Save thread")" ShortcutHint="Ctrl+Enter saves"
-                    Label="Introduction" Rows="8"
-                    Placeholder="How the scene begins, or what the discussion is for…" />
-
-    <a class="btn btn-link px-0 mt-2" href="@BackLink">Cancel</a>
+    <EditForm Model="Input" method="post" OnValidSubmit="SaveAsync" FormName="thread">
+        <DataAnnotationsValidator />
+        @if (errorMessage is not null)
+        {
+            <div class="alert alert-danger py-2" role="alert">@errorMessage</div>
+        }
+        <div class="mb-3">
+            <label for="thread-title" class="form-label">Title</label>
+            <InputText @bind-Value="Input.Title" id="thread-title" class="form-control" maxlength="@ThreadLimits.TitleMaxLength"
+                       placeholder="E.g. Chapter 1 – Arrival, OOC or Chronicle" autofocus />
+            <ValidationMessage For="() => Input.Title" class="text-danger" />
+        </div>
+        <button type="submit" class="btn btn-primary">@(thread is null ? "Create thread" : "Save")</button>
+        <a class="btn btn-link" href="@BackLink">Cancel</a>
+    </EditForm>
 </div>
 
 @code {
@@ -70,76 +55,70 @@
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
 
-    // Förs över från förrenderingen så att sidan inte blinkar tom och editorn får texten direkt.
-    [PersistentState]
-    public CampaignDetails? LoadedCampaign { get; set; }
-
-    [PersistentState]
-    public ThreadDetails? LoadedThread { get; set; }
+    [SupplyParameterFromForm(FormName = "thread")]
+    private InputModel Input { get; set; } = default!;
 
     private string userId = "";
-    private bool loaded;
-    private string? title;
-    private ThreadKind kind = ThreadKind.Story;
+    private CampaignDetails? campaign;
+    private ThreadDetails? thread;
+    private string? errorMessage;
 
-    private string Heading => LoadedThread is null ? "New thread" : $"Edit {LoadedThread.Title}";
+    private string Heading => thread is null ? "New thread" : $"Rename {thread.Title}";
 
-    private string DraftKey => ThreadId is null ? $"thread-new-{CampaignId}" : $"thread-intro-{ThreadId}";
+    private string BackLink => thread is null ? ThreadLinks.Threads(CampaignId) : ThreadLinks.Thread(CampaignId, thread.Id);
 
-    private string BackLink => LoadedThread is null ? ThreadLinks.Threads(CampaignId) : ThreadLinks.Thread(CampaignId, LoadedThread.Id);
-
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnInitializedAsync()
     {
         userId = (await AuthenticationState).User.GetUserId() ?? "";
 
-        if (LoadedCampaign?.Id != CampaignId)
-            LoadedCampaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
-        if (LoadedCampaign is null)
+        campaign = await CampaignService.GetCampaignAsync(CampaignId, userId);
+        if (campaign is null)
         {
             NavigationManager.NotFound();
             return;
         }
 
-        if (ThreadId is null)
+        if (ThreadId is { } id)
         {
-            LoadedThread = null;
-        }
-        else if (LoadedThread?.Id != ThreadId)
-        {
-            LoadedThread = await ThreadService.GetThreadAsync(CampaignId, ThreadId.Value, userId);
-            if (LoadedThread is null)
+            thread = await ThreadService.GetThreadAsync(CampaignId, id, userId);
+            if (thread is null)
             {
                 NavigationManager.NotFound();
                 return;
             }
         }
 
-        if (!loaded)
-            title = LoadedThread?.Title;
-        loaded = true;
+        Input ??= new() { Title = thread?.Title };
     }
 
-    private async Task<string?> SaveAsync(string introduction)
+    private async Task SaveAsync()
     {
+        int id;
         try
         {
-            int id;
-            if (LoadedThread is null)
+            if (thread is null)
             {
-                id = await ThreadService.CreateThreadAsync(CampaignId, userId, kind, title, introduction);
+                id = await ThreadService.CreateThreadAsync(CampaignId, userId, Input.Title);
             }
             else
             {
-                await ThreadService.UpdateThreadAsync(CampaignId, LoadedThread.Id, userId, title, introduction);
-                id = LoadedThread.Id;
+                await ThreadService.RenameThreadAsync(CampaignId, thread.Id, userId, Input.Title);
+                id = thread.Id;
             }
-
-            NavigationManager.NavigateTo(ThreadLinks.Thread(CampaignId, id));
-            return null;
         }
         catch (CampaignRuleException ex)
         {
-            return ex.Message;
+            errorMessage = ex.Message;
+            return;
         }
+
+        NavigationManager.NavigateTo(ThreadLinks.Thread(CampaignId, id));
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "Enter a title.")]
+        [StringLength(ThreadLimits.TitleMaxLength, ErrorMessage = "The title can be at most {1} characters.")]
+        public string? Title { get; set; }
     }
 }

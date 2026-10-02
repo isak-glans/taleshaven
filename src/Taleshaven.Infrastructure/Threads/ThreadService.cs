@@ -3,7 +3,6 @@ using Taleshaven.Core;
 using Taleshaven.Core.Campaigns;
 using Taleshaven.Core.Dice;
 using Taleshaven.Core.Media;
-using Taleshaven.Core.Text;
 using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Campaigns;
 using Taleshaven.Infrastructure.Data;
@@ -12,8 +11,6 @@ namespace Taleshaven.Infrastructure.Threads;
 
 internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFactory, TimeProvider timeProvider, IDiceRoller diceRoller) : IThreadService
 {
-    private const int ExcerptLength = 160;
-
     public async Task<IReadOnlyList<ThreadSummary>> GetThreadsAsync(int campaignId, string viewerId, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
@@ -26,11 +23,8 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             {
                 t.Id,
                 t.Title,
-                t.Kind,
                 t.Status,
                 t.Position,
-                t.Introduction,
-                t.Chronicle,
                 PostCount = db.Posts.Count(p => p.ThreadId == t.Id),
                 ParticipantCount = db.Posts.Where(p => p.ThreadId == t.Id).Select(p => p.AuthorId).Distinct().Count(),
                 LastPostId = db.Posts.Where(p => p.ThreadId == t.Id).Max(p => (long?)p.Id),
@@ -53,9 +47,8 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             .Select(r =>
             {
                 var last = r.LastPostId is { } id && lastPosts.TryGetValue(id, out var post) ? post : null;
-                var excerptSource = r.Status == ThreadStatus.Completed && r.Chronicle is not null ? r.Chronicle : r.Introduction;
                 return new ThreadSummary(
-                    r.Id, r.Title, r.Kind, r.Status, TextExcerpt.From(excerptSource, ExcerptLength), r.PostCount, r.ParticipantCount,
+                    r.Id, r.Title, r.Status, r.PostCount, r.ParticipantCount,
                     last is null ? null : AuthorOf(last), last?.CreatedAt, unread.GetValueOrDefault(r.Id));
             })
             .ToList();
@@ -70,7 +63,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             .Select(t => new
             {
                 Thread = t,
-                EditorName = db.Users.Where(u => u.Id == t.ChronicleEditedById).Select(u => u.DisplayName).FirstOrDefault(),
+
                 PostCount = db.Posts.Count(p => p.ThreadId == t.Id),
                 ParticipantCount = db.Posts.Where(p => p.ThreadId == t.Id).Select(p => p.AuthorId).Distinct().Count(),
             })
@@ -82,8 +75,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         var access = await CampaignAccess.GetAsync(db, campaignId, viewerId, cancellationToken);
         var thread = row.Thread;
         return new ThreadDetails(
-            thread.Id, thread.CampaignId, thread.Kind, thread.Status, thread.Title, thread.Introduction,
-            thread.Chronicle, row.EditorName, thread.ChronicleEditedAt, thread.CreatedAt, row.PostCount, row.ParticipantCount,
+            thread.Id, thread.CampaignId, thread.Status, thread.Title, thread.CreatedAt, row.PostCount, row.ParticipantCount,
             CanWrite: CampaignPermissions.CanWritePost(access.Role, access.CampaignStatus, thread.Status),
             CanManage: CampaignPermissions.CanManageThreads(access.Role));
     }
@@ -148,8 +140,6 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
 
         if (characterId is not null)
         {
-            if (thread.Kind != ThreadKind.Story)
-                throw new CampaignRuleException("Characters are only used in story threads.");
 
             var character = await db.Characters.AsNoTracking()
                 .SingleOrDefaultAsync(c => c.Id == characterId && c.CampaignId == campaignId, cancellationToken)
@@ -201,31 +191,40 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<int> CreateThreadAsync(int campaignId, string userId, ThreadKind kind, string? title, string? introduction, CancellationToken cancellationToken = default)
+    public async Task<PostingChoice> GetLastPostingChoiceAsync(int threadId, string userId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+
+        var last = await db.Posts.AsNoTracking()
+            .Where(p => p.ThreadId == threadId && p.AuthorId == userId)
+            .OrderByDescending(p => p.Id)
+            .Select(p => new { p.CharacterId })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return last is null ? new PostingChoice(false, null) : new PostingChoice(true, last.CharacterId);
+    }
+
+    public async Task<int> CreateThreadAsync(int campaignId, string userId, string? title, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         await EnsureCanManageAsync(db, campaignId, userId, cancellationToken);
 
         var position = (await db.Threads.Where(t => t.CampaignId == campaignId).MaxAsync(t => (int?)t.Position, cancellationToken) ?? 0) + 1;
-        var thread = CampaignThread.Create(campaignId, kind, title, introduction, position, userId, timeProvider.GetUtcNow());
+        var thread = CampaignThread.Create(campaignId, title, position, userId, timeProvider.GetUtcNow());
 
         db.Threads.Add(thread);
         await db.SaveChangesAsync(cancellationToken);
         return thread.Id;
     }
 
-    public Task UpdateThreadAsync(int campaignId, int threadId, string userId, string? title, string? introduction, CancellationToken cancellationToken = default) =>
-        ChangeThreadAsync(campaignId, threadId, userId, thread => thread.UpdateDetails(title, introduction, timeProvider.GetUtcNow()), cancellationToken);
+    public Task RenameThreadAsync(int campaignId, int threadId, string userId, string? title, CancellationToken cancellationToken = default) =>
+        ChangeThreadAsync(campaignId, threadId, userId, thread => thread.Rename(title, timeProvider.GetUtcNow()), cancellationToken);
 
-    public Task CompleteThreadAsync(int campaignId, int threadId, string userId, string? chronicle, CancellationToken cancellationToken = default) =>
-        ChangeThreadAsync(campaignId, threadId, userId, thread => thread.Complete(chronicle, userId, timeProvider.GetUtcNow()), cancellationToken);
+    public Task CompleteThreadAsync(int campaignId, int threadId, string userId, CancellationToken cancellationToken = default) =>
+        ChangeThreadAsync(campaignId, threadId, userId, thread => thread.Complete(timeProvider.GetUtcNow()), cancellationToken);
 
     public Task ReopenThreadAsync(int campaignId, int threadId, string userId, CancellationToken cancellationToken = default) =>
         ChangeThreadAsync(campaignId, threadId, userId, thread => thread.Reopen(timeProvider.GetUtcNow()), cancellationToken);
-
-    public Task SetChronicleAsync(int campaignId, int threadId, string userId, string? chronicle, CancellationToken cancellationToken = default) =>
-        ChangeThreadAsync(campaignId, threadId, userId, thread => thread.SetChronicle(chronicle, userId, timeProvider.GetUtcNow()), cancellationToken);
-
     public async Task MoveThreadAsync(int campaignId, int threadId, string userId, int direction, CancellationToken cancellationToken = default)
     {
         if (direction is not (-1 or 1))

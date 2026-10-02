@@ -26,7 +26,7 @@ public interface IThreadService
     Task<PostItem?> GetPostAsync(int threadId, long postId, string viewerId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Publicerar ett inlägg. I Story-trådar valfritt som en karaktär (B29). Tärningstaggar i texten slås här (B31).
+    /// Publicerar ett inlägg, valfritt som en karaktär (B29, B37). Tärningstaggar i texten slås här (B31).
     /// </summary>
     Task<PostItem> CreatePostAsync(int campaignId, int threadId, string userId, string? content,
         int? characterId = null, long? replyToPostId = null, CancellationToken cancellationToken = default);
@@ -37,30 +37,33 @@ public interface IThreadService
     /// <summary>Tar bort ett inlägg mjukt (B30).</summary>
     Task DeletePostAsync(int campaignId, long postId, string userId, CancellationToken cancellationToken = default);
 
-    /// <summary>Skapar en tråd sist bland de aktiva (B25). Returnerar id.</summary>
-    Task<int> CreateThreadAsync(int campaignId, string userId, ThreadKind kind, string? title, string? introduction, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Vem användaren senast skrev som i tråden (B37): <see cref="PostingChoice.HasPosted"/> är false om hen inte har skrivit där,
+    /// annars är <see cref="PostingChoice.CharacterId"/> karaktären, eller null för "som sig själv".
+    /// </summary>
+    Task<PostingChoice> GetLastPostingChoiceAsync(int threadId, string userId, CancellationToken cancellationToken = default);
 
-    Task UpdateThreadAsync(int campaignId, int threadId, string userId, string? title, string? introduction, CancellationToken cancellationToken = default);
+    /// <summary>Skapar en tråd sist i listan (B25). Returnerar id.</summary>
+    Task<int> CreateThreadAsync(int campaignId, string userId, string? title, CancellationToken cancellationToken = default);
+
+    Task RenameThreadAsync(int campaignId, int threadId, string userId, string? title, CancellationToken cancellationToken = default);
 
     /// <summary>Flyttar tråden ett steg upp (-1) eller ner (+1) bland trådarna med samma status (B27).</summary>
     Task MoveThreadAsync(int campaignId, int threadId, string userId, int direction, CancellationToken cancellationToken = default);
 
-    /// <summary>Avslutar tråden, för en Story-tråd valfritt med krönika (B32).</summary>
-    Task CompleteThreadAsync(int campaignId, int threadId, string userId, string? chronicle, CancellationToken cancellationToken = default);
+    /// <summary>Avslutar tråden; spelarna kan inte längre skriva i den (B32).</summary>
+    Task CompleteThreadAsync(int campaignId, int threadId, string userId, CancellationToken cancellationToken = default);
 
     Task ReopenThreadAsync(int campaignId, int threadId, string userId, CancellationToken cancellationToken = default);
-
-    /// <summary>Skriver eller ändrar krönikan för en Story-tråd (B33).</summary>
-    Task SetChronicleAsync(int campaignId, int threadId, string userId, string? chronicle, CancellationToken cancellationToken = default);
 }
 
-/// <summary>En rad i trådlistan (B27).</summary>
+public sealed record PostingChoice(bool HasPosted, int? CharacterId);
+
+/// <summary>En rad i trådlistan (B27, B37).</summary>
 public sealed record ThreadSummary(
     int Id,
     string Title,
-    ThreadKind Kind,
     ThreadStatus Status,
-    string Excerpt,
     int PostCount,
     int ParticipantCount,
     PostAuthor? LastPostAuthor,
@@ -70,13 +73,8 @@ public sealed record ThreadSummary(
 public sealed record ThreadDetails(
     int Id,
     int CampaignId,
-    ThreadKind Kind,
     ThreadStatus Status,
     string Title,
-    string Introduction,
-    string? Chronicle,
-    string? ChronicleEditedByName,
-    DateTimeOffset? ChronicleEditedAt,
     DateTimeOffset CreatedAt,
     int PostCount,
     int ParticipantCount,

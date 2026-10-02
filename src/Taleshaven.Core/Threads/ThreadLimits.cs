@@ -3,8 +3,6 @@ namespace Taleshaven.Core.Threads;
 public static class ThreadLimits
 {
     public const int TitleMaxLength = 100;
-    public const int IntroductionMaxLength = 5_000;
-    public const int ChronicleMaxLength = 5_000;
 
     /// <summary>Längsta inlägg som kan skrivas eller redigeras (B23).</summary>
     public const int PostMaxLength = 5_000;

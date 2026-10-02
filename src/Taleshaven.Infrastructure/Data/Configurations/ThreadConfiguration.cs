@@ -17,18 +17,7 @@ internal sealed class CampaignThreadConfiguration : IEntityTypeConfiguration<Cam
             .IsRequired()
             .HasMaxLength(ThreadLimits.TitleMaxLength);
 
-        // Hette Description före fas 6.
-        builder.Property(t => t.Introduction)
-            .IsRequired()
-            .HasMaxLength(ThreadLimits.IntroductionMaxLength);
 
-        builder.Property(t => t.Chronicle)
-            .HasMaxLength(ThreadLimits.ChronicleMaxLength);
-
-        builder.HasOne<ApplicationUser>()
-            .WithMany()
-            .HasForeignKey(t => t.ChronicleEditedById)
-            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne<Campaign>()
             .WithMany()
