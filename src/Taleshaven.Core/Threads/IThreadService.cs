@@ -3,7 +3,7 @@ using Taleshaven.Core.Dice;
 namespace Taleshaven.Core.Threads;
 
 /// <summary>
-/// Kampanjens trådar och deras inlägg (B25–B33). Allt läses för en viss användare (viewerId): dolda NPC:er visas med
+/// Kampanjens trådar och deras inlägg (B25–B42). Allt läses för en viss användare (viewerId): dolda NPC:er visas med
 /// riktigt namn bara för kampanjens GM (B16), och behörigheterna per inlägg räknas ut för den som läser.
 /// Regelbrott och saknad behörighet ger <see cref="CampaignRuleException"/>.
 /// </summary>
@@ -26,10 +26,11 @@ public interface IThreadService
     Task<PostItem?> GetPostAsync(int threadId, long postId, string viewerId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Publicerar ett inlägg, valfritt som en karaktär (B29, B37). Tärningstaggar i texten slås här (B31).
+    /// Publicerar ett inlägg, valfritt som en karaktär (B37). Tärningsslagen i <paramref name="rolls"/> slås här (B42).
     /// </summary>
     Task<PostItem> CreatePostAsync(int campaignId, int threadId, string userId, string? content,
-        int? characterId = null, long? replyToPostId = null, CancellationToken cancellationToken = default);
+        int? characterId = null, long? replyToPostId = null, IReadOnlyList<RollRequest>? rolls = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Byter texten i ett inlägg. Den tidigare versionen sparas som historik.</summary>
     Task<PostItem> EditPostAsync(int campaignId, long postId, string userId, string? content, CancellationToken cancellationToken = default);
@@ -123,8 +124,18 @@ public sealed record PostCharacter(int Id, string Name, bool IsNpc, string? Avat
     }
 }
 
-public sealed record DiceRollView(string Notation, string? Label, IReadOnlyList<int> Results, int Sides, int Modifier, int Total)
+/// <summary>Ett gjort slag (B42). Med fördel eller nackdel är <see cref="Results"/> båda tärningarna och <see cref="KeptIndex"/> den som räknas.</summary>
+public sealed record DiceRollView(string Notation, string? Label, IReadOnlyList<int> Results, int Sides, int Modifier, int Total,
+    DiceMode Mode = DiceMode.Normal)
 {
     public static DiceRollView From(DiceRoll roll) =>
-        new(roll.Notation, roll.Label, roll.Results.ToList(), roll.Sides, roll.Modifier, roll.Total);
+        new(roll.Notation, roll.Label, roll.Results.ToList(), roll.Sides, roll.Modifier, roll.Total, roll.Mode);
+
+    /// <summary>Tärningen som räknas vid fördel eller nackdel, annars null (alla räknas).</summary>
+    public int? KeptIndex => Mode switch
+    {
+        DiceMode.Advantage when Results.Count > 0 => Results.ToList().IndexOf(Results.Max()),
+        DiceMode.Disadvantage when Results.Count > 0 => Results.ToList().IndexOf(Results.Min()),
+        _ => null,
+    };
 }

@@ -31,7 +31,11 @@
                     }
                 </li>
             </ul>
-            @if (Page < PageCount)
+            @if (!ShowLatest)
+            {
+                <span class="pager-latest" aria-hidden="true"></span>
+            }
+            else if (Page < PageCount)
             {
                 <a class="btn btn-sm btn-outline-secondary pager-latest" href="@Href(PageCount)"><Icon Name="arrow-clockwise" Size="12" /> Latest</a>
             }
@@ -52,6 +56,10 @@
 
     [Parameter, EditorRequired]
     public int PageCount { get; set; }
+
+    /// <summary>Knappen Latest till höger, för trådar där sista sidan är den nyaste. Av i trådlistan (B41).</summary>
+    [Parameter]
+    public bool ShowLatest { get; set; } = true;
 
     /// <summary>Adressen till en sida.</summary>
     [Parameter, EditorRequired]

@@ -104,7 +104,7 @@ function applyFormat(textarea, action) {
         replace(textarea, start, end, marker + inner + marker, start + marker.length, start + marker.length + inner.length);
     };
 
-    // Taggar runt markeringen (eller en platshållare som blir markerad), t.ex. [dice]1d20[/dice].
+    // Taggar runt markeringen (eller en platshållare som blir markerad), t.ex. [ooc]…[/ooc].
     const wrapTags = (open, close, placeholder) => {
         const inner = selected || placeholder;
         replace(textarea, start, end, open + inner + close, start + open.length, start + open.length + inner.length);
@@ -119,7 +119,15 @@ function applyFormat(textarea, action) {
     switch (action) {
         case 'bold': wrap('**', 'bold text'); break;
         case 'italic': wrap('*', 'italic text'); break;
-        case 'dice': wrapTags('[dice]', '[/dice]', '1d20'); break;
+        case 'spoiler': {
+            // En hopfälld ruta (B40) måste stå på egna rader för att bli en ruta i stället för dold text i en mening.
+            const before = start > 0 && value[start - 1] !== '\n' ? '\n' : '';
+            const after = end < value.length && value[end] !== '\n' ? '\n' : '';
+            const open = `${before}[spoiler=Spoiler]\n`;
+            const inner = selected || 'Hidden text';
+            replace(textarea, start, end, `${open}${inner}\n[/spoiler]${after}`, start + open.length, start + open.length + inner.length);
+            break;
+        }
         case 'ooc': wrapTags('[ooc]', '[/ooc]', 'out of character'); break;
         case 'heading': prefixLines(() => '### '); break;
         case 'ul': prefixLines(() => '- '); break;

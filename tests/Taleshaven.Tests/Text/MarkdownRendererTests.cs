@@ -7,13 +7,13 @@ public class MarkdownRendererTests
     private readonly MarkdownRenderer renderer = new();
 
     [Fact]
-    public void KeepsDiceTagsAndReferencesAsText()
+    public void KeepsOocAndSpoilerTagsAsText()
     {
-        // Tärningarna sätts in efter renderingen (B31), så taggarna måste överleva Markdown och saneringen oförändrade.
-        var html = renderer.ToSafeHtml("Anfall [dice]1d20+5[/dice] och [dice:1].");
+        // OOC och spoilers sätts in efter renderingen (B36, B40), så taggarna måste överleva Markdown och saneringen.
+        var html = renderer.ToSafeHtml("Hej [ooc]brb[/ooc] och [spoiler=Map]x[/spoiler].");
 
-        Assert.Contains("[dice]1d20+5[/dice]", html);
-        Assert.Contains("[dice:1]", html);
+        Assert.Contains("[ooc]brb[/ooc]", html);
+        Assert.Contains("[spoiler=Map]x[/spoiler]", html);
     }
 
     [Fact]

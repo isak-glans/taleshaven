@@ -5,6 +5,8 @@
 
 @using Taleshaven.Core.Characters
 @using Taleshaven.Core.Dice
+@using System.Text.Json
+@using System.Text.Json.Serialization
 
 @* En tråd (B28–B37): inläggen 20 per sida med sidnavigering längst ner och skrivfältet under sista sidan. Ingen automatisk scroll: sidan hoppar bara till ett inlägg som man bett om
    (fast länk eller första olästa). Nya inlägg läggs till direkt bara för den som står på sista sidan. *@
@@ -37,22 +39,8 @@
         </div>
         @if (thread.CanManage)
         {
-            @* Den vanligaste åtgärden syns; resten ligger i "…"-menyn (B35). *@
+            @* Trådens åtgärder ligger i "…"-menyn längst till höger (B39). *@
             <div class="d-flex gap-2 thread-actions">
-                @if (thread.Status == ThreadStatus.Active && confirmComplete)
-                {
-                    <span class="small align-self-center thread-confirm-complete">
-                        Complete this thread? Players can no longer post in it.
-                        <button type="button" class="btn btn-sm btn-success py-0 ms-1" @onclick="CompleteAsync">Yes, complete</button>
-                        <button type="button" class="btn btn-sm btn-link py-0" @onclick="() => confirmComplete = false">Cancel</button>
-                    </span>
-                }
-                else if (thread.Status == ThreadStatus.Active)
-                {
-                    <button type="button" class="btn btn-sm btn-outline-secondary thread-complete" @onclick="() => { confirmComplete = true; openMenu = null; }">
-                        <Icon Name="check-circle" /> Complete thread
-                    </button>
-                }
                 <div class="menu-anchor">
                     <button type="button" class="btn btn-sm btn-outline-secondary" title="More" aria-label="More thread actions"
                             aria-expanded="@(openMenu == "thread" ? "true" : "false")" @onclick="@(() => ToggleMenu("thread"))">
@@ -62,6 +50,11 @@
                     {
                         <div class="menu-backdrop" @onclick="CloseMenu"></div>
                         <div class="action-menu border rounded shadow-sm" role="menu">
+                            @if (thread.Status == ThreadStatus.Active)
+                            {
+                                <button type="button" class="action-menu-item thread-complete" role="menuitem"
+                                        @onclick="() => { confirmComplete = true; openMenu = null; }"><Icon Name="check-circle" /> Complete thread</button>
+                            }
                             <a class="action-menu-item" role="menuitem" href="@ThreadLinks.Edit(CampaignId, ThreadId)"><Icon Name="pencil" /> Rename thread</a>
                             @if (thread.Status == ThreadStatus.Completed)
                             {
@@ -82,6 +75,14 @@
         }
         <a href="@ThreadLinks.Latest(CampaignId, ThreadId)">Latest</a>
     </div>
+    @if (thread.CanManage && thread.Status == ThreadStatus.Active && confirmComplete)
+    {
+        <div class="alert alert-warning py-2 mt-2 mb-0 d-flex flex-wrap align-items-center gap-2 thread-confirm-complete" role="alert">
+            Complete this thread? Players can no longer post in it.
+            <button type="button" class="btn btn-sm btn-success py-0" @onclick="CompleteAsync">Yes, complete</button>
+            <button type="button" class="btn btn-sm btn-link py-0" @onclick="() => confirmComplete = false">Cancel</button>
+        </div>
+    }
     @if (actionError is not null)
     {
         <div class="alert alert-danger py-2 mt-2 mb-0" role="alert">@actionError</div>
@@ -152,8 +153,47 @@
             }
         </div>
         <MarkdownEditor @ref="composer" MaxLength="ThreadLimits.PostMaxLength" DraftKey="@($"thread-{ThreadId}")" OnSubmit="SubmitAsync"
-                        SubmitText="Post" Label="New post" Placeholder="Write your post…" Rows="5" ShowDiceButton="true" ShowOocButton="true"
-                        RenderPreview="@(text => PostHtml.Preview(Markdown, text))" />
+                        SubmitText="Post" Label="New post" Placeholder="Write your post…" Rows="5" ShowOocButton="true" ShowSpoilerButton="true"
+                        AllowEmpty="@(rollRows.Count > 0)" RenderPreview="@(text => PostHtml.Preview(Markdown, text, PendingRolls()))">
+            <BelowText>
+                @* Tärningsslagen läggs till som rader och slås när inlägget publiceras (B42). *@
+                <div class="roll-editor mt-2">
+                    @foreach (var row in rollRows)
+                    {
+                        <div class="roll-row" @key="row">
+                            <span class="roll-row-icon" aria-hidden="true">🎲</span>
+                            <input class="form-control form-control-sm roll-notation @(row.Error is null ? "" : "is-invalid")" placeholder="1d20+5"
+                                   maxlength="12" aria-label="Dice, e.g. 1d20+5" value="@row.Notation" @oninput="e => SetNotationAsync(row, e.Value as string)" @onchange="() => row.Validate()" />
+                            <input class="form-control form-control-sm roll-label" placeholder="What is it for? (optional)" maxlength="@DiceRoll.LabelMaxLength"
+                                   aria-label="Description of the roll" value="@row.Label" @oninput="e => SetLabelAsync(row, e.Value as string)" />
+                            <select class="form-select form-select-sm roll-mode" aria-label="Advantage or disadvantage" disabled="@(!row.SupportsMode)"
+                                    title="@(row.SupportsMode ? "Roll two d20 and keep the higher or lower" : "Advantage and disadvantage work with a single d20")"
+                                    value="@row.Mode" @onchange="e => SetModeAsync(row, e.Value as string)">
+                                <option value="@DiceMode.Normal">Normal</option>
+                                <option value="@DiceMode.Advantage">Advantage</option>
+                                <option value="@DiceMode.Disadvantage">Disadvantage</option>
+                            </select>
+                            <button type="button" class="btn btn-sm btn-link text-secondary roll-remove" title="Remove roll" aria-label="Remove roll"
+                                    @onclick="() => RemoveRollAsync(row)">✕</button>
+                            @if (row.Error is not null)
+                            {
+                                <div class="small text-danger roll-error">@row.Error</div>
+                            }
+                        </div>
+                    }
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        @if (rollRows.Count < ThreadLimits.MaxRollsPerPost)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary roll-add" @onclick="AddRollAsync">🎲 Add roll</button>
+                        }
+                        @if (rollRows.Count > 0)
+                        {
+                            <small class="text-secondary">The dice are rolled when you post.</small>
+                        }
+                    </div>
+                </div>
+            </BelowText>
+        </MarkdownEditor>
     }
 </div>
 
@@ -209,6 +249,11 @@
     private CampaignHeader? header;
     private MarkdownEditor? composer;
     private IJSObjectReference? module;
+    private readonly List<RollRow> rollRows = [];
+    private int? rollsLoadedFor;
+    private bool focusNewRoll;
+
+    private string RollsDraftKey => $"thread-{ThreadId}";
 
     private bool OnLastPage => page is not null && page.Page >= page.PageCount;
 
@@ -311,6 +356,35 @@
         if (module is null || page is null)
             return;
 
+        // Slag som lagts till men inte postats ligger kvar i utkastet, som texten (B42).
+        if (rollsLoadedFor != ThreadId)
+        {
+            rollsLoadedFor = ThreadId;
+            rollRows.Clear();
+            var saved = await module.InvokeAsync<string?>("loadRolls", RollsDraftKey);
+            if (!string.IsNullOrEmpty(saved))
+            {
+                try
+                {
+                    rollRows.AddRange((JsonSerializer.Deserialize<List<RollRow>>(saved) ?? []).Take(ThreadLimits.MaxRollsPerPost));
+                    foreach (var row in rollRows)
+                        row.Validate();
+                }
+                catch (JsonException)
+                {
+                    // Ett trasigt utkast ignoreras.
+                }
+            }
+            if (rollRows.Count > 0)
+                StateHasChanged();
+        }
+
+        if (focusNewRoll)
+        {
+            focusNewRoll = false;
+            await module.InvokeVoidAsync("focusLastRoll");
+        }
+
         if (pendingQuote is { } quoteId && composer is not null && await ThreadService.GetPostAsync(ThreadId, quoteId, userId) is { } quoted)
         {
             pendingQuote = null;
@@ -356,19 +430,16 @@
 
     private async Task<string?> SubmitAsync(string content)
     {
-        // "/roll 1d20 attack" är en genväg för ett inlägg med bara ett slag (B31).
-        if (DiceCommand.IsCommand(content, out var notation, out var label, out var commandError))
-        {
-            if (commandError is not null)
-                return commandError;
-            content = InlineDice.Tag(notation.ToString()) + (label is null ? "" : " " + label);
-        }
+        foreach (var row in rollRows)
+            row.Validate();
+        if (rollRows.Any(r => r.Error is not null))
+            return "Fix the dice rolls first.";
 
         var characterId = selectedCharacterId;
         PostItem created;
         try
         {
-            created = await ThreadService.CreatePostAsync(CampaignId, ThreadId, userId, content, characterId, replyTo?.PostId);
+            created = await ThreadService.CreatePostAsync(CampaignId, ThreadId, userId, content, characterId, replyTo?.PostId, PendingRolls());
         }
         catch (CampaignRuleException ex)
         {
@@ -376,6 +447,8 @@
         }
 
         replyTo = null;
+        rollRows.Clear();
+        await SaveRollsAsync();
         Notifier.NotifyPostCreated(CampaignId, ThreadId);
 
         // Karaktären flyttar upp bland "Recently used" i väljaren (B17).
@@ -406,6 +479,98 @@
         await MarkReadAsync();
     }
 
+    // Tomma rader räknas inte; en rad med bara beskrivning ger ett fel när inlägget postas.
+    private List<RollRequest> PendingRolls() =>
+        [.. rollRows.Where(r => !r.IsBlank).Select(r => new RollRequest(r.Notation, r.Label, r.Mode))];
+
+    private async Task AddRollAsync()
+    {
+        if (rollRows.Count >= ThreadLimits.MaxRollsPerPost)
+            return;
+        rollRows.Add(new RollRow());
+        await SaveRollsAsync();
+        focusNewRoll = true;
+    }
+
+    private async Task RemoveRollAsync(RollRow row)
+    {
+        rollRows.Remove(row);
+        await SaveRollsAsync();
+    }
+
+    private async Task SetNotationAsync(RollRow row, string? value)
+    {
+        row.Notation = value ?? "";
+        // Felet visas först när man lämnar fältet, så att "1d" inte blir rött mitt i skrivandet.
+        row.Validate(showError: row.Error is not null);
+        await SaveRollsAsync();
+    }
+
+    private async Task SetLabelAsync(RollRow row, string? value)
+    {
+        row.Label = value ?? "";
+        await SaveRollsAsync();
+    }
+
+    private async Task SetModeAsync(RollRow row, string? value)
+    {
+        row.Mode = Enum.TryParse<DiceMode>(value, out var mode) ? mode : DiceMode.Normal;
+        row.Validate();
+        await SaveRollsAsync();
+    }
+
+    private async Task SaveRollsAsync()
+    {
+        if (module is null)
+            return;
+        try
+        {
+            await module.InvokeVoidAsync("saveRolls", RollsDraftKey, rollRows.Count == 0 ? null : JsonSerializer.Serialize(rollRows));
+        }
+        catch (JSDisconnectedException)
+        {
+            // Kretsen är nedkopplad; utkastet sparas nästa gång.
+        }
+    }
+
+    /// <summary>En rad med ett tärningsslag i skrivfältet (B42). Kontrolleras medan man skriver och igen på servern.</summary>
+    private sealed class RollRow
+    {
+        public string Notation { get; set; } = "";
+        public string Label { get; set; } = "";
+        public DiceMode Mode { get; set; }
+
+        [JsonIgnore]
+        public string? Error { get; private set; }
+
+        [JsonIgnore]
+        public bool SupportsMode { get; private set; }
+
+        [JsonIgnore]
+        public bool IsBlank => Notation.Trim().Length == 0 && Label.Trim().Length == 0;
+
+        public void Validate(bool showError = true)
+        {
+            Error = null;
+            SupportsMode = false;
+            if (Notation.Trim().Length == 0)
+            {
+                Error = Label.Trim().Length > 0 ? "Enter the dice, e.g. 1d20+5." : null;
+                Mode = DiceMode.Normal;
+                return;
+            }
+
+            if (!DiceNotation.TryParse(Notation, out var notation, out var error))
+            {
+                Error = showError ? error : null;
+                return;
+            }
+
+            SupportsMode = DiceRoll.SupportsMode(notation);
+            if (!SupportsMode)
+                Mode = DiceMode.Normal;
+        }
+    }
 
     private async Task ReplyAsync(PostItem post)
     {
@@ -433,11 +598,14 @@
             await module.InvokeVoidAsync("scrollToElement", "composer");
     }
 
-    // Citatet får slagens resultat som text, så att det inte pekar på det nya inläggets egna slag.
+    // Citatet får slagens resultat som text under det citerade (B42); de blir inte nya slag.
     private static string QuoteText(PostItem post)
     {
-        var text = InlineDice.ReplaceReferences(post.Content, post.Rolls.Count, number => "🎲 " + PostHtml.Describe(post.Rolls[number - 1]));
-        var lines = text.Split('\n').Select(line => "> " + line.TrimEnd('\r'));
+        var parts = new List<string>();
+        if (post.Content.Trim().Length > 0)
+            parts.Add(post.Content);
+        parts.AddRange(post.Rolls.Select(roll => "🎲 " + PostHtml.Describe(roll)));
+        var lines = string.Join("\n", parts).Split('\n').Select(line => "> " + line.TrimEnd('\r'));
         return $"> **{DisplayName(post)}** wrote:\n{string.Join("\n", lines)}\n\n";
     }
 
@@ -688,13 +856,25 @@
                     {
                         <MarkdownEditor @key="post.Id" MaxLength="ThreadLimits.PostMaxLength" DraftKey="" InitialText="@post.Content"
                                         OnSubmit="@(content => SaveEditAsync(post.Id, content))" SubmitText="Save"
-                                        ShortcutHint="Ctrl+Enter saves" Label="Edit post" Rows="5" ShowOocButton="true"
-                                        RenderPreview="@(text => PostHtml.Preview(Markdown, text, post.Rolls))" />
+                                        ShortcutHint="Ctrl+Enter saves" Label="Edit post" Rows="5" ShowOocButton="true" ShowSpoilerButton="true"
+                                        AllowEmpty="@(post.Rolls.Count > 0)" RenderPreview="@(text => PostHtml.Preview(Markdown, text))">
+                            <BelowText>
+                                @if (post.Rolls.Count > 0)
+                                {
+                                    <DiceRolls Rolls="post.Rolls" />
+                                    <small class="text-secondary">The dice rolls can't be changed.</small>
+                                }
+                            </BelowText>
+                        </MarkdownEditor>
                         <button type="button" class="btn btn-sm btn-link px-0" @onclick="() => editingPostId = null">Cancel</button>
                     }
                     else
                     {
-                        <div class="post-content">@PostHtml.Render(Markdown, post.Content, post.Rolls)</div>
+                        @if (post.Content.Trim().Length > 0)
+                        {
+                            <div class="post-content">@PostHtml.Render(Markdown, post.Content)</div>
+                        }
+                        <DiceRolls Rolls="post.Rolls" />
                         @if (confirmDeleteId == post.Id)
                         {
                             <div class="small post-confirm-delete">

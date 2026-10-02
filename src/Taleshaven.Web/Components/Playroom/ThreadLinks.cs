@@ -1,9 +1,22 @@
+using Taleshaven.Core.Threads;
+
 namespace Taleshaven.Web.Components.Playroom;
 
-/// <summary>Adresser till trådarna (B25–B30, B37). Kampanjens startsida är trådlistan.</summary>
+/// <summary>Adresser till trådarna (B25–B30, B37, B41). Kampanjens startsida är trådlistan.</summary>
 public static class ThreadLinks
 {
     public static string Threads(int campaignId) => $"campaigns/{campaignId}";
+
+    /// <summary>Trådlistan filtrerad på status, med sidnummer (B41). Aktiva trådar på första sidan är startsidan.</summary>
+    public static string Threads(int campaignId, ThreadStatus status, int page = 1)
+    {
+        var query = new List<string>();
+        if (status == ThreadStatus.Completed)
+            query.Add("status=completed");
+        if (page > 1)
+            query.Add($"page={page}");
+        return query.Count == 0 ? Threads(campaignId) : $"{Threads(campaignId)}?{string.Join("&", query)}";
+    }
 
     /// <summary>Tråden öppnas vid första olästa inlägget, annars på sista sidan (B28).</summary>
     public static string Thread(int campaignId, int threadId) => $"campaigns/{campaignId}/threads/{threadId}";

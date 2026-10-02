@@ -69,33 +69,25 @@ public class PostEditTests
     }
 
     [Fact]
-    public void DiceRollsCannotBeRemovedByEditing()
+    public void EditingChangesOnlyTheTextNotTheRolls()
     {
-        var post = Post.Create(3, "anna", "I swing [dice]1d20[/dice] at the orc.", Now, roller: new FixedRoller(2));
+        var post = Post.Create(3, "anna", "I swing.", Now, rolls: [new RollRequest("1d20", "Attack")], roller: new FixedRoller(15));
 
-        Assert.Equal("I swing [dice:1] at the orc.", post.Content);
-        Assert.Throws<CampaignRuleException>(() => post.Edit("I swing at the orc and hit.", Now));
-        Assert.Equal(2, post.Rolls[0].Total);
+        post.Edit("Sigrun swings her hammer and grins.", Now.AddMinutes(1));
+
+        Assert.Equal("Sigrun swings her hammer and grins.", post.Content);
+        Assert.Equal(15, post.Rolls.Single().Total);
     }
 
     [Fact]
-    public void NewDiceCannotBeAddedByEditing()
+    public void PostWithRollsCanBeEditedToNoText()
     {
-        var post = Post.Create(3, "anna", "I swing [dice]1d20[/dice].", Now, roller: new FixedRoller(2));
+        var post = Post.Create(3, "anna", "Initiative!", Now, rolls: [new RollRequest("1d20+2")], roller: new FixedRoller(9));
 
-        Assert.Throws<CampaignRuleException>(() => post.Edit("I swing [dice:1]. Again: [dice]1d20[/dice]", Now));
-        Assert.Single(post.Rolls);
-    }
+        post.Edit("", Now);
 
-    [Fact]
-    public void TextAroundDiceCanBeEdited()
-    {
-        var post = Post.Create(3, "anna", "I swing [dice]1d20[/dice].", Now, roller: new FixedRoller(15));
-
-        post.Edit("Sigrun swings her hammer [dice:1] and grins.", Now.AddMinutes(1));
-
-        Assert.Equal("Sigrun swings her hammer [dice:1] and grins.", post.Content);
-        Assert.Equal(15, post.Rolls[0].Total);
+        Assert.Equal("", post.Content);
+        Assert.Throws<CampaignRuleException>(() => Post.Create(3, "anna", "Hej", Now).Edit(" ", Now));
     }
 
     [Theory]

@@ -13,7 +13,10 @@ public static class ThreadLimits
     /// <summary>Inlägg per sida i en tråd (B35, ändrat från 25 i B28).</summary>
     public const int PostsPerPage = 20;
 
-    /// <summary>Högst så många tärningsslag i ett inlägg (B31).</summary>
+    /// <summary>Trådar per sida i trådlistan, för aktiva och avslutade var för sig (B41).</summary>
+    public const int ThreadsPerPage = 20;
+
+    /// <summary>Högst så många tärningsslag i ett inlägg (B31, B42).</summary>
     public const int MaxRollsPerPost = 10;
 }
 

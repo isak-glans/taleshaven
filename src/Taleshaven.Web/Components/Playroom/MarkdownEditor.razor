@@ -15,14 +15,14 @@
         <button type="button" class="btn btn-sm btn-outline-secondary" data-md="ol" title="Numbered list" disabled="@preview">1. List</button>
         <button type="button" class="btn btn-sm btn-outline-secondary" data-md="quote" title="Quote" disabled="@preview">Quote</button>
         <button type="button" class="btn btn-sm btn-outline-secondary" data-md="link" title="Link" disabled="@preview">Link</button>
-        @* Tärningar och OOC i trådarnas inlägg (B31, B36). *@
-        @if (ShowDiceButton)
-        {
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-md="dice" title="Dice roll: [dice]1d20+3[/dice], rolled when you post" disabled="@preview">🎲 Dice</button>
-        }
+        @* OOC och spoilers i trådarnas inlägg (B36, B40). *@
         @if (ShowOocButton)
         {
             <button type="button" class="btn btn-sm btn-outline-secondary" data-md="ooc" title="Out of character: [ooc]…[/ooc]" disabled="@preview">OOC</button>
+        }
+        @if (ShowSpoilerButton)
+        {
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-md="spoiler" title="Collapsed text: [spoiler=Title]…[/spoiler]" disabled="@preview">Spoiler</button>
         }
         <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" @onclick="TogglePreview" disabled="@(!interactive)">
             @(preview ? "Edit" : "Preview")
@@ -35,7 +35,7 @@
     @if (preview)
     {
         <div class="md-preview post-content border rounded p-2">
-            @if (text.Trim().Length == 0)
+            @if (text.Trim().Length == 0 && !AllowEmpty)
             {
                 <span class="text-secondary">Nothing to preview.</span>
             }
@@ -45,6 +45,8 @@
             }
         </div>
     }
+
+    @BelowText
 
     <div class="d-flex justify-content-between align-items-center mt-2 gap-2">
         <small class="text-secondary">
@@ -110,19 +112,23 @@
     [Parameter]
     public string? ShortcutHint { get; set; }
 
-    /// <summary>Knapp som lägger [dice]…[/dice] runt markeringen (B31). Bara för nya inlägg; slag görs när inlägget publiceras.</summary>
+    /// <summary>Knapp som lägger [spoiler=…]…[/spoiler] runt markeringen, på egna rader (B40).</summary>
     [Parameter]
-    public bool ShowDiceButton { get; set; }
+    public bool ShowSpoilerButton { get; set; }
+
+    /// <summary>Innehåll mellan textfältet och skicka-knappen, t.ex. inläggets tärningsslag (B42).</summary>
+    [Parameter]
+    public RenderFragment? BelowText { get; set; }
 
     /// <summary>Knapp som lägger [ooc]…[/ooc] runt markeringen (B36).</summary>
     [Parameter]
     public bool ShowOocButton { get; set; }
 
-    /// <summary>Egen rendering av förhandsgranskningen, t.ex. för att visa tärningar som "rolls when posted" (B31).</summary>
+    /// <summary>Egen rendering av förhandsgranskningen, t.ex. för att visa tärningsslag som "rolls when posted" (B42).</summary>
     [Parameter]
     public Func<string, MarkupString>? RenderPreview { get; set; }
 
-    /// <summary>Lägger in text där markören står (eller sist) och flyttar fokus till fältet, t.ex. en tärning eller ett citat.</summary>
+    /// <summary>Lägger in text där markören står (eller sist) och flyttar fokus till fältet, t.ex. ett citat.</summary>
     public async Task InsertAsync(string insertion)
     {
         preview = false;

@@ -127,7 +127,8 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
     }
 
     public async Task<PostItem> CreatePostAsync(int campaignId, int threadId, string userId, string? content,
-        int? characterId = null, long? replyToPostId = null, CancellationToken cancellationToken = default)
+        int? characterId = null, long? replyToPostId = null, IReadOnlyList<RollRequest>? rolls = null,
+        CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
@@ -140,7 +141,6 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
 
         if (characterId is not null)
         {
-
             var character = await db.Characters.AsNoTracking()
                 .SingleOrDefaultAsync(c => c.Id == characterId && c.CampaignId == campaignId, cancellationToken)
                 ?? throw new CampaignRuleException("The character doesn't exist.");
@@ -154,7 +154,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         if (replyToPostId is not null && !await db.Posts.AnyAsync(p => p.Id == replyToPostId && p.ThreadId == threadId, cancellationToken))
             throw new CampaignRuleException("The post you're replying to doesn't exist.");
 
-        var post = Post.Create(threadId, userId, content, timeProvider.GetUtcNow(), characterId, replyToPostId, diceRoller);
+        var post = Post.Create(threadId, userId, content, timeProvider.GetUtcNow(), characterId, replyToPostId, rolls, diceRoller);
         db.Posts.Add(post);
         await db.SaveChangesAsync(cancellationToken);
 

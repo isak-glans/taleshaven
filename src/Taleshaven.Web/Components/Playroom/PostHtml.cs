@@ -8,44 +8,38 @@ using Taleshaven.Core.Threads;
 namespace Taleshaven.Web.Components.Playroom;
 
 /// <summary>
-/// Renderar inläggstext till sanerad HTML, markerar OOC-text (B36) och sätter in tärningsslagen där de står i texten (B31).
-/// Slagens HTML byggs här av sparade siffror och kodas, så den går inte att påverka via inläggets text.
+/// Renderar inläggstext till sanerad HTML med spoilers (B40) och OOC-text (B36), och tärningsslagen som text för
+/// citat och titlar (B42). Själva slaglistan under ett inlägg ritas av <see cref="DiceRolls"/>.
 /// </summary>
 public static class PostHtml
 {
-    public static MarkupString Render(IMarkdownRenderer markdown, string content, IReadOnlyList<DiceRollView> rolls)
+    public static MarkupString Render(IMarkdownRenderer markdown, string content) =>
+        new(OocMarkup.Apply(SpoilerMarkup.Apply(markdown.ToSafeHtml(content))));
+
+    /// <summary>Förhandsgranskning: texten och de slag som ska slås när inlägget publiceras ("rolls when posted").</summary>
+    public static MarkupString Preview(IMarkdownRenderer markdown, string content, IReadOnlyList<RollRequest>? pendingRolls = null)
     {
-        var html = OocMarkup.Apply(markdown.ToSafeHtml(content));
-        return new MarkupString(InlineDice.ReplaceReferences(html, rolls.Count, number => Roll(rolls[number - 1])));
+        var html = new StringBuilder(Render(markdown, content).Value);
+        var rolls = pendingRolls?.Where(r => !string.IsNullOrWhiteSpace(r.Notation)).ToList() ?? [];
+        if (rolls.Count > 0)
+        {
+            html.Append("""<ul class="post-rolls post-rolls-pending">""");
+            foreach (var roll in rolls)
+            {
+                html.Append("""<li class="post-roll">🎲 """);
+                if (!string.IsNullOrWhiteSpace(roll.Label))
+                    html.Append($"""<span class="roll-label">{WebUtility.HtmlEncode(roll.Label.Trim())}</span> """);
+                html.Append($"""<span class="roll-notation">{WebUtility.HtmlEncode(roll.Notation!.Trim())}</span>""");
+                if (roll.Mode != DiceMode.Normal)
+                    html.Append($""" <span class="roll-mode">{ModeText(roll.Mode)}</span>""");
+                html.Append(""" <em class="text-secondary">rolls when posted</em></li>""");
+            }
+            html.Append("</ul>");
+        }
+        return new MarkupString(html.ToString());
     }
 
-    /// <summary>
-    /// Förhandsgranskning: nya taggar visas som "rolls when posted", redan gjorda slag (vid redigering) med sina resultat.
-    /// </summary>
-    public static MarkupString Preview(IMarkdownRenderer markdown, string content, IReadOnlyList<DiceRollView>? rolls = null)
-    {
-        var html = OocMarkup.Apply(markdown.ToSafeHtml(content));
-        html = InlineDice.ReplaceTags(html, notation =>
-            $"""<span class="dice-inline dice-pending">🎲 <strong>{WebUtility.HtmlEncode(notation)}</strong> <em>rolls when posted</em></span>""");
-        rolls ??= [];
-        return new MarkupString(InlineDice.ReplaceReferences(html, rolls.Count, number => Roll(rolls[number - 1])));
-    }
-
-    private static string Roll(DiceRollView roll)
-    {
-        var html = new StringBuilder();
-        html.Append($"""<span class="dice-inline" title="{WebUtility.HtmlEncode(Describe(roll))}">🎲 <strong class="dice-notation">{WebUtility.HtmlEncode(roll.Notation)}</strong> """);
-        html.Append("""<span class="dice-values">""");
-        foreach (var value in roll.Results)
-            html.Append($"""<span class="dice-value {CriticalClass(roll, value)}">{value}</span>""");
-        html.Append("</span>");
-        if (roll.Modifier != 0)
-            html.Append($" {(roll.Modifier > 0 ? "+" : "−")} {Math.Abs(roll.Modifier)}");
-        html.Append($""" = <strong class="dice-total">{roll.Total}</strong></span>""");
-        return html.ToString();
-    }
-
-    /// <summary>Slaget som text, t.ex. "2d6+3: [4, 5] + 3 = 12", för titlar och citat.</summary>
+    /// <summary>Slaget som text, t.ex. "Attack: 1d20+5 (advantage): [17, 4] + 5 = 22", för titlar och citat.</summary>
     public static string Describe(DiceRollView roll)
     {
         var modifier = roll.Modifier switch
@@ -54,11 +48,15 @@ public static class PostHtml
             < 0 => $" - {-roll.Modifier}",
             _ => "",
         };
-        return $"{roll.Notation}: [{string.Join(", ", roll.Results)}]{modifier} = {roll.Total}";
+        var label = roll.Label is null ? "" : $"{roll.Label}: ";
+        var mode = roll.Mode == DiceMode.Normal ? "" : $" ({ModeText(roll.Mode).ToLowerInvariant()})";
+        return $"{label}{roll.Notation}{mode}: [{string.Join(", ", roll.Results)}]{modifier} = {roll.Total}";
     }
 
-    // En naturlig 20 eller 1 på en ensam d20 markeras (T-4).
-    private static string CriticalClass(DiceRollView roll, int value) => roll is { Sides: 20, Results.Count: 1 } && value is 20 or 1
-        ? value == 20 ? "dice-max" : "dice-min"
-        : "";
+    public static string ModeText(DiceMode mode) => mode switch
+    {
+        DiceMode.Advantage => "Advantage",
+        DiceMode.Disadvantage => "Disadvantage",
+        _ => "",
+    };
 }

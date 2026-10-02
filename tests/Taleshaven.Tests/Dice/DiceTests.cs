@@ -63,53 +63,6 @@ public class DiceNotationTests
     }
 }
 
-public class DiceCommandTests
-{
-    [Theory]
-    [InlineData("/roll 2d6+3", "2d6+3", null)]
-    [InlineData("/roll 1d20", "1d20", null)]
-    [InlineData("/ROLL d20 attack the orc", "1d20", "attack the orc")]
-    [InlineData("  /roll   1d100   ", "1d100", null)]
-    public void RecognizesCommands(string input, string expectedNotation, string? expectedLabel)
-    {
-        Assert.True(DiceCommand.IsCommand(input, out var notation, out var label, out var error));
-        Assert.Null(error);
-        Assert.Equal(expectedNotation, notation.ToString());
-        Assert.Equal(expectedLabel, label);
-    }
-
-    [Theory]
-    [InlineData("Hello everyone")]
-    [InlineData("I roll 2d6")]
-    [InlineData("/slå 2d6")]
-    [InlineData("/rollercoaster")]
-    [InlineData("/rolled")]
-    [InlineData("")]
-    public void IgnoresOrdinaryText(string input)
-    {
-        Assert.False(DiceCommand.IsCommand(input, out _, out _, out _));
-    }
-
-    [Theory]
-    [InlineData("/roll")]
-    [InlineData("/roll 3d7")]
-    [InlineData("/roll abc")]
-    public void ReportsErrorsForInvalidCommands(string input)
-    {
-        Assert.True(DiceCommand.IsCommand(input, out _, out _, out var error));
-        Assert.NotNull(error);
-    }
-
-    [Fact]
-    public void RejectsTooLongLabel()
-    {
-        var input = "/roll 1d20 " + new string('a', DiceRoll.LabelMaxLength + 1);
-
-        Assert.True(DiceCommand.IsCommand(input, out _, out _, out var error));
-        Assert.NotNull(error);
-    }
-}
-
 public class DiceRollTests
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 23, 12, 0, 0, TimeSpan.Zero);
@@ -138,8 +91,8 @@ public class DiceRollTests
         Assert.Equal(12, roll.Total);
         Assert.Equal("2d6+3", roll.Notation);
         Assert.Equal("anfall", roll.Label);
+        Assert.Equal(DiceMode.Normal, roll.Mode);
         Assert.Equal([6, 6], roller.RequestedSides);
-        Assert.Equal("🎲 2d6+3 (anfall): [4, 5] + 3 = 12", roll.ToText());
     }
 
     [Fact]
@@ -149,7 +102,6 @@ public class DiceRollTests
 
         Assert.Equal(-1, roll.Total);
         Assert.Null(roll.Label);
-        Assert.Equal("🎲 1d20-2: [1] - 2 = -1", roll.ToText());
     }
 
     [Theory]
@@ -174,15 +126,89 @@ public class DiceRollTests
     }
 
     [Fact]
-    public void InlineDiceAreRolledWhenPostIsCreated()
+    public void AdvantageRollsTwoD20AndKeepsTheHigher()
     {
-        var post = Post.Create(3, "anna", "Attack [dice]1d20+5[/dice], damage [DICE] 2d6 [/dice]!", Now, roller: new FixedRoller(17, 3, 4));
+        var roller = new FixedRoller(7, 16);
 
-        Assert.Equal("Attack [dice:1], damage [dice:2]!", post.Content);
+        var roll = DiceRoll.Roll(new RollRequest("1d20+5", "Attack", DiceMode.Advantage), roller);
+
+        Assert.Equal([7, 16], roll.Results);
+        Assert.Equal(21, roll.Total);
+        Assert.Equal(DiceMode.Advantage, roll.Mode);
+        Assert.Equal([20, 20], roller.RequestedSides);
+        Assert.Equal(1, DiceRollView.From(roll).KeptIndex);
+    }
+
+    [Fact]
+    public void DisadvantageKeepsTheLower()
+    {
+        var roll = DiceRoll.Roll(new RollRequest("d20-1", null, DiceMode.Disadvantage), new FixedRoller(12, 3));
+
+        Assert.Equal(2, roll.Total);
+        Assert.Equal(1, DiceRollView.From(roll).KeptIndex);
+    }
+
+    [Theory]
+    [InlineData("2d20")]
+    [InlineData("1d6+2")]
+    public void AdvantageOnlyWorksWithASingleD20(string notation)
+    {
+        Assert.Throws<CampaignRuleException>(() =>
+            DiceRoll.Roll(new RollRequest(notation, null, DiceMode.Advantage), new FixedRoller(1, 1, 1, 1)));
+    }
+
+    [Fact]
+    public void NormalRollHasNoKeptDie()
+    {
+        Assert.Null(DiceRollView.From(DiceRoll.Roll(new DiceNotation(2, 6), null, new FixedRoller(1, 2))).KeptIndex);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("3d7")]
+    [InlineData("lots")]
+    public void InvalidRequestsAreRejected(string? notation)
+    {
+        Assert.Throws<CampaignRuleException>(() => DiceRoll.Roll(new RollRequest(notation), new FixedRoller(1)));
+    }
+
+    [Fact]
+    public void RollsAreRolledWhenPostIsCreated()
+    {
+        var post = Post.Create(3, "anna", "Sigrun charges.", Now,
+            rolls: [new RollRequest("1d20+5", "Attack"), new RollRequest(" 2d6 ", "Damage")], roller: new FixedRoller(17, 3, 4));
+
+        Assert.Equal("Sigrun charges.", post.Content);
         Assert.Equal(2, post.Rolls.Count);
         Assert.Equal(22, post.Rolls[0].Total);
+        Assert.Equal("Attack", post.Rolls[0].Label);
         Assert.Equal([3, 4], post.Rolls[1].Results);
         Assert.True(post.HasRolls);
+    }
+
+    [Fact]
+    public void DiceTagsInTextAreNoLongerRolled()
+    {
+        var post = Post.Create(3, "anna", "I roll [dice]1d20[/dice]", Now);
+
+        Assert.Empty(post.Rolls);
+        Assert.Equal("I roll [dice]1d20[/dice]", post.Content);
+    }
+
+    [Fact]
+    public void PostWithOnlyRollsMayHaveNoText()
+    {
+        var post = Post.Create(3, "anna", "  ", Now, rolls: [new RollRequest("1d20+2", "Initiative")], roller: new FixedRoller(11));
+
+        Assert.Equal("", post.Content);
+        Assert.Equal(13, post.Rolls[0].Total);
+    }
+
+    [Fact]
+    public void EmptyPostWithoutRollsIsRejected()
+    {
+        Assert.Throws<CampaignRuleException>(() => Post.Create(3, "anna", " ", Now));
     }
 
     [Fact]
@@ -192,26 +218,11 @@ public class DiceRollTests
     }
 
     [Fact]
-    public void InvalidInlineDiceAreRejected()
-    {
-        Assert.Throws<CampaignRuleException>(() => Post.Create(3, "anna", "[dice]3d7[/dice]", Now, roller: new FixedRoller(1)));
-        Assert.Throws<CampaignRuleException>(() => Post.Create(3, "anna", "[dice]lots[/dice]", Now, roller: new FixedRoller(1)));
-    }
-
-    [Fact]
     public void AtMostTenRollsPerPost()
     {
-        var content = string.Concat(Enumerable.Repeat("[dice]1d6[/dice] ", ThreadLimits.MaxRollsPerPost + 1));
+        var rolls = Enumerable.Repeat(new RollRequest("1d6"), ThreadLimits.MaxRollsPerPost + 1).ToList();
 
         Assert.Throws<CampaignRuleException>(() =>
-            Post.Create(3, "anna", content, Now, roller: new FixedRoller(Enumerable.Repeat(1, 20).ToArray())));
-    }
-
-    [Fact]
-    public void ReferencesAreReplacedOnlyForExistingRolls()
-    {
-        var html = InlineDice.ReplaceReferences("<p>[dice:1] and [dice:2] and [dice:9]</p>", 2, n => $"<b>{n}</b>");
-
-        Assert.Equal("<p><b>1</b> and <b>2</b> and [dice:9]</p>", html);
+            Post.Create(3, "anna", "Many", Now, rolls: rolls, roller: new FixedRoller(Enumerable.Repeat(1, 20).ToArray())));
     }
 }

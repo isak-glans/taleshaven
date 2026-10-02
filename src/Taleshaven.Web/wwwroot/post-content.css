@@ -68,3 +68,134 @@
     display: inline-block;
     margin-bottom: 0.2rem;
 }
+
+/* Hopfälld text (B40): [spoiler=Rubrik]…[/spoiler] på egna rader, eller [spoiler]…[/spoiler] mitt i en mening. */
+.post-content details.spoiler {
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    margin: 0.25rem 0 0.75rem;
+}
+
+.post-content details.spoiler > summary {
+    color: var(--bs-secondary-color);
+    cursor: pointer;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.post-content details.spoiler > summary::after {
+    content: " – click to show";
+    font-weight: 400;
+}
+
+.post-content details.spoiler[open] > summary::after {
+    content: " – click to hide";
+}
+
+.post-content .spoiler-body {
+    border-top: 1px solid var(--bs-border-color);
+    padding: 0.5rem 0.75rem;
+}
+
+.post-content .spoiler-body > :last-child {
+    margin-bottom: 0;
+}
+
+.post-content .spoiler-inline {
+    background: var(--bs-secondary-color);
+    border-radius: 0.2rem;
+    color: transparent;
+    cursor: pointer;
+    padding: 0 0.15rem;
+}
+
+.post-content .spoiler-inline:focus,
+.post-content .spoiler-inline:active {
+    background: var(--bs-tertiary-bg);
+    color: inherit;
+    outline: none;
+}
+
+/* Tärningsslagen under ett inlägg (B42). */
+.post-rolls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    list-style: none;
+    margin: 0.5rem 0 0;
+    max-width: 72ch;
+    padding: 0;
+}
+
+.post-roll {
+    align-items: center;
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    padding: 0.2rem 0.5rem;
+}
+
+.post-rolls-pending .post-roll {
+    border-style: dashed;
+}
+
+.post-roll .roll-label {
+    font-weight: 600;
+}
+
+.post-roll .roll-notation {
+    color: var(--bs-secondary-color);
+    font-family: var(--bs-font-monospace);
+    font-size: 0.9em;
+}
+
+.post-roll .roll-mode {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 1rem;
+    color: var(--bs-secondary-color);
+    font-size: 0.75em;
+    padding: 0 0.4rem;
+}
+
+.post-roll .dice-values {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+}
+
+.post-roll .dice-value {
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.25rem;
+    font-variant-numeric: tabular-nums;
+    min-width: 1.6rem;
+    padding: 0 0.25rem;
+    text-align: center;
+}
+
+.post-roll .dice-dropped {
+    color: var(--bs-secondary-color);
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+
+.post-roll .dice-max {
+    border-color: var(--bs-success);
+    color: var(--bs-success);
+    font-weight: 700;
+}
+
+.post-roll .dice-min {
+    border-color: var(--bs-danger);
+    color: var(--bs-danger);
+    font-weight: 700;
+}
+
+.post-roll .dice-total {
+    font-size: 1.05em;
+    font-variant-numeric: tabular-nums;
+}

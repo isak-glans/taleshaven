@@ -1,0 +1,51 @@
+@using Taleshaven.Core.Dice
+
+@* Tärningsslagen under ett inlägg (B42): beskrivning, formel, tärningarna och summan. Med fördel eller nackdel visas
+   båda tärningarna och den som inte räknas är överstruken. Stilarna ligger i post-content.css. *@
+
+@if (Rolls.Count > 0)
+{
+    <ul class="post-rolls" aria-label="Dice rolls">
+        @foreach (var roll in Rolls)
+        {
+            var kept = roll.KeptIndex;
+            <li class="post-roll" title="@PostHtml.Describe(roll)">
+                <span aria-hidden="true">🎲</span>
+                @if (roll.Label is not null)
+                {
+                    <span class="roll-label">@roll.Label</span>
+                }
+                <span class="roll-notation">@roll.Notation</span>
+                @if (roll.Mode != DiceMode.Normal)
+                {
+                    <span class="roll-mode">@PostHtml.ModeText(roll.Mode)</span>
+                }
+                <span class="dice-values">
+                    @for (var i = 0; i < roll.Results.Count; i++)
+                    {
+                        var value = roll.Results[i];
+                        var dropped = kept is not null && i != kept;
+                        <span class="dice-value @(dropped ? "dice-dropped" : CriticalClass(roll, value))">@value</span>
+                    }
+                </span>
+                @if (roll.Modifier != 0)
+                {
+                    <span class="roll-modifier">@(roll.Modifier > 0 ? "+" : "−") @Math.Abs(roll.Modifier)</span>
+                }
+                <span class="roll-equals">=</span>
+                <strong class="dice-total">@roll.Total</strong>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<DiceRollView> Rolls { get; set; } = [];
+
+    // En naturlig 20 eller 1 på en ensam d20 markeras (T-4); med fördel eller nackdel gäller det tärningen som räknas.
+    private static string CriticalClass(DiceRollView roll, int value) =>
+        roll.Sides == 20 && (roll.Results.Count == 1 || roll.Mode != DiceMode.Normal) && value is 20 or 1
+            ? value == 20 ? "dice-max" : "dice-min"
+            : "";
+}

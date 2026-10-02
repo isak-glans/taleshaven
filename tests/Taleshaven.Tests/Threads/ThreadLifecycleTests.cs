@@ -89,7 +89,7 @@ public class ThreadLifecycleTests
     [Fact]
     public void PostsWithRolls_AreMarked()
     {
-        Assert.True(Post.Create(3, "anna", "[dice]1d20[/dice]", Now, roller: new OneRoller()).HasRolls);
+        Assert.True(Post.Create(3, "anna", "Attack!", Now, rolls: [new RollRequest("1d20")], roller: new OneRoller()).HasRolls);
         Assert.False(Post.Create(3, "anna", "No dice.", Now).HasRolls);
     }
 

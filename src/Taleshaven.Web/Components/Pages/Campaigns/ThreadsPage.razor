@@ -1,7 +1,8 @@
 @page "/campaigns/{CampaignId:int}"
 @attribute [Authorize]
 
-@* Kampanjens startsida: trådarna (B26, B27, B37). Kompakta textrader utan bilder; aktiva trådar först. *@
+@* Kampanjens startsida: trådarna (B26, B27, B37, B41). Kompakta textrader utan bilder. Ett filter visar aktiva eller
+   avslutade trådar, 20 per sida, i GM:s ordning. *@
 
 @inject ICampaignService CampaignService
 @inject IThreadService ThreadService
@@ -21,10 +22,16 @@
     <div class="alert alert-danger py-2" role="alert">@errorMessage</div>
 }
 
-@if (canManage)
-{
-    <a class="btn btn-primary btn-sm mb-3" href="@ThreadLinks.New(CampaignId)">+ New thread</a>
-}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <nav class="nav nav-pills thread-filter" aria-label="Thread status">
+        @FilterLink(ThreadStatus.Active, "Active")
+        @FilterLink(ThreadStatus.Completed, "Completed")
+    </nav>
+    @if (canManage)
+    {
+        <a class="btn btn-primary btn-sm ms-auto" href="@ThreadLinks.New(CampaignId)">+ New thread</a>
+    }
+</div>
 
 @if (threads.Count == 0)
 {
@@ -32,15 +39,26 @@
         No threads yet.@(canManage ? " Create a thread for the first scene, and perhaps one for out-of-character talk." : " The GM hasn't started any threads.")
     </p>
 }
-
-@foreach (var group in threads.GroupBy(t => t.Status))
+else if (shown.Count == 0)
 {
-    var list = group.ToList();
-    <h2 class="h6 text-uppercase text-secondary thread-group mt-3">@(group.Key == ThreadStatus.Active ? "Active" : "Completed")</h2>
-    <ul class="list-group mb-3 thread-list">
-        @for (var i = 0; i < list.Count; i++)
+    <p class="text-secondary thread-filter-empty">
+        @if (Status == ThreadStatus.Active)
         {
-            var thread = list[i];
+            <text>No active threads. </text><a href="@ThreadLinks.Threads(CampaignId, ThreadStatus.Completed)">See the completed threads</a>
+        }
+        else
+        {
+            <text>No completed threads yet.</text>
+        }
+    </p>
+}
+else
+{
+    <ul class="list-group mb-3 thread-list">
+        @for (var i = 0; i < shown.Count; i++)
+        {
+            var thread = shown[i];
+            var position = firstIndex + i;
             <li class="list-group-item thread-row @(thread.UnreadCount > 0 ? "has-unread" : "")" data-thread-id="@thread.Id">
                 <div class="d-flex flex-wrap align-items-baseline gap-2">
                     @if (thread.UnreadCount > 0)
@@ -65,9 +83,9 @@
                             <AntiforgeryToken />
                             <input type="hidden" name="Move.ThreadId" value="@thread.Id" />
                             <button type="submit" name="Move.Direction" value="-1" class="btn btn-sm btn-outline-secondary py-0"
-                                    title="Move up" aria-label="Move @thread.Title up" disabled="@(i == 0)">↑</button>
+                                    title="Move up" aria-label="Move @thread.Title up" disabled="@(position == 0)">↑</button>
                             <button type="submit" name="Move.Direction" value="1" class="btn btn-sm btn-outline-secondary py-0"
-                                    title="Move down" aria-label="Move @thread.Title down" disabled="@(i == list.Count - 1)">↓</button>
+                                    title="Move down" aria-label="Move @thread.Title down" disabled="@(position == filtered.Count - 1)">↓</button>
                         </form>
                     }
                 </div>
@@ -86,11 +104,20 @@
             </li>
         }
     </ul>
+
+    <Pager Page="pageNumber" PageCount="pageCount" ShowLatest="false" Href="@(p => ThreadLinks.Threads(CampaignId, Status, p))" />
 }
 
 @code {
     [Parameter]
     public int CampaignId { get; set; }
+
+    /// <summary>"completed" visar de avslutade trådarna; annars visas de aktiva (B41).</summary>
+    [SupplyParameterFromQuery(Name = "status")]
+    public string? StatusQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "page")]
+    public int? PageQuery { get; set; }
 
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
@@ -102,9 +129,18 @@
     private string userId = "";
     private CampaignDetails? campaign;
     private IReadOnlyList<ThreadSummary>? threads;
+    private List<ThreadSummary> filtered = [];
+    private List<ThreadSummary> shown = [];
+    private int pageNumber = 1;
+    private int pageCount = 1;
+    private int firstIndex;
     private bool canManage;
     private string? errorMessage;
     private DateTimeOffset now;
+
+    private ThreadStatus Status => string.Equals(StatusQuery, "completed", StringComparison.OrdinalIgnoreCase)
+        ? ThreadStatus.Completed
+        : ThreadStatus.Active;
 
     protected override async Task OnInitializedAsync()
     {
@@ -120,6 +156,28 @@
 
         canManage = CampaignPermissions.CanManageThreads(campaign.ViewerRole);
         threads = await ThreadService.GetThreadsAsync(CampaignId, userId);
+
+        filtered = [.. threads.Where(t => t.Status == Status)];
+        pageCount = Paging.PageCount(filtered.Count, ThreadLimits.ThreadsPerPage);
+        pageNumber = Paging.Clamp(PageQuery ?? 1, pageCount);
+        firstIndex = (pageNumber - 1) * ThreadLimits.ThreadsPerPage;
+        shown = [.. filtered.Skip(firstIndex).Take(ThreadLimits.ThreadsPerPage)];
+    }
+
+    // Filtret visar antalet trådar och hur många olästa inlägg som finns bland dem, så att inget missas i det andra filtret.
+    private RenderFragment FilterLink(ThreadStatus status, string text)
+    {
+        var count = threads!.Count(t => t.Status == status);
+        var unread = threads!.Where(t => t.Status == status).Sum(t => t.UnreadCount);
+        var current = status == Status;
+        return @<a class="nav-link py-1 px-3 @(current ? "active" : "")" href="@ThreadLinks.Threads(CampaignId, status)"
+                   aria-current="@(current ? "page" : null)" data-filter="@status.ToString().ToLowerInvariant()">
+            @text <span class="thread-filter-count">@count</span>
+            @if (unread > 0)
+            {
+                <span class="badge rounded-pill text-bg-danger ms-1 thread-filter-unread">@UnreadDisplay.Format(unread) new</span>
+            }
+        </a>;
     }
 
     private async Task MoveAsync()
@@ -137,7 +195,7 @@
             return;
         }
 
-        NavigationManager.NavigateTo(ThreadLinks.Threads(CampaignId));
+        NavigationManager.NavigateTo(ThreadLinks.Threads(CampaignId, Status, pageNumber));
     }
 
     private sealed class MoveModel

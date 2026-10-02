@@ -11,13 +11,13 @@ public class Post
     public int ThreadId { get; private set; }
     public string AuthorId { get; private set; } = "";
 
-    /// <summary>Inläggets text i Markdown, med tärningsslagen som referenser <c>[dice:N]</c> (B31). Renderas och saneras vid visning.</summary>
+    /// <summary>Inläggets text i Markdown. Renderas och saneras vid visning. Får vara tom om inlägget har tärningsslag (B42).</summary>
     public string Content { get; private set; } = "";
 
     /// <summary>Karaktären inlägget är skrivet som (Story-trådar), eller null om det är skrivet som användaren själv (B29).</summary>
     public int? CharacterId { get; private set; }
 
-    /// <summary>Tärningsslagen i texten (B31), i samma ordning som referenserna <c>[dice:1]</c>, <c>[dice:2]</c> …</summary>
+    /// <summary>Tärningsslagen (B42) i den ordning skribenten lade till dem. De visas som en lista under texten.</summary>
     public List<DiceRoll> Rolls { get; private set; } = [];
 
     /// <summary>Inlägget som det här svarar på (B30), eller null.</summary>
@@ -38,26 +38,26 @@ public class Post
 
     public bool IsDeleted => DeletedAt is not null;
 
-    /// <summary>Inlägg med tärningsslag kan bara tas bort av GM (B31).</summary>
+    /// <summary>Inlägg med tärningsslag kan bara tas bort av GM (B31, B42).</summary>
     public bool HasRolls => Rolls.Count > 0;
 
     /// <summary>
-    /// Skapar ett inlägg. Taggar som <c>[dice]1d20+3[/dice]</c> slås här med <paramref name="roller"/> (B31);
-    /// utan tärningsslagare får texten inte innehålla taggar.
+    /// Skapar ett inlägg. Slagen i <paramref name="rolls"/> slås här med <paramref name="roller"/> (B42), alltså på
+    /// servern när inlägget publiceras. Ett inlägg med slag får sakna text.
     /// </summary>
     public static Post Create(int threadId, string authorId, string? content, DateTimeOffset now,
-        int? characterId = null, long? replyToPostId = null, IDiceRoller? roller = null)
+        int? characterId = null, long? replyToPostId = null, IReadOnlyList<RollRequest>? rolls = null, IDiceRoller? roller = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(authorId);
 
-        var text = ValidateContent(content);
-        List<DiceRoll> rolls = [];
-        if (InlineDice.ContainsTags(text))
-        {
-            if (roller is null)
-                throw new InvalidOperationException("Inlägget innehåller tärningar men ingen tärningsslagare angavs.");
-            (text, rolls) = InlineDice.RollAll(text, roller);
-        }
+        rolls ??= [];
+        if (rolls.Count > ThreadLimits.MaxRollsPerPost)
+            throw new CampaignRuleException($"A post can have at most {ThreadLimits.MaxRollsPerPost} dice rolls.");
+        if (rolls.Count > 0 && roller is null)
+            throw new InvalidOperationException("Inlägget har tärningsslag men ingen tärningsslagare angavs.");
+
+        var text = ValidateContent(content, allowEmpty: rolls.Count > 0);
+        var rolled = rolls.Select(request => DiceRoll.Roll(request, roller!)).ToList();
 
         return new Post
         {
@@ -66,22 +66,21 @@ public class Post
             Content = text,
             CharacterId = characterId,
             ReplyToPostId = replyToPostId,
-            Rolls = rolls,
+            Rolls = rolled,
             CreatedAt = now,
         };
     }
 
     /// <summary>
     /// Byter inläggets text. Returnerar den tidigare versionen som ska sparas som historik (F6).
-    /// Tärningsslag kan varken tas bort eller läggas till vid redigering (B31).
+    /// Bara texten ändras; tärningsslagen kan varken ändras, tas bort eller läggas till (B31, B42).
     /// </summary>
     public PostRevision Edit(string? content, DateTimeOffset now)
     {
         if (IsDeleted)
             throw new CampaignRuleException("A deleted post can't be edited.");
 
-        var text = ValidateContent(content);
-        InlineDice.EnsureValidEdit(text, Rolls.Count);
+        var text = ValidateContent(content, allowEmpty: HasRolls);
 
         var revision = new PostRevision(Id, Content, EditedAt ?? CreatedAt, now);
         Content = text;
@@ -100,10 +99,10 @@ public class Post
         DeletedById = deletedById;
     }
 
-    private static string ValidateContent(string? content)
+    private static string ValidateContent(string? content, bool allowEmpty)
     {
         var text = content?.Trim() ?? "";
-        if (text.Length == 0)
+        if (text.Length == 0 && !allowEmpty)
             throw new CampaignRuleException("The post is empty.");
         if (text.Length > ThreadLimits.PostMaxLength)
             throw new CampaignRuleException($"The post can be at most {ThreadLimits.PostMaxLength} characters.");
