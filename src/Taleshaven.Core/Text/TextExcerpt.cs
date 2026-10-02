@@ -21,7 +21,7 @@ public static partial class TextExcerpt
     }
 
     // Tärningsreferenser, rubrik- och citattecken i radbörjan samt betoning och kod.
-    [GeneratedRegex(@"\[dice:\d+\]|\[/?dice\]|^\s{0,3}(#{1,6}|>)\s?|[*_`~]", RegexOptions.Multiline)]
+    [GeneratedRegex(@"\[dice:\d+\]|\[/?dice\]|\[/?ooc\]|^\s{0,3}(#{1,6}|>)\s?|[*_`~]", RegexOptions.Multiline)]
     private static partial Regex MarkdownSymbols();
 
     [GeneratedRegex(@"\s+")]

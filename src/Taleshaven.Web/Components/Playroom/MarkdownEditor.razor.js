@@ -104,6 +104,12 @@ function applyFormat(textarea, action) {
         replace(textarea, start, end, marker + inner + marker, start + marker.length, start + marker.length + inner.length);
     };
 
+    // Taggar runt markeringen (eller en platshållare som blir markerad), t.ex. [dice]1d20[/dice].
+    const wrapTags = (open, close, placeholder) => {
+        const inner = selected || placeholder;
+        replace(textarea, start, end, open + inner + close, start + open.length, start + open.length + inner.length);
+    };
+
     const prefixLines = prefixFor => {
         const lineStart = value.lastIndexOf('\n', start - 1) + 1;
         const result = value.slice(lineStart, end).split('\n').map((line, i) => prefixFor(i) + line).join('\n');
@@ -111,8 +117,10 @@ function applyFormat(textarea, action) {
     };
 
     switch (action) {
-        case 'bold': wrap('**', 'fet text'); break;
-        case 'italic': wrap('*', 'kursiv text'); break;
+        case 'bold': wrap('**', 'bold text'); break;
+        case 'italic': wrap('*', 'italic text'); break;
+        case 'dice': wrapTags('[dice]', '[/dice]', '1d20'); break;
+        case 'ooc': wrapTags('[ooc]', '[/ooc]', 'out of character'); break;
         case 'heading': prefixLines(() => '### '); break;
         case 'ul': prefixLines(() => '- '); break;
         case 'ol': prefixLines(i => `${i + 1}. `); break;

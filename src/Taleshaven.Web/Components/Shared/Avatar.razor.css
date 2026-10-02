@@ -20,3 +20,8 @@
     justify-content: center;
     overflow: hidden;
 }
+
+/* Stående porträtt (B35). De kvadratiska biblioteksbilderna beskärs lite i kanterna. */
+.avatar-portrait {
+    border-radius: 0.5rem;
+}

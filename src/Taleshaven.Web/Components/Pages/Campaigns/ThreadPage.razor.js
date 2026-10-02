@@ -11,3 +11,13 @@ export function scrollToElement(id) {
 export function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'instant' });
 }
+
+// Kopierar en fast l?nk till ett inl?gg. Returnerar false om webbl?saren inte till?ter det.
+export async function copyText(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch {
+        return false;
+    }
+}

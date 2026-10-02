@@ -8,19 +8,19 @@ public class PagingTests
     [Theory]
     [InlineData(0, 1)]
     [InlineData(1, 1)]
-    [InlineData(25, 1)]
-    [InlineData(26, 2)]
-    [InlineData(250, 10)]
-    public void PageCount_Uses25PostsPerPage(int posts, int expected)
+    [InlineData(20, 1)]
+    [InlineData(21, 2)]
+    [InlineData(250, 13)]
+    public void PageCount_Uses20PostsPerPage(int posts, int expected)
     {
         Assert.Equal(expected, Paging.PageCount(posts));
     }
 
     [Theory]
     [InlineData(1, 1)]
-    [InlineData(25, 1)]
-    [InlineData(26, 2)]
-    [InlineData(51, 3)]
+    [InlineData(20, 1)]
+    [InlineData(21, 2)]
+    [InlineData(41, 3)]
     public void PageOf_FindsThePageOfAPost(int position, int expected)
     {
         Assert.Equal(expected, Paging.PageOf(position));

@@ -32,3 +32,39 @@
 .md-preview {
     min-height: 9.5rem;
 }
+
+/* Text utanför rollspelet i ett inlägg (B36): [ooc]…[/ooc]. */
+.post-content .ooc-text,
+.post-content .ooc-block {
+    color: var(--bs-secondary-color);
+    font-style: italic;
+}
+
+.post-content .ooc-block {
+    background: var(--bs-tertiary-bg);
+    border-left: 3px solid var(--bs-secondary-border-subtle, var(--bs-border-color));
+    border-radius: 0.25rem;
+    margin: 0.25rem 0 0.75rem;
+    padding: 0.35rem 0.75rem;
+}
+
+.post-content .ooc-block p:last-child {
+    margin-bottom: 0;
+}
+
+.post-content .ooc-label {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.25rem;
+    font-size: 0.7em;
+    font-style: normal;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-right: 0.25rem;
+    padding: 0 0.3rem;
+    vertical-align: 0.1em;
+}
+
+.post-content .ooc-block .ooc-label {
+    display: inline-block;
+    margin-bottom: 0.2rem;
+}

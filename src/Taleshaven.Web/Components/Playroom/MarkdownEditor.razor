@@ -15,6 +15,15 @@
         <button type="button" class="btn btn-sm btn-outline-secondary" data-md="ol" title="Numbered list" disabled="@preview">1. List</button>
         <button type="button" class="btn btn-sm btn-outline-secondary" data-md="quote" title="Quote" disabled="@preview">Quote</button>
         <button type="button" class="btn btn-sm btn-outline-secondary" data-md="link" title="Link" disabled="@preview">Link</button>
+        @* Tärningar och OOC i trådarnas inlägg (B31, B36). *@
+        @if (ShowDiceButton)
+        {
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-md="dice" title="Dice roll: [dice]1d20+3[/dice], rolled when you post" disabled="@preview">🎲 Dice</button>
+        }
+        @if (ShowOocButton)
+        {
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-md="ooc" title="Out of character: [ooc]…[/ooc]" disabled="@preview">OOC</button>
+        }
         <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" @onclick="TogglePreview" disabled="@(!interactive)">
             @(preview ? "Edit" : "Preview")
         </button>
@@ -100,6 +109,14 @@
     /// <summary>Ersätter standardtipset om kortkommando, t.ex. "Ctrl+Enter sparar".</summary>
     [Parameter]
     public string? ShortcutHint { get; set; }
+
+    /// <summary>Knapp som lägger [dice]…[/dice] runt markeringen (B31). Bara för nya inlägg; slag görs när inlägget publiceras.</summary>
+    [Parameter]
+    public bool ShowDiceButton { get; set; }
+
+    /// <summary>Knapp som lägger [ooc]…[/ooc] runt markeringen (B36).</summary>
+    [Parameter]
+    public bool ShowOocButton { get; set; }
 
     /// <summary>Egen rendering av förhandsgranskningen, t.ex. för att visa tärningar som "rolls when posted" (B31).</summary>
     [Parameter]

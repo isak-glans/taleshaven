@@ -1,5 +1,18 @@
 .thread-pager {
-    padding-top: 0.75rem;
+    padding-top: 0.5rem;
+}
+
+.pager-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: space-between;
+}
+
+.pager-numbers {
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 /* Tips om tangenterna visas bara där det finns ett tangentbord (inte på pekskärmar). */

@@ -8,14 +8,14 @@ using Taleshaven.Core.Threads;
 namespace Taleshaven.Web.Components.Playroom;
 
 /// <summary>
-/// Renderar inläggstext till sanerad HTML och sätter in tärningsslagen där de står i texten (B31).
+/// Renderar inläggstext till sanerad HTML, markerar OOC-text (B36) och sätter in tärningsslagen där de står i texten (B31).
 /// Slagens HTML byggs här av sparade siffror och kodas, så den går inte att påverka via inläggets text.
 /// </summary>
 public static class PostHtml
 {
     public static MarkupString Render(IMarkdownRenderer markdown, string content, IReadOnlyList<DiceRollView> rolls)
     {
-        var html = markdown.ToSafeHtml(content);
+        var html = OocMarkup.Apply(markdown.ToSafeHtml(content));
         return new MarkupString(InlineDice.ReplaceReferences(html, rolls.Count, number => Roll(rolls[number - 1])));
     }
 
@@ -24,7 +24,7 @@ public static class PostHtml
     /// </summary>
     public static MarkupString Preview(IMarkdownRenderer markdown, string content, IReadOnlyList<DiceRollView>? rolls = null)
     {
-        var html = markdown.ToSafeHtml(content);
+        var html = OocMarkup.Apply(markdown.ToSafeHtml(content));
         html = InlineDice.ReplaceTags(html, notation =>
             $"""<span class="dice-inline dice-pending">🎲 <strong>{WebUtility.HtmlEncode(notation)}</strong> <em>rolls when posted</em></span>""");
         rolls ??= [];

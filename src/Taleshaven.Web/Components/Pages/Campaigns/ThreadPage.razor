@@ -29,45 +29,60 @@
 
 <CampaignHeader @ref="header" Campaign="campaign" Active="CampaignTab.Threads" />
 
-<div class="thread-head mb-2">
+<div class="thread-head mb-3">
     <p class="small mb-1"><a href="@ThreadLinks.Threads(CampaignId)">← Threads</a></p>
-    <div class="d-flex flex-wrap align-items-center gap-2">
-        <h2 class="h4 mb-0 thread-title">@thread.Title</h2>
-        <span class="badge @(thread.Kind == ThreadKind.Story ? "text-bg-primary" : "text-bg-secondary")">@(thread.Kind == ThreadKind.Story ? "Story" : "Discussion")</span>
-        <span class="badge @(thread.Status == ThreadStatus.Active ? "text-bg-success" : "text-bg-light border") thread-status">@(thread.Status == ThreadStatus.Active ? "Active" : "Completed")</span>
+    <div class="d-flex flex-wrap align-items-start gap-2">
+        <div class="d-flex flex-wrap align-items-center gap-2 me-auto">
+            <h2 class="h4 mb-0 thread-title">@thread.Title</h2>
+            <span class="badge rounded-pill @(thread.Kind == ThreadKind.Story ? "text-bg-primary" : "text-bg-secondary")">@(thread.Kind == ThreadKind.Story ? "Story" : "Discussion")</span>
+            <span class="badge rounded-pill @(thread.Status == ThreadStatus.Active ? "text-bg-success" : "text-bg-light border") thread-status">@(thread.Status == ThreadStatus.Active ? "Active" : "Completed")</span>
+        </div>
         @if (thread.CanManage)
         {
-            <div class="ms-auto d-flex flex-wrap gap-1 thread-actions">
-                <a class="btn btn-sm btn-outline-secondary" href="@ThreadLinks.Edit(CampaignId, ThreadId)">Edit thread</a>
+            @* Den vanligaste åtgärden syns; resten ligger i "…"-menyn (B35). *@
+            <div class="d-flex gap-2 thread-actions">
                 @if (thread.Status == ThreadStatus.Active)
                 {
-                    <a class="btn btn-sm btn-outline-primary" href="@ThreadLinks.Complete(CampaignId, ThreadId)">Complete thread</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="@ThreadLinks.Complete(CampaignId, ThreadId)"><Icon Name="check-circle" /> Complete thread</a>
                 }
-                else
-                {
-                    @if (thread.Kind == ThreadKind.Story)
+                <div class="menu-anchor">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" title="More" aria-label="More thread actions"
+                            aria-expanded="@(openMenu == "thread" ? "true" : "false")" @onclick="@(() => ToggleMenu("thread"))">
+                        <Icon Name="three-dots" />
+                    </button>
+                    @if (openMenu == "thread")
                     {
-                        <a class="btn btn-sm btn-outline-secondary" href="@ThreadLinks.Chronicle(CampaignId, ThreadId)">@(thread.Chronicle is null ? "Write chronicle" : "Edit chronicle")</a>
+                        <div class="menu-backdrop" @onclick="CloseMenu"></div>
+                        <div class="action-menu border rounded shadow-sm" role="menu">
+                            <a class="action-menu-item" role="menuitem" href="@ThreadLinks.Edit(CampaignId, ThreadId)"><Icon Name="pencil" /> Edit thread</a>
+                            @if (thread.Kind == ThreadKind.Story && (thread.Status == ThreadStatus.Completed || thread.Chronicle is not null))
+                            {
+                                <a class="action-menu-item" role="menuitem" href="@ThreadLinks.Chronicle(CampaignId, ThreadId)"><Icon Name="pencil" /> @(thread.Chronicle is null ? "Write chronicle" : "Edit chronicle")</a>
+                            }
+                            @if (thread.Status == ThreadStatus.Completed)
+                            {
+                                <button type="button" class="action-menu-item" role="menuitem" @onclick="ReopenAsync"><Icon Name="arrow-clockwise" /> Reopen</button>
+                            }
+                        </div>
                     }
-                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ReopenAsync">Reopen</button>
-                }
+                </div>
             </div>
         }
     </div>
-    <div class="small text-secondary mt-1">
-        @thread.PostCount @(thread.PostCount == 1 ? "post" : "posts") · @thread.ParticipantCount @(thread.ParticipantCount == 1 ? "participant" : "participants")
+    <div class="d-flex flex-wrap align-items-center gap-3 small text-secondary mt-2 thread-meta">
+        <span><Icon Name="chat" /> @thread.PostCount @(thread.PostCount == 1 ? "post" : "posts")</span>
+        <span><Icon Name="people" /> @thread.ParticipantCount @(thread.ParticipantCount == 1 ? "participant" : "participants")</span>
         @if (firstUnreadId is { } unreadId)
         {
-            <text> · </text><a href="@ThreadLinks.Post(CampaignId, ThreadId, unreadId)">First unread</a>
+            <a href="@ThreadLinks.Post(CampaignId, ThreadId, unreadId)">First unread</a>
         }
-        · <a href="@ThreadLinks.Latest(CampaignId, ThreadId)">Latest</a>
+        <a href="@ThreadLinks.Latest(CampaignId, ThreadId)">Latest</a>
     </div>
     @if (actionError is not null)
     {
         <div class="alert alert-danger py-2 mt-2 mb-0" role="alert">@actionError</div>
     }
 </div>
-
 @* Krönikan ersätter introduktionen när en Story-tråd är avslutad (B33); introduktionen finns kvar under Thread info. *@
 @if (ShowChronicle)
 {
@@ -165,14 +180,9 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
                     Create a character under <a href="campaigns/@CampaignId/characters">Characters</a> to post as it.
                 </span>
             }
-            <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" aria-expanded="@showDice" @onclick="() => showDice = !showDice">🎲 Dice</button>
         </div>
-        @if (showDice)
-        {
-            <DicePanel OnInsert="InsertAsync" />
-        }
         <MarkdownEditor @ref="composer" MaxLength="ThreadLimits.PostMaxLength" DraftKey="@($"thread-{ThreadId}")" OnSubmit="SubmitAsync"
-                        SubmitText="Post" Label="New post" Placeholder="Write your post…" Rows="5"
+                        SubmitText="Post" Label="New post" Placeholder="Write your post…" Rows="5" ShowDiceButton="true" ShowOocButton="true"
                         RenderPreview="@(text => PostHtml.Preview(Markdown, text))" />
     }
 </div>
@@ -213,7 +223,9 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
     private PostReference? replyTo;
     private long? editingPostId;
     private long? confirmDeleteId;
-    private bool showDice;
+    private string? openMenu;
+    private long? copiedPostId;
+    private DateTimeOffset now = DateTimeOffset.UtcNow;
     private string? actionError;
     private int newPostsElsewhere;
     private string? scrollTarget;
@@ -284,6 +296,9 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
         }
 
         page = await ThreadService.GetPostsPageAsync(ThreadId, target, userId);
+        now = DateTimeOffset.UtcNow;
+        openMenu = null;
+        copiedPostId = null;
         posts.Clear();
         posts.AddRange(page.Posts);
         newPostsElsewhere = 0;
@@ -381,7 +396,6 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
         }
 
         replyTo = null;
-        showDice = false;
         Notifier.NotifyPostCreated(CampaignId, ThreadId);
 
         // Karaktären flyttar upp bland "Recently used" i väljaren (B17).
@@ -412,11 +426,6 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
         await MarkReadAsync();
     }
 
-    private async Task InsertAsync(string text)
-    {
-        if (composer is not null)
-            await composer.InsertAsync(text);
-    }
 
     private async Task ReplyAsync(PostItem post)
     {
@@ -581,8 +590,22 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
         }
     }
 
+    private void ToggleMenu(string key) => openMenu = openMenu == key ? null : key;
+
+    private void CloseMenu() => openMenu = null;
+
+    private async Task CopyLinkAsync(PostItem post)
+    {
+        openMenu = null;
+        if (module is null)
+            return;
+
+        var url = NavigationManager.ToAbsoluteUri(ThreadLinks.Post(CampaignId, ThreadId, post.Id)).ToString();
+        copiedPostId = await module.InvokeAsync<bool>("copyText", url) ? post.Id : null;
+    }
+
     private RenderFragment PostView(PostItem post) =>
-        @<article id="post-@post.Id" class="thread-post @(post.AuthorIsGameMaster ? "post-gm" : "") @(post.Id == PostQuery ? "post-target" : "")">
+        @<article id="post-@post.Id" class="thread-post @(post.AuthorIsGameMaster ? "post-gm" : "") @(post.Id == PostQuery ? "post-target" : "") @(post.IsDeleted ? "post-is-deleted" : "")">
             <div class="post-avatar">
                 @if (post.IsDeleted)
                 {
@@ -590,12 +613,12 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
                 }
                 else if (post.Character is { } character)
                 {
-                    <Avatar Name="@character.Name" ImageUrl="@character.AvatarUrl" ColorKey="@($"character-{character.Id}")"
+                    <Avatar Name="@character.Name" ImageUrl="@character.AvatarUrl" ColorKey="@($"character-{character.Id}")" Size="56"
                             Silhouette="@(character.IsHidden && campaign!.ViewerRole != CampaignRole.GameMaster)" />
                 }
                 else
                 {
-                    <Avatar Name="@post.AuthorName" ColorKey="@post.AuthorId" />
+                    <Avatar Name="@post.AuthorName" ColorKey="@post.AuthorId" Size="56" />
                 }
             </div>
             <div class="post-body">
@@ -609,10 +632,10 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
                         <strong class="post-author">@(post.Character?.Name ?? post.AuthorName)</strong>
                         @if (post.Character is { IsNpc: true } npc)
                         {
-                            <span class="badge text-bg-secondary">NPC</span>
+                            <span class="badge rounded-pill text-bg-secondary">NPC</span>
                             @if (npc.IsHidden && campaign!.ViewerRole == CampaignRole.GameMaster)
                             {
-                                <span class="badge text-bg-warning" title="Players see: @(npc.Alias ?? Character.UnknownName)">Hidden</span>
+                                <span class="badge rounded-pill text-bg-warning" title="Players see: @(npc.Alias ?? Character.UnknownName)">Hidden</span>
                             }
                         }
                         else if (post.Character is not null)
@@ -621,25 +644,47 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
                         }
                         else if (post.AuthorIsGameMaster)
                         {
-                            <span class="badge text-bg-dark">GM</span>
+                            <span class="badge rounded-pill text-bg-dark">GM</span>
                         }
                         <a class="text-secondary small post-time" href="@ThreadLinks.Post(CampaignId, ThreadId, post.Id)" title="@Dates.DateTime(post.CreatedAt)">
-                            <time datetime="@post.CreatedAt.ToString("o")">@Dates.DateTime(post.CreatedAt)</time>
+                            <time datetime="@post.CreatedAt.ToString("o")">@Dates.Relative(post.CreatedAt, now)</time>
                         </a>
                         @if (post.EditedAt is { } editedAt)
                         {
                             <span class="small text-secondary post-edited" title="Edited @Dates.DateTime(editedAt)">(edited)</span>
                         }
+                        @if (copiedPostId == post.Id)
+                        {
+                            <span class="small text-success" role="status">Link copied</span>
+                        }
+                        <div class="menu-anchor ms-auto">
+                            <button type="button" class="btn btn-sm btn-link post-menu-toggle" title="More" aria-label="More actions"
+                                    aria-expanded="@(openMenu == $"post-{post.Id}" ? "true" : "false")" @onclick="@(() => ToggleMenu($"post-{post.Id}"))">
+                                <Icon Name="three-dots" />
+                            </button>
+                            @if (openMenu == $"post-{post.Id}")
+                            {
+                                <div class="menu-backdrop" @onclick="CloseMenu"></div>
+                                <div class="action-menu border rounded shadow-sm" role="menu">
+                                    <button type="button" class="action-menu-item" role="menuitem" @onclick="() => CopyLinkAsync(post)"><Icon Name="link" /> Copy link</button>
+                                    @if (post.CanDelete)
+                                    {
+                                        <button type="button" class="action-menu-item text-danger" role="menuitem"
+                                                @onclick="() => { confirmDeleteId = post.Id; editingPostId = null; openMenu = null; }"><Icon Name="trash" /> Delete</button>
+                                    }
+                                </div>
+                            }
+                        </div>
                     </header>
                     @if (post.ReplyTo is { } reply)
                     {
-                        <div class="small text-secondary post-reply">↪ Replying to <a href="@ThreadLinks.Post(CampaignId, ThreadId, reply.PostId)">@reply.Name</a></div>
+                        <div class="small text-secondary post-reply"><Icon Name="reply" /> Replying to <a href="@ThreadLinks.Post(CampaignId, ThreadId, reply.PostId)">@reply.Name</a></div>
                     }
                     @if (editingPostId == post.Id)
                     {
                         <MarkdownEditor @key="post.Id" MaxLength="ThreadLimits.PostMaxLength" DraftKey="" InitialText="@post.Content"
                                         OnSubmit="@(content => SaveEditAsync(post.Id, content))" SubmitText="Save"
-                                        ShortcutHint="Ctrl+Enter saves" Label="Edit post" Rows="5"
+                                        ShortcutHint="Ctrl+Enter saves" Label="Edit post" Rows="5" ShowOocButton="true"
                                         RenderPreview="@(text => PostHtml.Preview(Markdown, text, post.Rolls))" />
                         <button type="button" class="btn btn-sm btn-link px-0" @onclick="() => editingPostId = null">Cancel</button>
                     }
@@ -656,19 +701,16 @@ else if (thread.Kind == ThreadKind.Story && thread.Status == ThreadStatus.Comple
                         }
                         else
                         {
-                            <div class="post-actions small">
+                            <div class="post-actions">
                                 @if (thread!.CanWrite)
                                 {
-                                    <button type="button" class="btn btn-link btn-sm p-0" @onclick="() => ReplyAsync(post)">Reply</button>
-                                    <button type="button" class="btn btn-link btn-sm p-0" @onclick="() => QuoteAsync(post)">Quote</button>
+                                    <button type="button" class="post-action" title="Reply" aria-label="Reply" @onclick="() => ReplyAsync(post)"><Icon Name="reply" /></button>
+                                    <button type="button" class="post-action" title="Quote" aria-label="Quote" @onclick="() => QuoteAsync(post)"><Icon Name="quote" /></button>
                                 }
                                 @if (post.CanEdit)
                                 {
-                                    <button type="button" class="btn btn-link btn-sm p-0" @onclick="() => { editingPostId = post.Id; confirmDeleteId = null; }">Edit</button>
-                                }
-                                @if (post.CanDelete)
-                                {
-                                    <button type="button" class="btn btn-link btn-sm p-0 text-danger" @onclick="() => { confirmDeleteId = post.Id; editingPostId = null; }">Delete</button>
+                                    <button type="button" class="post-action" title="Edit" aria-label="Edit"
+                                            @onclick="() => { editingPostId = post.Id; confirmDeleteId = null; }"><Icon Name="pencil" /></button>
                                 }
                             </div>
                         }

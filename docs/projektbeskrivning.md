@@ -59,6 +59,8 @@ Besluten nedan ersätter B1, B3, B6–B10, B13, B14, F2 (delvis), F13 och F14 n�
 | B32 | Avsluta en tråd | GM sätter en tråd till *Completed*. För en Story-tråd **uppmanas GM att skriva krönikan** i samma steg, men kan hoppa över och skriva den senare. En avslutad tråd är **skrivskyddad för spelarna**. GM kan öppna den igen om den avslutades av misstag. Discussion-trådar kan också avslutas, men har ingen krönika. |
 | B33 | Krönika per Story-tråd | Den globala krönikan tas bort. **Varje Story-tråd har en egen krönika**: ett redigerbart dokument (Markdown, högst 5 000 tecken), inte en serie inlägg. När tråden är *Completed* **visas krönikan i stället för introduktionen**. Introduktionen raderas inte utan finns kvar under trådinformationen. Bara GM skriver och redigerar krönikan i första versionen. Den visar "Last edited by …". Syftet är att en ny spelare ska kunna läsa de avslutade kapitlens krönikor ("Previously on …") och sedan gå in i den aktiva tråden, utan att läsa varje gammalt inlägg. Ersätter B1, B10, B14 och F14. |
 | B34 | Befintlig data | **Ingenting flyttas över**; det som finns är testdata. Gamla chattar och krönikekapitel tas bort, och en ny exempelkampanj skapas i trådformatet. Gamla databasfält tas bort först när den nya modellen fungerar. |
+| B35 | Trådsidans utseende (2026-09-27) | Inläggen visas som **ljusa kort** med **stående, rektangulära porträtt** (ca 64×80, rundade hörn; de kvadratiska biblioteksporträtten beskärs i visningen, initialer och siluett i samma form), namn, märkning (GM, NPC, Hidden) och **relativ tid** (exakt tid vid hovring). **20 inlägg per sida** (ändrat från 25 i B28). Åtgärderna är **små ikoner**: Reply, Quote och Edit syns, och Delete och Copy link ligger i en **"…"-meny** per inlägg. Uppe till höger syns **Complete thread**; Edit thread, Chronicle och Reopen ligger i en "…"-meny. Sidnavigeringen: Previous till vänster, sidnumren i mitten, Latest till höger. Inga flikar i tråden, och inga knappar för bilder eller emoji i skrivfältet (bilder i inlägg ligger under "Senare"). Gränssnittet är på engelska (B24). |
+| B36 | Läsbarhet, OOC och tärningsknapp (2026-09-27) | **Porträtten är runda igen**, men större: 56 px (ersätter de rektangulära i B35). Inläggstexten får en **maxbredd** (ca 72 tecken per rad) så att den blir lätt att läsa. **OOC-text i inlägg:** `[ooc]…[/ooc]` visas grå, kursiv och märkt "OOC" – mitt i ett stycke eller som ett eget block över flera stycken – så att den inte läses som in character. Verktygsraden får knapparna **🎲 Dice** och **OOC**, som lägger taggarna runt markerad text. Den separata tärningsknappen och tärningspanelen ovanför skrivfältet tas bort. Dice-knappen finns bara när man skriver ett nytt inlägg, eftersom nya slag inte görs vid redigering (B31). |
 
 ### 1.2 Arbetsförslag (ej slutligt beslutade)
 
@@ -512,6 +514,14 @@ Ordningen gör att sajten fungerar mellan stegen.
 32. ✅ Städning: chattarna, krönikefliken, `/ooc`- och `/chronicle`-adresserna, tabellen `ChronicleChapters`
     och kolumnen `Roll` är borttagna. Exempelkampanjen är omskapad i trådformatet: *Chapter 1 – Arrival in
     the fog* (avslutad, med krönika), *Chapter 2 – The empty boats* och *OOC*.
+
+### Fas 7 – Trådsidans utseende
+33. ✅ Trådsidan enligt B35: kort med rektangulära porträtt, relativ tid, ikonknappar och "…"-menyer,
+    20 inlägg per sida och sidnavigering med Previous till vänster och Latest till höger.
+34. ✅ B36: runda porträtt (56 px), maxbredd på inläggstexten, OOC-formatering med `[ooc]…[/ooc]`, knapparna
+    Dice och OOC i verktygsraden; tärningspanelen ovanför skrivfältet är borttagen.
+35. ✅ Ny exempelkampanj *The Salt Road* (GM Leif, spelare Gunnar och Freja): två kapitel (ett avslutat med krönika), OOC och
+    House rules, 125 inlägg över fem veckor med tärningsslag och OOC-text, så att flera trådar har flera sidor.
 
 ### Senare
 Social inloggning, privata meddelanden, notiser/e-postnotiser, privata

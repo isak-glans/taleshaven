@@ -1,28 +1,46 @@
-@* Sidnavigering längst ner i en tråd (B28): Previous/Next, sidnummer med … och Latest.
-   Länkarna framåt/bakåt används också av tangenterna ← → (page-keys.js). *@
+@* Sidnavigering längst ner i en tråd (B28, B35): Previous till vänster, sidnumren (med …) och Next i mitten,
+   Latest till höger. Länkarna framåt/bakåt används också av tangenterna ← → (page-keys.js). *@
 
 @if (PageCount > 1)
 {
     <nav class="thread-pager" aria-label="Pages">
-        <ul class="pagination pagination-sm justify-content-center flex-wrap mb-1">
-            @PageItem(Page - 1, "← Previous", Page > 1, prev: true)
-            @foreach (var p in Paging.Window(Page, PageCount))
+        <div class="pager-row">
+            @StepLink(Page - 1, Page > 1, prev: true)
+            <ul class="pagination pagination-sm mb-0 pager-numbers">
+                @foreach (var p in Paging.Window(Page, PageCount))
+                {
+                    if (p is { } number)
+                    {
+                        <li class="page-item @(number == Page ? "active" : "")">
+                            <a class="page-link" href="@Href(number)" aria-current="@(number == Page ? "page" : null)">@number</a>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="page-item disabled"><span class="page-link">…</span></li>
+                    }
+                }
+                <li class="page-item @(Page < PageCount ? "" : "disabled") pager-next">
+                    @if (Page < PageCount)
+                    {
+                        <a class="page-link" href="@Href(Page + 1)" data-page-next>Next <Icon Name="arrow-right" Size="12" /></a>
+                    }
+                    else
+                    {
+                        <span class="page-link">Next <Icon Name="arrow-right" Size="12" /></span>
+                    }
+                </li>
+            </ul>
+            @if (Page < PageCount)
             {
-                if (p is { } number)
-                {
-                    <li class="page-item @(number == Page ? "active" : "")">
-                        <a class="page-link" href="@Href(number)" aria-current="@(number == Page ? "page" : null)">@number</a>
-                    </li>
-                }
-                else
-                {
-                    <li class="page-item disabled"><span class="page-link">…</span></li>
-                }
+                <a class="btn btn-sm btn-outline-secondary pager-latest" href="@Href(PageCount)"><Icon Name="arrow-clockwise" Size="12" /> Latest</a>
             }
-            @PageItem(Page + 1, "Next →", Page < PageCount, next: true)
-            @PageItem(PageCount, "Latest", Page < PageCount)
-        </ul>
-        <p class="text-center text-secondary small mb-0">
+            else
+            {
+                <span class="btn btn-sm btn-outline-secondary disabled pager-latest" aria-disabled="true"><Icon Name="arrow-clockwise" Size="12" /> Latest</span>
+            }
+        </div>
+        <p class="text-center text-secondary small mb-0 mt-1">
             Page @Page of @PageCount<span class="pager-keys"> · ← → to turn pages</span>
         </p>
     </nav>
@@ -39,16 +57,16 @@
     [Parameter, EditorRequired]
     public Func<int, string> Href { get; set; } = default!;
 
-    // Inaktiva steg (t.ex. Previous på första sidan) visas som text, inte som länk.
-    private RenderFragment PageItem(int target, string label, bool enabled, bool prev = false, bool next = false) =>
-        @<li class="page-item @(enabled ? "" : "disabled")">
+    // Inaktiva steg (Previous på första sidan) visas som text, inte som länk.
+    private RenderFragment StepLink(int target, bool enabled, bool prev) =>
+        @<text>
             @if (enabled)
             {
-                <a class="page-link" href="@Href(target)" data-page-prev="@(prev ? "" : null)" data-page-next="@(next ? "" : null)">@label</a>
+                <a class="btn btn-sm btn-outline-secondary pager-previous" href="@Href(target)" data-page-prev="@(prev ? "" : null)"><Icon Name="arrow-left" Size="12" /> Previous</a>
             }
             else
             {
-                <span class="page-link">@label</span>
+                <span class="btn btn-sm btn-outline-secondary disabled pager-previous" aria-disabled="true"><Icon Name="arrow-left" Size="12" /> Previous</span>
             }
-        </li>;
+        </text>;
 }

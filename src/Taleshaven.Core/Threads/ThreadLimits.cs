@@ -12,8 +12,8 @@ public static class ThreadLimits
     /// <summary>Kolumnens storlek i databasen. Större än <see cref="PostMaxLength"/>, så att inlägg från tiden före B23 ligger kvar.</summary>
     public const int PostStorageMaxLength = 10_000;
 
-    /// <summary>Inlägg per sida i en tråd (B28).</summary>
-    public const int PostsPerPage = 25;
+    /// <summary>Inlägg per sida i en tråd (B35, ändrat från 25 i B28).</summary>
+    public const int PostsPerPage = 20;
 
     /// <summary>Högst så många tärningsslag i ett inlägg (B31).</summary>
     public const int MaxRollsPerPost = 10;
