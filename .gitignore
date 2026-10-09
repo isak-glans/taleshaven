@@ -484,8 +484,7 @@ $RECYCLE.BIN/
 # Uppladdade filer (karaktärsbilder) under utveckling
 App_Data/
 
-# Bildbiblioteket (B64): källarken, översiktsarken och de utklippta bilderna versionshanteras inte; bara taggfilerna
-# i assets/sources/ gör det.
+# Källarken (B64, B65) och inkorgen för nya bilder versionshanteras inte; bilderna läggs in i biblioteket när appen
+# startar i utvecklingsläge.
 assets/**/*.png
-assets/portraits/
-assets/icons/
+assets/new_images/

@@ -68,17 +68,20 @@ public class PortraitTests
         Assert.Equal("Egen bild, CC BY 4.0", portrait.Source);
         Assert.Equal("anna", portrait.UploadedById);
         Assert.Equal(ImageKind.Portrait, portrait.Kind);
-        Assert.Null(portrait.ImportKey);
+        Assert.Null(portrait.ContentHash);
         Assert.Equal(Now, portrait.CreatedAt);
     }
 
     [Fact]
-    public void Create_KeepsImportKey()
+    public void Create_KeepsContentHashAndAllowsNoUploader()
     {
-        var icon = Portrait.Create("abc.webp", "anna", ImageKind.Icon, "#hp", null, Now, "icons/general_icons_1/1.1");
+        var hash = new string('a', Portrait.ContentHashLength);
+        var icon = Portrait.Create("abc.webp", null, ImageKind.Icon, "#hp", null, Now, hash);
 
         Assert.Equal(ImageKind.Icon, icon.Kind);
-        Assert.Equal("icons/general_icons_1/1.1", icon.ImportKey);
+        Assert.Equal(hash, icon.ContentHash);
+        Assert.Null(icon.UploadedById);
+        Assert.Throws<ArgumentException>(() => icon.SetContentHash("ABC"));
     }
 
     [Fact]

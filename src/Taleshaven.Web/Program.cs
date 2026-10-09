@@ -4,16 +4,20 @@ using Taleshaven.Core.Media;
 using Taleshaven.Infrastructure;
 using Taleshaven.Infrastructure.Data;
 using Taleshaven.Infrastructure.Identity;
+using Taleshaven.Infrastructure.Media;
 using Taleshaven.Infrastructure.Portraits;
 using Taleshaven.Web;
 using Taleshaven.Web.Components;
 using Taleshaven.Web.Components.Account;
 
-// "images …" kör bildimporten (B64) i stället för webbplatsen, med samma inställningar (databas, bildmapp, administratörer).
-var imageCommand = args is ["images", ..] ? args[1..] : null;
-var builder = WebApplication.CreateBuilder(imageCommand is null ? args : []);
-if (imageCommand is not null)
-    builder.Logging.ClearProviders();
+// "images cut …" klipper ut ett källark till inkorgen (B65) i stället för att starta webbplatsen.
+if (args is ["images", .. var imageArgs])
+{
+    Environment.ExitCode = SheetCommand.Run(imageArgs, Console.Out);
+    return;
+}
+
+var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -36,7 +40,8 @@ var connectionString = builder.Configuration.GetConnectionString("Taleshaven")
 var mediaPath = Path.Combine(builder.Environment.ContentRootPath, builder.Configuration["Storage:MediaPath"] ?? "App_Data/media");
 // Sajtens första administratörer anges med e-postadress (B18); därefter delar de ut roller på /admin/roles.
 var adminEmails = builder.Configuration.GetSection("Admin:Emails").Get<string[]>() ?? [];
-builder.Services.AddTaleshavenInfrastructure(connectionString, mediaPath, adminEmails);
+// Bildbibliotekets manifest skrivs bara i utvecklingsmiljön; i produktion läses det bara vid start (B65).
+builder.Services.AddTaleshavenInfrastructure(connectionString, mediaPath, adminEmails, writeImageManifest: builder.Environment.IsDevelopment());
 builder.Services.AddSingleton<PostNotifier>();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
@@ -56,20 +61,27 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 var app = builder.Build();
 
-if (imageCommand is not null)
-{
-    if (app.Environment.IsDevelopment())
-        await app.Services.MigrateTaleshavenDatabaseAsync();
-    Environment.ExitCode = await ImageLibraryImport.RunAsync(app.Services, imageCommand, adminEmails, Console.Out);
-    return;
-}
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     await app.Services.MigrateTaleshavenDatabaseAsync();
 }
-else
+
+// Bildbiblioteket (B65): bilder i manifestet som saknas i databasen läggs till, och i utvecklingsläge läses inkorgen
+// assets/new_images/ i repots rot. Ett fel här ska inte hindra sajten från att starta.
+try
+{
+    var inbox = app.Environment.IsDevelopment()
+        ? Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, builder.Configuration["Storage:InboxPath"] ?? "../../assets/new_images"))
+        : null;
+    await ImageLibrarySync.RunAsync(app.Services, inbox, adminEmails);
+}
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Microsoft.EntityFrameworkCore.DbUpdateException)
+{
+    app.Logger.LogError(ex, "Bildbiblioteket kunde inte synkas vid start.");
+}
+
+if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
@@ -87,8 +99,8 @@ app.MapRazorComponents<App>()
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 
-// Porträtt ur biblioteket (B19). Nyckeln är unik per uppladdning, så bilden kan cachas länge.
-app.MapGet("/media/portraits/{key}", (string key, IImageStore images, HttpContext context) =>
+// Bilder ur biblioteket (B19, B65). Nyckeln är unik per uppladdning, så bilden kan cachas länge.
+app.MapGet("/media/images/{key}", (string key, IImageStore images, HttpContext context) =>
     {
         var stream = images.OpenPortrait(key);
         if (stream is null)

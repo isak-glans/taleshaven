@@ -12,9 +12,9 @@ internal sealed class PortraitConfiguration : IEntityTypeConfiguration<Portrait>
         builder.Property(p => p.ImageKey).IsRequired().HasMaxLength(64);
         builder.Property(p => p.Source).HasMaxLength(PortraitTags.SourceMaxLength);
 
-        // Importen (B64) känner igen bilder på nyckeln; uppladdade bilder har ingen, och flera null är tillåtna.
-        builder.Property(p => p.ImportKey).HasMaxLength(Portrait.ImportKeyMaxLength);
-        builder.HasIndex(p => p.ImportKey).IsUnique();
+        // Inkorgen (B65) letar efter samma bild med kontrollsumman.
+        builder.Property(p => p.ContentHash).HasMaxLength(Portrait.ContentHashLength);
+        builder.HasIndex(p => p.ContentHash);
 
         // Taggarna lagras som en text[]-kolumn; GIN-indexet gör sökning på taggar snabb (PB-4).
         builder.Property(p => p.Tags).IsRequired();

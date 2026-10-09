@@ -11,6 +11,7 @@ internal sealed class PortraitService(
     IDbContextFactory<TaleshavenDbContext> dbFactory,
     ISiteRoleService siteRoles,
     IImageStore imageStore,
+    ImageLibraryOptions libraryOptions,
     TimeProvider timeProvider) : IPortraitService
 {
     public async Task<PortraitPage> SearchAsync(string? query, int limit, int skip = 0, ImageKind? kind = null, CancellationToken cancellationToken = default)
@@ -67,9 +68,10 @@ internal sealed class PortraitService(
         var imageKey = await imageStore.SavePortraitAsync(image, cancellationToken);
         try
         {
-            var portrait = Portrait.Create(imageKey, userId, kind, tags, source, timeProvider.GetUtcNow());
+            var portrait = Portrait.Create(imageKey, userId, kind, tags, source, timeProvider.GetUtcNow(), ImageLibrarySync.Hash(image));
             db.Portraits.Add(portrait);
             await db.SaveChangesAsync(cancellationToken);
+            await ImageLibrarySync.WriteManifestAsync(db, imageStore, libraryOptions, cancellationToken);
             return portrait.Id;
         }
         catch
@@ -88,6 +90,7 @@ internal sealed class PortraitService(
 
         portrait.Update(kind, tags, source);
         await db.SaveChangesAsync(cancellationToken);
+        await ImageLibrarySync.WriteManifestAsync(db, imageStore, libraryOptions, cancellationToken);
     }
 
     public async Task DeleteAsync(string userId, int portraitId, CancellationToken cancellationToken = default)
@@ -102,6 +105,7 @@ internal sealed class PortraitService(
         await db.SaveChangesAsync(cancellationToken);
 
         imageStore.DeletePortrait(portrait.ImageKey);
+        await ImageLibrarySync.WriteManifestAsync(db, imageStore, libraryOptions, cancellationToken);
     }
 
     private async Task EnsureCanManageAsync(string userId, CancellationToken cancellationToken)

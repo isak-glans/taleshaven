@@ -26,8 +26,10 @@ public static class DependencyInjection
 {
     /// <param name="mediaPath">Mapp där uppladdade bilder lagras (utanför wwwroot).</param>
     /// <param name="adminEmails">Sajtens första administratörer (<c>Admin:Emails</c>, B18).</param>
+    /// <param name="writeImageManifest">Om bildbibliotekets manifest skrivs om efter ändringar; bara i utvecklingsmiljön (B65).</param>
     public static IServiceCollection AddTaleshavenInfrastructure(
-        this IServiceCollection services, string connectionString, string mediaPath, IReadOnlyList<string> adminEmails)
+        this IServiceCollection services, string connectionString, string mediaPath, IReadOnlyList<string> adminEmails,
+        bool writeImageManifest = false)
     {
         // Fabriken används av tjänsterna (kortlivade contexts, säkert i Blazor Server).
         // AddDbContextFactory registrerar även TaleshavenDbContext som scoped, vilket Identity behöver.
@@ -46,7 +48,9 @@ public static class DependencyInjection
         services.AddSingleton<IMarkdownRenderer, MarkdownRenderer>();
         services.AddSingleton<IDiceRoller, CryptoDiceRoller>();
         services.AddSingleton<IImageProcessor, SkiaImageProcessor>();
+        LocalImageStore.MoveLegacyFolder(mediaPath);
         services.AddSingleton<IImageStore>(new LocalImageStore(mediaPath));
+        services.AddSingleton(new ImageLibraryOptions(writeImageManifest));
 
         return services;
     }

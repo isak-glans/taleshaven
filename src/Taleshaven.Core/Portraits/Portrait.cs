@@ -9,8 +9,8 @@ namespace Taleshaven.Core.Portraits;
 /// </summary>
 public class Portrait
 {
-    /// <summary>Längsta <see cref="ImportKey"/>, t.ex. "portraits/dwarves_1/7.8".</summary>
-    public const int ImportKeyMaxLength = 120;
+    /// <summary>Längden på <see cref="ContentHash"/>: SHA-256 som 64 hexadecimala tecken.</summary>
+    public const int ContentHashLength = 64;
 
     private Portrait() { }
 
@@ -27,31 +27,38 @@ public class Portrait
     /// <summary>Var bilden kommer ifrån och under vilken licens, t.ex. "Egen bild, CC BY 4.0". Valfritt.</summary>
     public string? Source { get; private set; }
 
-    public string UploadedById { get; private set; } = "";
+    /// <summary>Vem som lade upp bilden; null för bilder som lagts in från ett manifest (B65).</summary>
+    public string? UploadedById { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     /// <summary>
-    /// Var i ett källark bilden kommer ifrån, t.ex. "portraits/dwarves_1/7.8", för bilder som läggts in med importen (B64).
-    /// Importen känner igen bilden på nyckeln och uppdaterar taggarna i stället för att lägga till den igen. Null för
-    /// bilder som laddats upp på sidan.
+    /// SHA-256 av den sparade bilden (B65), så att samma bild inte läggs in två gånger från inkorgen. Null tills
+    /// kontrollsumman har räknats ut (bilder från före B65 får den när appen startar).
     /// </summary>
-    public string? ImportKey { get; private set; }
+    public string? ContentHash { get; private set; }
 
-    public static Portrait Create(string imageKey, string uploadedById, ImageKind kind, string? tags, string? source, DateTimeOffset now,
-        string? importKey = null)
+    public static Portrait Create(string imageKey, string? uploadedById, ImageKind kind, string? tags, string? source, DateTimeOffset now,
+        string? contentHash = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(imageKey);
-        ArgumentException.ThrowIfNullOrWhiteSpace(uploadedById);
 
         var portrait = new Portrait
         {
             ImageKey = imageKey,
             UploadedById = uploadedById,
             CreatedAt = now,
-            ImportKey = importKey,
         };
+        portrait.SetContentHash(contentHash);
         portrait.Update(kind, tags, source);
         return portrait;
+    }
+
+    public void SetContentHash(string? contentHash)
+    {
+        if (contentHash is not null && (contentHash.Length != ContentHashLength || !contentHash.All(char.IsAsciiHexDigitLower)))
+            throw new ArgumentException("Kontrollsumman ska vara SHA-256 med små hexadecimala tecken.", nameof(contentHash));
+        ContentHash = contentHash;
     }
 
     public void Update(ImageKind kind, string? tags, string? source)

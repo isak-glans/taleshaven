@@ -30,14 +30,19 @@ dotnet ef migrations add <Namn> --project src/Taleshaven.Infrastructure --startu
 
 ### Bildbiblioteket
 
-Porträtt och ikoner kan läggas in från källark, bilder med många runda motiv. Arken ligger i
-`assets/sources/portraits/` eller `assets/sources/icons/` och versionshanteras inte; taggfilerna bredvid
-(`<ark>.tags.txt`) gör det. Se B64 i projektbeskrivningen.
+Bilderna ligger i `App_Data/media/images/` tillsammans med `manifest.csv`, som skrivs om efter varje ändring.
+När appen startar läggs bilder som står i manifestet men saknas i databasen till, så en ny databas fylls i genom att
+kopiera bildmappen.
 
-```bash
-# Klipp ut ett nytt ark, skapa översiktsark och en tom taggfil att fylla i
-dotnet run --project src/Taleshaven.Web -- images preview ../../assets/sources/portraits/<ark>.png
-# Lägg in nya bilder och uppdatera taggar (kan köras om; --dry-run visar bara vad som skulle hända)
-dotnet run --project src/Taleshaven.Web -- images import --dry-run
-dotnet run --project src/Taleshaven.Web -- images import
+Nya bilder i utvecklingsmiljön: lägg dem i `assets/new_images/` med en `manifest.csv` och starta appen (se B65 i
+projektbeskrivningen).
+
 ```
+file,kind,tags,source
+goblin_chief.webp,portrait,goblin monster,Egen bild
+quest.webp,icon,quest scroll,
+```
+
+Ark med många runda bilder läggs i `assets/new_images/sheets/`; vid start klipps de ut till inkorgen, med ett
+numrerat översiktsark att tagga efter, och arket flyttas till `assets/sources/`. Manifestet i `media/images/` skrivs
+bara i utvecklingsmiljön.

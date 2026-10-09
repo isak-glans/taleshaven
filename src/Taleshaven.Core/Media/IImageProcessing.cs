@@ -31,7 +31,13 @@ public interface IImageStore
 
     void DeletePortrait(string key);
 
+    /// <summary>Bildbibliotekets manifest (B65) bredvid bilderna, eller null om det inte finns.</summary>
+    Task<string?> ReadManifestAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Skriver manifestet (B65). Filen byts ut i ett steg, så att den aldrig är halvskriven.</summary>
+    Task WriteManifestAsync(string content, CancellationToken cancellationToken = default);
+
     const string PortraitContentType = "image/webp";
 
-    static string PortraitUrl(string key) => $"media/portraits/{key}";
+    static string PortraitUrl(string key) => $"media/images/{key}";
 }

@@ -579,10 +579,13 @@ och ikoner, och alla väljer därifrån.
   `animal` och `object` (de som finns, i den ordningen), följda av de vanligaste övriga taggarna, högst 12 knappar.
 - **PB-11 Taggstandard:** engelska, små bokstäver, singular, bindestreck mellan ord. Ett porträtt får först folkslag
   eller kategori, sedan `man`/`woman`, kännetecken och roll. En ikon får först sitt namn, sedan synonymer och kategori.
-- **PB-12 Import av källark:** ett ark med många runda bilder delas upp automatiskt (rutnät av cirklar på ljus
-  bakgrund), och en taggfil anger taggarna per position (`rad.kolumn: taggar`). Importen lägger till nya bilder och
-  uppdaterar befintliga, igenkända på en importnyckel (`portraits/dwarves_1/7.8`), så den kan köras om utan dubbletter.
-  Den körs från kommandoraden av den som driftar sajten, inte från webbsidan.
+- **PB-12 Manifest:** bredvid bilderna ligger `manifest.csv` med en rad per bild (`file,kind,tags,source`), som
+  skrivs om efter varje ändring (bara i utvecklingsmiljön; i produktion läses det bara). När sajten startar läggs bilder som står i manifestet och finns som fil, men saknas i
+  databasen, till; så kan biblioteket flyttas till en ny databas genom att kopiera bildmappen.
+- **PB-13 Inkorg (bara i utvecklingsmiljön):** nya bilder läggs i en mapp tillsammans med ett manifest i samma format.
+  Vid start bearbetas och sparas varje bild som har en rad, och tas sedan bort ur mappen; en bild som redan finns
+  (samma SHA-256 efter bearbetning) läggs inte in igen. Bilder utan rad ligger kvar. Ark med många runda bilder i undermappen `sheets/`
+  delas upp automatiskt vid start (rutnät av cirklar på ljus bakgrund) till 256×256-bilder i inkorgen, som sedan taggas.
 
 ---
 
@@ -662,7 +665,7 @@ users ──< user_roles
 | post_rolls | post_id, sort_order, notation, label (null), count, sides, modifier, mode (`normal` / `advantage` / `disadvantage`), results (t.ex. `"4,18"` eller JSON), total |
 | post_revisions | id, post_id, content, written_at, replaced_at |
 | characters | id, campaign_id, owner_id, is_npc, name, portrait_id (null), sheet, sheet_url, rule_system, gm_note, is_hidden, alias, is_archived, created_at, updated_at |
-| portraits | id, image_key (filnamn), kind (portrait/icon), tags, source, import_key (unik, kan vara null), uploaded_by, created_at |
+| portraits | id, image_key (filnamn), kind (portrait/icon), tags, source, content_hash (SHA-256), uploaded_by (kan vara null), created_at |
 | read_markers | user_id, thread_id, last_read_post_id, updated_at |
 
 Kommentarer:
@@ -699,7 +702,7 @@ Kommentarer:
 | `/campaigns/{id}/players` | Spelare och ansökningar |
 | `/portraits` | Bildbiblioteket, *Image library* (manager, administratör) |
 | `/admin/roles` | Roller (administratör) |
-| `/media/portraits/{key}` | Porträttbild (inloggad) |
+| `/media/images/{key}` | Bild ur biblioteket (inloggad) |
 
 Alla ändringar görs med **POST** (aldrig GET) och följs av en omdirigering (Post/Redirect/Get), så att en omladdning
 inte skickar formuläret igen. Okända adresser och sådant man inte får se ger en vänlig 404-sida.
