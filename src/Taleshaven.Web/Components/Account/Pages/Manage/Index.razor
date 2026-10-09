@@ -17,45 +17,17 @@
 <h3>Profile</h3>
 <StatusMessage />
 
-<div class="row">
-    <div class="col-xl-6">
-        <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <input type="text" value="@username" id="username" class="form-control" placeholder="Email" disabled />
-                <label for="username" class="form-label">Email</label>
-            </div>
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.DisplayName" id="Input.DisplayName" class="form-control" placeholder="Display name" />
-                <label for="Input.DisplayName" class="form-label">Display name</label>
-                <ValidationMessage For="() => Input.DisplayName" class="text-danger" />
-            </div>
-            @* Visas på profilsidan, som andra når via namnet eller bilden i trådarna (B52). *@
-            <div class="mb-3">
-                <label for="Input.About" class="form-label">About me</label>
-                <InputTextArea @bind-Value="Input.About" id="Input.About" class="form-control" rows="6" maxlength="@UserLimits.AboutMaxLength"
-                               placeholder="A few words about yourself: favourite games, how often you post, what you enjoy in a story…" />
-                <div class="form-text">
-                    Markdown, at most @UserLimits.AboutMaxLength characters. Shown on <a href="@UserLinks.Profile(user?.Id ?? "")">your profile page</a>.
-                </div>
-                <ValidationMessage For="() => Input.About" class="text-danger" />
-            </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
-        </EditForm>
-    </div>
-</div>
-
 @* Profilbild ur porträttbiblioteket (B50). Sidan är statisk: sökningen är ett GET-formulär och valet ett vanligt
-   formulär med radioknappar, så att inloggningskakan (och bilden i menyn) kan förnyas när bilden sparas. *@
-<section class="profile-picture mt-5" id="picture">
+   formulär med radioknappar, så att inloggningskakan (och bilden i menyn) kan förnyas när bilden sparas.
+   Ett klick på en bild sparar den direkt (B54); knappen finns bara kvar för den som inte har JavaScript. *@
+<section class="profile-picture mt-3" id="picture">
     <h4>Profile picture</h4>
     <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
         <Avatar Name="@(user?.DisplayName ?? "?")" ImageUrl="@current?.Url" ColorKey="@(user?.Id ?? "")" Size="96" />
         <div>
             <p class="mb-2 text-secondary small">
                 Shown when you post without a character (and as the GM narrator), in player lists and in the menu.
-                Without a picture, your initials are shown.
+                Without a picture, your initials are shown. <strong>Click a picture below to use it</strong> – it's saved right away.
             </p>
             @if (current is not null)
             {
@@ -95,18 +67,52 @@
                 @foreach (var portrait in results.Portraits)
                 {
                     <label class="profile-picture-choice" title="@PortraitTags.Format(portrait.Tags)">
-                        <input type="radio" name="Picture.PortraitId" value="@portrait.Id" checked="@(portrait.Id == current?.PortraitId)" />
+                        <input type="radio" name="Picture.PortraitId" value="@portrait.Id" checked="@(portrait.Id == current?.PortraitId)"
+                               onchange="this.form.requestSubmit()" />
                         <img src="@portrait.Url" alt="@PortraitTags.Format(portrait.Tags)" width="80" height="80" loading="lazy" />
                     </label>
                 }
             </div>
-            <button type="submit" class="btn btn-primary mt-3">Use selected picture</button>
+            <noscript><button type="submit" class="btn btn-primary mt-3">Use selected picture</button></noscript>
         </form>
         <div class="profile-picture-pager mt-3" style="max-width: 44rem">
             <Pager Page="pageNumber" PageCount="pageCount" ShowLatest="false" Href="PageHref" />
         </div>
     }
 </section>
+
+<section class="profile-details mt-5">
+    <h4>Name and about me</h4>
+<div class="row">
+    <div class="col-xl-6">
+        <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            <div class="form-floating mb-3">
+                <input type="text" value="@username" id="username" class="form-control" placeholder="Email" disabled />
+                <label for="username" class="form-label">Email</label>
+            </div>
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.DisplayName" id="Input.DisplayName" class="form-control" placeholder="Display name" />
+                <label for="Input.DisplayName" class="form-label">Display name</label>
+                <ValidationMessage For="() => Input.DisplayName" class="text-danger" />
+            </div>
+            @* Visas på profilsidan, som andra når via namnet eller bilden i trådarna (B52). *@
+            <div class="mb-3">
+                <label for="Input.About" class="form-label">About me</label>
+                <InputTextArea @bind-Value="Input.About" id="Input.About" class="form-control" rows="6" maxlength="@UserLimits.AboutMaxLength"
+                               placeholder="A few words about yourself: favourite games, how often you post, what you enjoy in a story…" />
+                <div class="form-text">
+                    Markdown, at most @UserLimits.AboutMaxLength characters. Shown on <a href="@UserLinks.Profile(user?.Id ?? "")">your profile page</a>.
+                </div>
+                <ValidationMessage For="() => Input.About" class="text-danger" />
+            </div>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Save name and about me</button>
+        </EditForm>
+    </div>
+</div>
+</section>
+
 
 @code {
     private ApplicationUser? user;
@@ -134,8 +140,8 @@
     private int pageNumber = 1;
     private int pageCount = 1;
 
-    /// <summary>Bilder per sida i väljaren (B51).</summary>
-    private const int PageSize = 20;
+    /// <summary>Bilder per sida i väljaren (B51; 40 sedan B53).</summary>
+    private const int PageSize = 40;
 
     private ProfilePortrait? current;
     private PortraitPage? results;

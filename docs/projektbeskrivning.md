@@ -75,8 +75,10 @@ Besluten nedan ersätter B1, B3, B6–B10, B13, B14, F2 (delvis), F13 och F14 n�
 | B48 | Kompakt kampanjlista | Kampanjlistan visar en **rad per kampanj**: namn, status, taggar, olästa, GM och antal spelare, och Apply eller "Application sent". **Beskrivningen visas inte** i listan, bara under "About the campaign". Kampanjer man är GM eller spelare i ligger överst under **My campaigns**; övriga under **Other campaigns** (eller **All campaigns** om man inte är med i någon), **25 per sida**. |
 | B49 | Filter i kampanjlistan | En sökruta överst filtrerar på **namn och taggar**: varje ord ska matcha början av ett ord i namnet eller början av en tagg, och kampanjen visas om **alla** ord matchar. Filtret ligger i adressen (`/?q=horror`) och fungerar utan JavaScript; sidindelningen behåller filtret. |
 | B50 | Profilbild (2026-10-09) | Användaren väljer en **profilbild ur porträttbiblioteket** under Account › Profile; ingen egen uppladdning (B19). Väljaren visar först bilder med taggen **`#profile`** (finns inga visas hela biblioteket), och man kan söka på andra taggar eller visa alla. Bilden visas där användaren visas utan karaktär: inlägg skrivna som sig själv eller **som GM-berättare**, "Latest" i trådlistan, spelarlistan, ansökningar hos GM och i sidomenyn. Utan bild visas initialer. Tas porträttet bort ur biblioteket får användaren initialer igen (som B20), och ett borttaget konto förlorar bilden (B21). |
-| B51 | Sidor i profilbildsväljaren | Väljaren visar **20 bilder per sida** med samma sidnavigering som i trådarna (utan Latest), så att den fungerar även med hundratals bilder. Sidbytet behåller sökningen. |
+| B51 | Sidor i profilbildsväljaren | *40 per sida enligt B53.* Väljaren visar **20 bilder per sida** med samma sidnavigering som i trådarna (utan Latest), så att den fungerar även med hundratals bilder. Sidbytet behåller sökningen. |
 | B52 | Profilsida (2026-10-09) | Varje användare har en **profilsida** (`/users/{id}`) som alla inloggade kan se: profilbild, namn, **"Member since"** (när kontot skapades), **antal inlägg** (borttagna räknas inte), texten **"About me"** och kampanjerna personen är GM eller spelare i. "About me" skrivs under Account › Profile (Markdown, högst 2 000 tecken). Namn och bild för inlägg skrivna utan karaktär, spelarens namn bredvid en karaktär, namnen i spelarlistan och ansökningarna samt GM:s namn i kampanjens huvud **länkar till profilsidan**. Borttagna konton har ingen profil och länkas inte. För konton från tiden före B52 räknas skapandedatumet fram från deras tidigaste aktivitet. |
+| B53 | Profilbilder i biblioteket (2026-10-09) | **168 profilbilder** klipps ut ur tre ark i `assets/` (runda, 256×256 WebP med genomskinliga hörn) och läggs in i porträttbiblioteket med taggen `profile` och beskrivande taggar (t.ex. `fox animal`, `dragon creature`, `elf woman character`, `lantern object`). De utklippta filerna ligger i `assets/profile_images/` men versionshanteras inte. De 25 tidigare uppladdade dubbletterna tas bort. Profilbildsväljaren visar **40 bilder per sida** (ändrar B51). |
+| B54 | Tydligare profilsida (2026-10-09) | Profilbilden ligger **först** på Account › Profile, och **ett klick på en bild sparar den direkt** (utan JavaScript finns knappen *Use selected picture* kvar). Namn och About me ligger under rubriken *Name and about me* med knappen *Save name and about me*, så att det inte ser ut som att bilden kräver den knappen. Exempel-NPC:erna i *Lanterns of Greywater* får bilder ur de nya profilbilderna. |
 
 ### 1.2 Arbetsförslag (ej slutligt beslutade)
 
@@ -570,13 +572,15 @@ Ordningen gör att sajten fungerar mellan stegen.
 48. ✅ Taggar på kampanjer (B47), som `text[]`-kolumnen `Tags`. Taggreglerna är gemensamma med porträtten (`TagList`).
 49. ✅ Kompakt kampanjlista med My campaigns överst och 25 kampanjer per sida (B48), och filter på namn och taggar (B49).
 
-### Fas 11 – Profilbild och profilsida (B50–B52)
+### Fas 11 – Profilbild och profilsida (B50–B54)
 50. ✅ Profilbild ur porträttbiblioteket under Account › Profile, med `#profile` förvalt i sökningen (B50). Kolumnen
     `PortraitId` på användaren (nollställs när porträttet tas bort). Bilden ligger i inloggningskakan, så menyn visar
     den utan databasanrop; kakan förnyas när bilden sparas.
 51. ✅ 20 bilder per sida i profilbildsväljaren, med sidnavigering som behåller sökningen (B51).
 52. ✅ Profilsida med About me, Member since, antal inlägg och kampanjer, och länkar dit från namn och bilder (B52).
     Kolumnerna `About` och `CreatedAt` på användaren.
+53. ✅ 168 taggade profilbilder i biblioteket och 40 bilder per sida i väljaren (B53).
+54. ✅ Profilbilden först på profilsidan och sparas med ett klick; egen rubrik och knapp för namn och About me (B54).
 
 ### Senare
 Social inloggning, privata meddelanden, notiser/e-postnotiser, privata

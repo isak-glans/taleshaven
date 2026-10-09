@@ -483,3 +483,6 @@ $RECYCLE.BIN/
 
 # Uppladdade filer (karaktärsbilder) under utveckling
 App_Data/
+
+# Utklippta profilbilder (B53); de läggs in i porträttbiblioteket men ska inte ligga i git.
+assets/profile_images/

@@ -103,8 +103,10 @@ En arkiverad NPC kan inte väljas.
   - Medlemskap, ansökningar, roller och läspositioner raderas.
 - **KO-6 Profilbild:** användaren väljer en bild ur porträttbiblioteket (avsnitt 13) under *Mitt konto*; ingen egen
   uppladdning. Väljaren söker först på taggen **`profile`** (finns inga sådana bilder visas hela biblioteket med en
-  förklaring), och man kan söka på andra taggar eller visa alla. Valet görs med radioknappar i ett rutnät och
-  sparas med en knapp; **Remove picture** tar bort bilden. Rutnätet visar **20 bilder per sida** med sidnavigeringen
+  förklaring), och man kan söka på andra taggar eller visa alla. Valet görs med radioknappar i ett rutnät, och
+  **ett klick på en bild sparar den direkt** (en rad JavaScript skickar formuläret; utan JavaScript visas knappen
+  *Use selected picture*). Bildvalet ligger först på sidan, före namn och About me, som har en egen spara-knapp
+  (*Save name and about me*). **Remove picture** tar bort bilden. Rutnätet visar **40 bilder per sida** med sidnavigeringen
   i avsnitt 8.2 (utan *Latest*), och sidbytet behåller sökningen (`?q=elf&page=2`).
 - **KO-7 Var bilden visas:** där användaren visas utan karaktär – inlägg skrivna som sig själv eller som GM-berättare,
   "Latest" i trådlistan, spelarlistan, ansökningar hos GM och sidomenyn. Utan bild visas **initialer** i en färgad
