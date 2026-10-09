@@ -490,5 +490,7 @@ assets/items/
 assets/monsters/
 assets/conditions/
 assets/counters/
+assets/dwarves/
+assets/elves/
 # Källarken med flera bilder per ark (profilbilder, föremål, monster, ikoner, dvärgar, alver) versionshanteras inte heller.
 assets/*.png

@@ -596,6 +596,8 @@ Ordningen gör att sajten fungerar mellan stegen.
     sparas och kan bytas (B58). 96 ikoner och 77 monster utklippta och taggade.
 59. ✅ Förhandsvisning av https-bildlänkar i inlägg, bara bild, begränsad storlek och inga skript (B59).
 60. ✅ Slagens ikoner i postade inlägg (B60). 48 allmänna ikoner (HP, tillstånd m.m.) utklippta och taggade.
+    Dessutom 56 dvärgar och 56 alver (taggarna `dwarf`/`elf`, `character`, man/woman, hårfärg m.m.) som
+    karaktärsporträtt.
 
 ### Senare
 Social inloggning, privata meddelanden, notiser/e-postnotiser, privata
