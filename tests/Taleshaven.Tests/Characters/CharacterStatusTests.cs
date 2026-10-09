@@ -72,12 +72,54 @@ public class CharacterStatusTests
     {
         var ilse = Ilse();
 
-        ilse.AddSavedRoll("Rapier", "d20+5", DiceMode.Advantage, Now);
+        ilse.AddSavedRoll("Rapier", "d20+5", Now);
 
         var roll = ilse.SavedRolls.Single();
-        Assert.Equal(("Rapier", "1d20+5", DiceMode.Advantage), (roll.Label, roll.Notation, roll.Mode));
-        Assert.Throws<CampaignRuleException>(() => ilse.AddSavedRoll("Sneak Attack", "2d6", DiceMode.Advantage, Now));
-        Assert.Throws<CampaignRuleException>(() => ilse.AddSavedRoll("Odd", "1d7", DiceMode.Normal, Now));
+        Assert.Equal(("Rapier", "1d20+5"), (roll.Label, roll.Notation));
+        Assert.Throws<CampaignRuleException>(() => ilse.AddSavedRoll("Odd", "1d7", Now));
+
+        ilse.UpdateSavedRoll(roll.Uid, " Rapier (finesse) ", "1d20 + 6", Now);
+        Assert.Equal(("Rapier (finesse)", "1d20+6"), (roll.Label, roll.Notation));
+        Assert.Throws<CampaignRuleException>(() => ilse.UpdateSavedRoll(roll.Uid, "Rapier", "", Now));
+    }
+
+    [Fact]
+    public void EditingACounterChangesNameAndMaxAndLowersTheValue()
+    {
+        var ilse = Ilse();
+        var hp = ilse.AddCounter("HP", 12, 12, Now);
+
+        new CharacterStatusChange.EditCounter(hp, "Hit points", 20).ApplyTo(ilse, Now);
+        Assert.Equal(("Hit points", 12, 20), (ilse.Counters[0].Label, ilse.Counters[0].Current, ilse.Counters[0].Max));
+
+        new CharacterStatusChange.EditCounter(hp, "Hit points", 10).ApplyTo(ilse, Now);
+        Assert.Equal((10, 10), (ilse.Counters[0].Current, ilse.Counters[0].Max));
+
+        Assert.Throws<CampaignRuleException>(() => new CharacterStatusChange.EditCounter(hp, "HP", 0).ApplyTo(ilse, Now));
+    }
+
+    [Fact]
+    public void CountersAndRollsCanBeMovedButNotPastTheEnds()
+    {
+        var ilse = Ilse();
+        var hp = ilse.AddCounter("HP", 12, 12, Now);
+        var ki = ilse.AddCounter("Ki", 3, 3, Now);
+        var arrows = ilse.AddCounter("Arrows", 20, 20, Now);
+        var rapier = ilse.AddSavedRoll("Rapier", "1d20+5", Now);
+        var dagger = ilse.AddSavedRoll("Dagger", "1d20+5", Now);
+
+        new CharacterStatusChange.Move(arrows, -1).ApplyTo(ilse, Now);
+        Assert.Equal([hp, arrows, ki], ilse.Counters.Select(c => c.Uid));
+        new CharacterStatusChange.Move(hp, -1).ApplyTo(ilse, Now);
+        Assert.Equal([hp, arrows, ki], ilse.Counters.Select(c => c.Uid));
+        new CharacterStatusChange.Move(hp, 5).ApplyTo(ilse, Now);
+        Assert.Equal([arrows, ki, hp], ilse.Counters.Select(c => c.Uid));
+
+        new CharacterStatusChange.Move(dagger, -1).ApplyTo(ilse, Now);
+        Assert.Equal([dagger, rapier], ilse.SavedRolls.Select(r => r.Uid));
+
+        var prone = ilse.AddCondition("Prone", Now);
+        Assert.Throws<CampaignRuleException>(() => new CharacterStatusChange.Move(prone, 1).ApplyTo(ilse, Now));
     }
 
     [Fact]
@@ -109,7 +151,7 @@ public class CharacterStatusTests
         var ilse = Ilse();
         int? Suggest(string name) => name.Contains("sword", StringComparison.OrdinalIgnoreCase) ? 7 : null;
 
-        new CharacterStatusChange.AddSavedRoll("Shortsword", "1d20+5", DiceMode.Normal).ApplyTo(ilse, Now, Suggest);
+        new CharacterStatusChange.AddSavedRoll("Shortsword", "1d20+5").ApplyTo(ilse, Now, Suggest);
         new CharacterStatusChange.AddCounter("HP", 21, 21).ApplyTo(ilse, Now, Suggest);
         var roll = ilse.SavedRolls.Single();
         Assert.Equal(7, roll.IconId);
@@ -122,7 +164,7 @@ public class CharacterStatusTests
         Assert.Equal(7, roll.IconId);
 
         // Ett nytt namn byter inte ikonen av sig själv; den sparas tills någon ändrar den.
-        new CharacterStatusChange.UpdateSavedRoll(roll.Uid, "Dagger", "1d20+5", DiceMode.Normal).ApplyTo(ilse, Now, Suggest);
+        new CharacterStatusChange.UpdateSavedRoll(roll.Uid, "Dagger", "1d20+5").ApplyTo(ilse, Now, Suggest);
         Assert.Equal(7, roll.IconId);
     }
 

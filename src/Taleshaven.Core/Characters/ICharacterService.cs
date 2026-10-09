@@ -91,10 +91,10 @@ public sealed record CounterView(Guid Uid, string Label, int Current, int Max, i
 
 public sealed record ConditionView(Guid Uid, string Name, int? IconId = null, string? IconUrl = null);
 
-public sealed record SavedRollView(Guid Uid, string Label, string Notation, DiceMode Mode, int? IconId = null, string? IconUrl = null)
+public sealed record SavedRollView(Guid Uid, string Label, string Notation, int? IconId = null, string? IconUrl = null)
 {
     public static SavedRollView From(SavedRoll roll, string? iconUrl = null) =>
-        new(roll.Uid, roll.Label, roll.Notation, roll.Mode, roll.IconId, iconUrl);
+        new(roll.Uid, roll.Label, roll.Notation, roll.IconId, iconUrl);
 }
 
 /// <summary>En ändring av karaktärens räknare, tillstånd eller sparade slag (B56).</summary>
@@ -102,13 +102,19 @@ public abstract record CharacterStatusChange
 {
     public sealed record AddCounter(string? Label, int Current, int Max) : CharacterStatusChange;
     public sealed record UpdateCounter(Guid Uid, string? Label, int Current, int Max) : CharacterStatusChange;
+
+    /// <summary>Byter namn och max (B66); värdet sänks om det är över det nya maxet.</summary>
+    public sealed record EditCounter(Guid Uid, string? Label, int Max) : CharacterStatusChange;
     public sealed record AdjustCounter(Guid Uid, int Delta) : CharacterStatusChange;
     public sealed record RemoveCounter(Guid Uid) : CharacterStatusChange;
     public sealed record AddCondition(string? Name) : CharacterStatusChange;
     public sealed record RemoveCondition(Guid Uid) : CharacterStatusChange;
-    public sealed record AddSavedRoll(string? Label, string? Notation, DiceMode Mode) : CharacterStatusChange;
-    public sealed record UpdateSavedRoll(Guid Uid, string? Label, string? Notation, DiceMode Mode) : CharacterStatusChange;
+    public sealed record AddSavedRoll(string? Label, string? Notation) : CharacterStatusChange;
+    public sealed record UpdateSavedRoll(Guid Uid, string? Label, string? Notation) : CharacterStatusChange;
     public sealed record RemoveSavedRoll(Guid Uid) : CharacterStatusChange;
+
+    /// <summary>Flyttar en räknare eller ett sparat slag i listan (B66), −1 upp och +1 ned.</summary>
+    public sealed record Move(Guid Uid, int Offset) : CharacterStatusChange;
 
     /// <summary>Byter ikon (B58); null tar bort den.</summary>
     public sealed record SetIcon(Guid Uid, int? IconId) : CharacterStatusChange;
@@ -127,13 +133,15 @@ public abstract record CharacterStatusChange
         {
             case AddCounter c: added = character.AddCounter(c.Label, c.Current, c.Max, now); break;
             case UpdateCounter c: character.UpdateCounter(c.Uid, c.Label, c.Current, c.Max, now); break;
+            case EditCounter c: character.EditCounter(c.Uid, c.Label, c.Max, now); break;
             case AdjustCounter c: character.AdjustCounter(c.Uid, c.Delta, now); break;
             case RemoveCounter c: character.RemoveCounter(c.Uid, now); break;
             case AddCondition c: added = character.AddCondition(c.Name, now); break;
             case RemoveCondition c: character.RemoveCondition(c.Uid, now); break;
-            case AddSavedRoll c: added = character.AddSavedRoll(c.Label, c.Notation, c.Mode, now); break;
-            case UpdateSavedRoll c: character.UpdateSavedRoll(c.Uid, c.Label, c.Notation, c.Mode, now); break;
+            case AddSavedRoll c: added = character.AddSavedRoll(c.Label, c.Notation, now); break;
+            case UpdateSavedRoll c: character.UpdateSavedRoll(c.Uid, c.Label, c.Notation, now); break;
             case RemoveSavedRoll c: character.RemoveSavedRoll(c.Uid, now); break;
+            case Move c: character.MoveStatusItem(c.Uid, c.Offset, now); break;
             case SetIcon c: character.SetStatusIcon(c.Uid, c.IconId, now); break;
             case SuggestIcon c: character.SetStatusIcon(c.Uid, suggestIcon?.Invoke(character.StatusItemName(c.Uid)), now); break;
             default: throw new ArgumentOutOfRangeException(nameof(CharacterStatusChange));

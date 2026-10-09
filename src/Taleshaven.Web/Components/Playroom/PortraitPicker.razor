@@ -1,8 +1,10 @@
 @using Taleshaven.Core.Portraits
+@using Taleshaven.Core.Threads
 
 @* Väljer en karaktärs porträtt ur sajtens bibliotek (B19, PB-4): rutnät med sökning på taggar.
    Varje sökord matchar början av en tagg, och porträttet måste ha alla. Bara porträtt visas, aldrig ikoner (B61);
-   kategorierna (B62) kommer först bland taggknapparna, sedan de vanligaste taggarna. *@
+   kategorierna (B62) kommer först bland taggknapparna, sedan de vanligaste taggarna. Porträtten visas sida för sida
+   med knappar (B67), eftersom väljaren ligger i ett formulär som inte får lämnas. *@
 
 @inject IPortraitService Portraits
 
@@ -66,22 +68,22 @@
                         </button>
                     }
                 </div>
-                @if (page.HasMore)
-                {
-                    <button type="button" class="btn btn-link btn-sm px-0 mt-1" @onclick="ShowMoreAsync">Show more</button>
-                }
+                <div class="mt-2 portrait-pager">
+                    <Pager Page="pageNumber" PageCount="pageCount" ShowLatest="false" OnPage="GoToPageAsync" />
+                </div>
             }
         </div>
     }
 </div>
 
 @code {
-    private const int PageSize = 48;
+    private const int PageSize = 40;
     private const int SuggestedTagCount = 12;
 
     private bool open;
     private string query = "";
-    private int limit = PageSize;
+    private int pageNumber = 1;
+    private int pageCount = 1;
     private int searchVersion;
     private PortraitPage? page;
     private IReadOnlyList<TagCount> tags = [];
@@ -124,14 +126,20 @@
     {
         // Svaren kan komma i fel ordning när man skriver snabbt; bara det senaste visas.
         var version = ++searchVersion;
-        var result = await Portraits.SearchAsync(query, limit, kind: ImageKind.Portrait);
-        if (version == searchVersion)
-            page = result;
+        var count = (await Portraits.SearchAsync(query, 0, kind: ImageKind.Portrait)).TotalCount;
+        var pages = Paging.PageCount(count, PageSize);
+        var number = Paging.Clamp(pageNumber, pages);
+        var result = await Portraits.SearchAsync(query, PageSize, (number - 1) * PageSize, ImageKind.Portrait);
+        if (version != searchVersion)
+            return;
+        page = result;
+        pageCount = pages;
+        pageNumber = number;
     }
 
     private async Task OnQueryChangedAsync()
     {
-        limit = PageSize;
+        pageNumber = 1;
         await SearchAsync();
     }
 
@@ -140,13 +148,13 @@
         var terms = PortraitTags.ParseSearch(query);
         if (!terms.Contains(tag))
             query = string.Join(" ", terms.Append(tag));
-        limit = PageSize;
+        pageNumber = 1;
         await SearchAsync();
     }
 
-    private async Task ShowMoreAsync()
+    private async Task GoToPageAsync(int number)
     {
-        limit += PageSize;
+        pageNumber = number;
         await SearchAsync();
     }
 

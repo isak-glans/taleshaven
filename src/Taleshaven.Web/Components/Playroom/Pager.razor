@@ -1,5 +1,7 @@
 @* Sidnavigering längst ner i en tråd (B28, B35): Previous till vänster, sidnumren (med …) och Next i mitten,
-   Latest till höger. Länkarna framåt/bakåt används också av tangenterna ← → (page-keys.js). *@
+   Latest till höger. Länkarna framåt/bakåt används också av tangenterna ← → (page-keys.js).
+   Med OnPage blir sidorna knappar i stället för länkar (B67), för en väljare inne i ett formulär som inte får lämna sidan;
+   då används inte tangenterna. *@
 
 @if (PageCount > 1)
 {
@@ -12,7 +14,14 @@
                     if (p is { } number)
                     {
                         <li class="page-item @(number == Page ? "active" : "")">
-                            <a class="page-link" href="@Href(number)" aria-current="@(number == Page ? "page" : null)">@number</a>
+                            @if (UsesButtons)
+                            {
+                                <button type="button" class="page-link" aria-current="@(number == Page ? "page" : null)" @onclick="() => OnPage.InvokeAsync(number)">@number</button>
+                            }
+                            else
+                            {
+                                <a class="page-link" href="@Href(number)" aria-current="@(number == Page ? "page" : null)">@number</a>
+                            }
                         </li>
                     }
                     else
@@ -21,7 +30,11 @@
                     }
                 }
                 <li class="page-item @(Page < PageCount ? "" : "disabled") pager-next">
-                    @if (Page < PageCount)
+                    @if (Page < PageCount && UsesButtons)
+                    {
+                        <button type="button" class="page-link" @onclick="() => OnPage.InvokeAsync(Page + 1)">Next <Icon Name="arrow-right" Size="12" /></button>
+                    }
+                    else if (Page < PageCount)
                     {
                         <a class="page-link" href="@Href(Page + 1)" data-page-next>Next <Icon Name="arrow-right" Size="12" /></a>
                     }
@@ -45,7 +58,10 @@
             }
         </div>
         <p class="text-center text-secondary small mb-0 mt-1">
-            Page @Page of @PageCount<span class="pager-keys"> · ← → to turn pages</span>
+            Page @Page of @PageCount@if (!UsesButtons)
+            {
+                <span class="pager-keys"> · ← → to turn pages</span>
+            }
         </p>
     </nav>
 }
@@ -61,14 +77,24 @@
     [Parameter]
     public bool ShowLatest { get; set; } = true;
 
-    /// <summary>Adressen till en sida.</summary>
-    [Parameter, EditorRequired]
-    public Func<int, string> Href { get; set; } = default!;
+    /// <summary>Adressen till en sida. Behövs inte med <see cref="OnPage"/>.</summary>
+    [Parameter]
+    public Func<int, string> Href { get; set; } = page => "";
+
+    /// <summary>Anropas med sidnumret när sidorna är knappar (B67).</summary>
+    [Parameter]
+    public EventCallback<int> OnPage { get; set; }
+
+    private bool UsesButtons => OnPage.HasDelegate;
 
     // Inaktiva steg (Previous på första sidan) visas som text, inte som länk.
     private RenderFragment StepLink(int target, bool enabled, bool prev) =>
         @<text>
-            @if (enabled)
+            @if (enabled && UsesButtons)
+            {
+                <button type="button" class="btn btn-sm btn-outline-secondary pager-previous" @onclick="() => OnPage.InvokeAsync(target)"><Icon Name="arrow-left" Size="12" /> Previous</button>
+            }
+            else if (enabled)
             {
                 <a class="btn btn-sm btn-outline-secondary pager-previous" href="@Href(target)" data-page-prev="@(prev ? "" : null)"><Icon Name="arrow-left" Size="12" /> Previous</a>
             }

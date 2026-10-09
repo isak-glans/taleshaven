@@ -519,19 +519,23 @@ som renderas på servern.
 
 - **KS-1 Räknare:** namn (högst 40 tecken), värde och max (1–9 999), t.ex. *HP 28 / 38* eller *Arrows 12 / 20*. Visas
   med en stapel (röd när värdet är högst en fjärdedel av max). Den som får ändra har − och + och kan skriva in ett värde.
-  Värdet får gå över max (t.ex. tillfälliga HP) och ligger inom −9 999 till 9 999.
+  Värdet får gå över max (t.ex. tillfälliga HP) och ligger inom −9 999 till 9 999. Namn och max kan ändras (en penna
+  på raden); är värdet över det nya maxet sänks det till max.
 - **KS-2 Tillstånd:** ett namn (högst 40 tecken), t.ex. *Poisoned*. Samma tillstånd två gånger (oavsett stora och små
   bokstäver) blir ett. Fältet föreslår D&D 5e:s tillstånd (*Blinded, Charmed, Deafened, Exhaustion, Frightened, Grappled,
   Incapacitated, Invisible, Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned, Unconscious*), *Bloodied* och
   de tillstånd som redan används i kampanjen (en `<datalist>` räcker). *Bloodied* och *Unconscious* markeras rött.
-- **KS-3 Sparade slag:** namn, formel (TA-1) och läge (Normal/Advantage/Disadvantage, bara för en ensam d20).
+- **KS-3 Sparade slag:** namn och formel (TA-1), som kan ändras. Inget läge: fördel och nackdel väljs när slaget läggs
+  till i ett inlägg (avsnitt 10.2).
+- **KS-3b Ordning:** räknare och sparade slag har pilar ↑ ↓ för att flytta dem ett steg; ordningen sparas och gäller
+  även i skrivfältet (KS-6). Tillstånd har ingen egen ordning.
 - **KS-4 Gränser:** högst 20 räknare, 20 tillstånd och 30 sparade slag per karaktär.
 - **KS-5 Vem ser och ändrar:** ägaren och GM ändrar; alla som får se karaktären ser listorna. För en **NPC** visas
   räknare och sparade slag bara för GM (de får inte finnas i HTML:en till andra), medan tillstånden visas för alla.
   En dold NPC visas inte alls (KN-2).
 - **KS-6 I skrivfältet:** när man skriver som en karaktär visas dess sparade slag under *🎲 Add roll*: högst fem, och en
-  sökruta (på namnet) om det finns fler. Ett klick lägger till en slagrad med formel, beskrivning och läge ifyllda
-  (avsnitt 10.2).
+  sökruta (på namnet) om det finns fler. Ett klick lägger till en slagrad med formel och beskrivning ifyllda och
+  läget *Normal* (avsnitt 10.2).
 - **KS-7 Ikoner:** räknare, tillstånd och sparade slag kan ha en ikon ur porträttbiblioteket, bland bibliotekets
   ikoner (PB-9). När något läggs till föreslås en ikon automatiskt efter namnet: jämför namnets ord (och orden ihopskrivna)
   med ikonernas taggar utan bindestreck; exakt träff väger tyngst, sedan en tagg som ingår i ett ord ("sword" i
@@ -540,7 +544,7 @@ som renderas på servern.
   den som får ändra kan välja en annan ikon (sökbar lista), föreslå igen eller ta bort ikonen. Porträtt- och
   profilbildsväljaren visar aldrig ikoner.
 - **KS-8 Datamodell:** tabellerna `character_counters` (character_id, label, current, max, icon_id, sort_order),
-  `character_conditions` (character_id, name, icon_id) och `saved_rolls` (character_id, label, notation, mode, icon_id,
+  `character_conditions` (character_id, name, icon_id) och `saved_rolls` (character_id, label, notation, icon_id,
   sort_order); icon_id pekar på `portraits` med `ON DELETE SET NULL`.
 
 ### 12.5 Ta bort karaktär
@@ -570,7 +574,10 @@ och ikoner, och alla väljer därifrån.
   karaktärerna som använde det får då initialer.
 - **PB-7 Välja porträtt** (på karaktärens redigeringssida och för profilbilden, KO-6): ett rutnät med porträtt och en sökruta. Varje sökord
   matchar **början** av en tagg, och ett porträtt visas om det matchar **alla** sökord. Utan JavaScript räcker en
-  vanlig sökning (GET-formulär) och ett rutnät av radioknappar.
+  vanlig sökning (GET-formulär) och ett rutnät av radioknappar. Porträtten visas sida för sida (40 per sida) med
+  sidväljare; sökningen gäller sidorna.
+- **PB-7b Bibliotekssidan:** visar 48 bilder per sida med sidväljare och antalet träffar. Sökning, typfilter och sida
+  står i adressen (`?q=elf&kind=icon&page=3`); en ny sökning börjar på sida 1.
 - **PB-8:** Porträtten ligger kvar när en kampanj raderas.
 - **PB-9 Typ:** varje bild är ett **porträtt** eller en **ikon**, vald vid uppladdning. Porträtt väljs till karaktärer,
   NPC:er och profiler; ikoner till räknare, tillstånd och tärningsslag (KS-7, TA-18). Väljarna visar bara sin typ, och

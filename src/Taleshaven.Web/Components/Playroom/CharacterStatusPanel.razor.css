@@ -25,6 +25,10 @@
     white-space: nowrap;
 }
 
+.counter-max {
+    min-width: 2.75rem;
+}
+
 .counter-value strong {
     color: var(--bs-body-color);
 }
@@ -113,14 +117,6 @@
     font-size: 0.9em;
 }
 
-.saved-roll-mode {
-    border: 1px solid var(--bs-border-color);
-    border-radius: 1rem;
-    color: var(--bs-secondary-color);
-    font-size: 0.75em;
-    padding: 0 0.4rem;
-}
-
 .saved-roll-notation-input {
     max-width: 7rem;
 }
@@ -206,4 +202,44 @@
 
 .icon-choice img {
     border-radius: 50%;
+}
+
+/* Pilar, penna och kryss på räknare och slag, och fälten när de redigeras (B66). */
+.status-actions {
+    display: inline-flex;
+    white-space: nowrap;
+}
+
+.status-actions .btn {
+    padding: 0 0.3rem;
+}
+
+.status-actions .btn:disabled {
+    visibility: hidden;
+}
+
+.saved-roll .status-actions {
+    margin-left: auto;
+}
+
+.status-edit {
+    align-items: center;
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.counter-edit {
+    grid-column: 2 / -1;
+}
+
+.status-edit .form-control {
+    flex: 1 1 8rem;
+    width: auto;
+}
+
+.status-edit .counter-edit-max,
+.status-edit .saved-roll-notation-input {
+    flex: 0 0 6rem;
 }

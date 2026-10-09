@@ -147,6 +147,13 @@ public class Character
         UpdatedAt = now;
     }
 
+    /// <summary>Byter räknarens namn och max (B66); värdet sänks om det är över det nya maxet.</summary>
+    public void EditCounter(Guid uid, string? label, int max, DateTimeOffset now)
+    {
+        FindCounter(uid).Edit(label, max);
+        UpdatedAt = now;
+    }
+
     /// <summary>Ökar eller minskar räknarens värde, t.ex. −5 HP. Värdet kan gå över max (t.ex. tillfälliga HP).</summary>
     public void AdjustCounter(Guid uid, int delta, DateTimeOffset now)
     {
@@ -182,19 +189,19 @@ public class Character
         UpdatedAt = now;
     }
 
-    public Guid AddSavedRoll(string? label, string? notation, Dice.DiceMode mode, DateTimeOffset now)
+    public Guid AddSavedRoll(string? label, string? notation, DateTimeOffset now)
     {
         if (SavedRolls.Count >= CharacterTrackers.MaxSavedRolls)
             throw new CampaignRuleException($"A character can have at most {CharacterTrackers.MaxSavedRolls} dice rolls.");
-        var roll = new SavedRoll(label, notation, mode);
+        var roll = new SavedRoll(label, notation);
         SavedRolls.Add(roll);
         UpdatedAt = now;
         return roll.Uid;
     }
 
-    public void UpdateSavedRoll(Guid uid, string? label, string? notation, Dice.DiceMode mode, DateTimeOffset now)
+    public void UpdateSavedRoll(Guid uid, string? label, string? notation, DateTimeOffset now)
     {
-        FindSavedRoll(uid).Set(label, notation, mode);
+        FindSavedRoll(uid).Set(label, notation);
         UpdatedAt = now;
     }
 
@@ -202,6 +209,29 @@ public class Character
     {
         SavedRolls.Remove(FindSavedRoll(uid));
         UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Flyttar en räknare eller ett sparat slag <paramref name="offset"/> steg i listan (B66), t.ex. −1 för ett steg upp.
+    /// Ordningen syns på karaktärssidan och bland de sparade slagen i skrivfältet. Utanför listan stannar den i änden.
+    /// </summary>
+    public void MoveStatusItem(Guid uid, int offset, DateTimeOffset now)
+    {
+        if (Counters.FindIndex(c => c.Uid == uid) is var counter and >= 0)
+            Move(Counters, counter, offset);
+        else if (SavedRolls.FindIndex(r => r.Uid == uid) is var roll and >= 0)
+            Move(SavedRolls, roll, offset);
+        else
+            throw new CampaignRuleException("The item doesn't exist any more.");
+        UpdatedAt = now;
+    }
+
+    private static void Move<T>(List<T> items, int index, int offset)
+    {
+        var target = Math.Clamp(index + offset, 0, items.Count - 1);
+        var item = items[index];
+        items.RemoveAt(index);
+        items.Insert(target, item);
     }
 
     /// <summary>Sätter ikonen (B58) på en räknare, ett tillstånd eller ett sparat slag; null tar bort den.</summary>

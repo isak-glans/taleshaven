@@ -5,14 +5,17 @@
 @using Taleshaven.Core.Media
 @using Taleshaven.Core.Portraits
 @using Taleshaven.Core.Site
+@using Taleshaven.Core.Threads
 
 @* Bildbiblioteket (B19, PB-1–PB-3). Administratörer och managers laddar upp, taggar och tar bort porträtt och ikoner;
-   typen (B61) väljs vid uppladdning och kan ändras. *@
+   typen (B61) väljs vid uppladdning och kan ändras. Biblioteket visas sida för sida (B67); sökningen, typfiltret och
+   sidan står i adressen (?q=elf&kind=icon&page=3), så att man hamnar rätt efter en omladdning. *@
 
 @inject IPortraitService Portraits
 @inject ISiteRoleService RoleService
 @inject IImageProcessor ImageProcessor
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 
 @if (!loaded)
 {
@@ -77,7 +80,13 @@
 </section>
 
 <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-    <h2 class="h5 mb-0 me-auto">Library</h2>
+    <h2 class="h5 mb-0 me-auto">
+        Library
+        @if (page is not null)
+        {
+            <span class="text-secondary fw-normal small library-count">@(page.TotalCount) @(page.TotalCount == 1 ? "image" : "images")</span>
+        }
+    </h2>
     <div class="btn-group btn-group-sm library-filter" role="group" aria-label="Show">
         <button type="button" class="btn @(filterKind is null ? "btn-secondary" : "btn-outline-secondary")" aria-pressed="@(filterKind is null ? "true" : "false")"
                 @onclick="() => SetFilterAsync(null)">All</button>
@@ -164,10 +173,9 @@ else if (page is not null)
             </article>
         }
     </div>
-    @if (page.HasMore)
-    {
-        <button type="button" class="btn btn-link px-0 mt-2" @onclick="ShowMoreAsync">Show more</button>
-    }
+    <div class="mt-3 library-pager">
+        <Pager Page="pageNumber" PageCount="pageCount" ShowLatest="false" Href="PageHref" />
+    </div>
 }
 
 @code {
@@ -181,9 +189,19 @@ else if (page is not null)
     private PortraitPage? page;
     private IReadOnlyList<TagCount> tags = [];
     private string query = "";
-    private int limit = PageSize;
+    private int pageNumber = 1;
+    private int pageCount = 1;
     private int searchVersion;
     private ImageKind? filterKind;
+
+    [SupplyParameterFromQuery(Name = "q")]
+    private string? QueryParameter { get; set; }
+
+    [SupplyParameterFromQuery(Name = "kind")]
+    private string? KindParameter { get; set; }
+
+    [SupplyParameterFromQuery(Name = "page")]
+    private int? PageParameter { get; set; }
 
     private static readonly ImageKind[] Kinds = Enum.GetValues<ImageKind>();
     private ImageKind newKind = ImageKind.Portrait;
@@ -214,8 +232,24 @@ else if (page is not null)
             return;
         }
 
-        await RefreshAsync();
+        tags = await Portraits.GetTagsAsync(newKind);
         loaded = true;
+    }
+
+    // Adressen styr sökning, typ och sida: när sidan öppnas och när man klickar på en sidlänk eller går tillbaka.
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!loaded)
+            return;
+        query = QueryParameter?.Trim() ?? "";
+        filterKind = KindParameter switch
+        {
+            "portrait" => ImageKind.Portrait,
+            "icon" => ImageKind.Icon,
+            _ => null,
+        };
+        pageNumber = PageParameter ?? 1;
+        await SearchAsync();
     }
 
     private async Task RefreshAsync()
@@ -224,25 +258,59 @@ else if (page is not null)
         await SearchAsync();
     }
 
+    // Antalet träffar räknas först, så att en sida bortom slutet (t.ex. efter en borttagning) blir den sista.
     private async Task SearchAsync()
     {
         var version = ++searchVersion;
-        var result = await Portraits.SearchAsync(query, limit, kind: filterKind);
-        if (version == searchVersion)
-            page = result;
+        var count = (await Portraits.SearchAsync(query, 0, kind: filterKind)).TotalCount;
+        var pages = Paging.PageCount(count, PageSize);
+        var number = Paging.Clamp(pageNumber, pages);
+        var result = await Portraits.SearchAsync(query, PageSize, (number - 1) * PageSize, filterKind);
+        if (version != searchVersion)
+            return;
+        page = result;
+        pageCount = pages;
+        pageNumber = number;
     }
 
     private async Task OnQueryChangedAsync()
     {
-        limit = PageSize;
+        pageNumber = 1;
         await SearchAsync();
+        await ReplaceAddressAsync();
     }
 
     private async Task SetFilterAsync(ImageKind? kind)
     {
         filterKind = kind;
-        limit = PageSize;
+        pageNumber = 1;
         await SearchAsync();
+        await ReplaceAddressAsync();
+    }
+
+    private string PageHref(int number)
+    {
+        var parts = new List<string>();
+        if (query.Length > 0)
+            parts.Add("q=" + Uri.EscapeDataString(query));
+        if (filterKind is { } kind)
+            parts.Add("kind=" + (kind == ImageKind.Icon ? "icon" : "portrait"));
+        if (number > 1)
+            parts.Add($"page={number}");
+        return "portraits" + (parts.Count == 0 ? "" : "?" + string.Join("&", parts));
+    }
+
+    // Sökning och filter skriver om adressen utan att navigera, så att det man skriver inte avbryts av en sidladdning
+    // och historiken inte fylls av varje tangenttryck.
+    private async Task ReplaceAddressAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("history.replaceState", null, "", NavigationManager.ToAbsoluteUri(PageHref(pageNumber)).ToString());
+        }
+        catch (JSDisconnectedException)
+        {
+        }
     }
 
     // Taggförslagen gäller den typ som laddas upp.
@@ -257,12 +325,6 @@ else if (page is not null)
         ImageKind.Icon => "Icon",
         _ => "Portrait",
     };
-
-    private async Task ShowMoreAsync()
-    {
-        limit += PageSize;
-        await SearchAsync();
-    }
 
     // Bilden behandlas direkt när den väljs, så att förhandsvisningen visar exakt det som sparas.
     private async Task OnImageSelectedAsync(InputFileChangeEventArgs e)

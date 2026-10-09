@@ -24,4 +24,14 @@ document.addEventListener('keydown', event => {
     navigating = true;
     setTimeout(() => { navigating = false; }, 3000); // Säkerhetsnät om navigeringen aldrig blir klar.
     link.click(); // Ett klick ger samma förbättrade navigering som när man klickar på pilen.
+
+    // På en interaktiv sida (t.ex. bildbiblioteket, B67) kommer ingen enhancedload; där är bytet klart när länken har
+    // fått en ny adress eller försvunnit.
+    const href = link.getAttribute('href');
+    const check = () => {
+        if (!navigating) return;
+        if (!link.isConnected || link.getAttribute('href') !== href) navigating = false;
+        else setTimeout(check, 50);
+    };
+    setTimeout(check, 50);
 });

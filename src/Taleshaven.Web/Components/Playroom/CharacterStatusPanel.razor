@@ -2,7 +2,8 @@
 @using Taleshaven.Core.Dice
 
 @* Karaktärens räknare, tillstånd och sparade tärningsslag (B56). Ägaren och GM ändrar direkt här; andra ser dem.
-   För en NPC skickas räknare och slag bara till GM – tillstånden ser alla. Används interaktivt i den statiska karaktärssidan. *@
+   För en NPC skickas räknare och slag bara till GM – tillstånden ser alla. Används interaktivt i den statiska karaktärssidan.
+   Räknare och slag kan flyttas med pilarna och redigeras med pennan (B66). *@
 
 @using Taleshaven.Core.Portraits
 
@@ -42,7 +43,7 @@
                 </div>
                 @if (iconResults.Count == 0)
                 {
-                    <p class="small text-secondary mb-0">No icons found. Administrators add icons to the library with the tag #icon.</p>
+                    <p class="small text-secondary mb-0">No icons found. Administrators add icons in the image library.</p>
                 }
                 else
                 {
@@ -71,6 +72,20 @@
                 {
                     <div class="counter-row" @key="counter.Uid">
                         @IconCell(counter.Uid, counter.IconUrl, counter.Label)
+                        @if (canEdit && editingUid == counter.Uid)
+                        {
+                            <div class="status-edit counter-edit">
+                                <input class="form-control form-control-sm" maxlength="@CharacterTrackers.LabelMaxLength" aria-label="Counter name"
+                                       @bind="editLabel" @bind:event="oninput" @onkeydown="e => EditKeyAsync(e, SaveCounterAsync)" />
+                                <span class="text-secondary">max</span>
+                                <input type="number" class="form-control form-control-sm counter-edit-max" aria-label="Maximum"
+                                       @bind="editMax" @bind:event="oninput" @onkeydown="e => EditKeyAsync(e, SaveCounterAsync)" />
+                                <button type="button" class="btn btn-sm btn-primary" @onclick="SaveCounterAsync">Save</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                            </div>
+                        }
+                        else
+                        {
                         <span class="counter-label">@counter.Label</span>
                         @if (canEdit)
                         {
@@ -81,12 +96,14 @@
                             <span class="counter-max">/ @counter.Max</span>
                             <button type="button" class="btn btn-sm btn-outline-secondary counter-plus" aria-label="Increase @counter.Label"
                                     @onclick="() => EditAsync(new CharacterStatusChange.AdjustCounter(counter.Uid, 1))">+</button>
-                            <button type="button" class="btn btn-sm btn-link text-secondary counter-remove" title="Remove counter" aria-label="Remove @counter.Label"
-                                    @onclick="() => EditAsync(new CharacterStatusChange.RemoveCounter(counter.Uid))">✕</button>
+                            @ItemActions(counter.Uid, counter.Label, status.Counters.Count, IndexOf(status.Counters, counter),
+                                () => StartEdit(counter.Uid, counter.Label, counter.Max, ""),
+                                new CharacterStatusChange.RemoveCounter(counter.Uid), "counter")
                         }
                         else
                         {
                             <span class="counter-value"><strong>@counter.Current</strong> / @counter.Max</span>
+                        }
                         }
                         <div class="counter-bar" aria-hidden="true">
                             <div class="counter-fill @(counter.Current * 4 <= counter.Max ? "counter-low" : "")"
@@ -170,16 +187,27 @@
                         {
                             @IconCell(roll.Uid, roll.IconUrl, roll.Label)
                         }
-                        <span class="saved-roll-label">@roll.Label</span>
-                        <span class="saved-roll-notation">@roll.Notation</span>
-                        @if (roll.Mode != DiceMode.Normal)
+                        @if (canEdit && editingUid == roll.Uid)
                         {
-                            <span class="saved-roll-mode">@PostHtml.ModeText(roll.Mode)</span>
+                            <div class="status-edit roll-edit">
+                                <input class="form-control form-control-sm" maxlength="@CharacterTrackers.LabelMaxLength" aria-label="Dice roll name"
+                                       @bind="editLabel" @bind:event="oninput" @onkeydown="e => EditKeyAsync(e, SaveRollAsync)" />
+                                <input class="form-control form-control-sm saved-roll-notation-input" maxlength="12" aria-label="Dice"
+                                       @bind="editNotation" @bind:event="oninput" @onkeydown="e => EditKeyAsync(e, SaveRollAsync)" />
+                                <button type="button" class="btn btn-sm btn-primary" @onclick="SaveRollAsync">Save</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                            </div>
                         }
-                        @if (canEdit)
+                        else
                         {
-                            <button type="button" class="btn btn-sm btn-link text-secondary ms-auto saved-roll-remove" title="Remove dice roll"
-                                    aria-label="Remove @roll.Label" @onclick="() => EditAsync(new CharacterStatusChange.RemoveSavedRoll(roll.Uid))">✕</button>
+                            <span class="saved-roll-label">@roll.Label</span>
+                            <span class="saved-roll-notation">@roll.Notation</span>
+                            @if (canEdit)
+                            {
+                                @ItemActions(roll.Uid, roll.Label, status.SavedRolls.Count, IndexOf(status.SavedRolls, roll),
+                                    () => StartEdit(roll.Uid, roll.Label, 0, roll.Notation),
+                                    new CharacterStatusChange.RemoveSavedRoll(roll.Uid), "dice roll")
+                            }
                         }
                     </div>
                 }
@@ -189,12 +217,7 @@
                         <input class="form-control form-control-sm" placeholder="e.g. Shortsword" maxlength="@CharacterTrackers.LabelMaxLength"
                                aria-label="New dice roll name" @bind="newRollLabel" />
                         <input class="form-control form-control-sm saved-roll-notation-input" placeholder="1d20+5" maxlength="12"
-                               aria-label="Dice" @bind="newRollNotation" @bind:event="oninput" />
-                        <select class="form-select form-select-sm" aria-label="Advantage or disadvantage" disabled="@(!NewRollSupportsMode)" @bind="newRollMode">
-                            <option value="@DiceMode.Normal">Normal</option>
-                            <option value="@DiceMode.Advantage">Advantage</option>
-                            <option value="@DiceMode.Disadvantage">Disadvantage</option>
-                        </select>
+                               aria-label="Dice" @bind="newRollNotation" />
                         <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddRollAsync">Add dice roll</button>
                     </div>
                 }
@@ -225,9 +248,12 @@
     private string newCondition = "";
     private string newRollLabel = "";
     private string newRollNotation = "";
-    private DiceMode newRollMode;
 
-    private bool NewRollSupportsMode => DiceNotation.TryParse(newRollNotation, out var notation, out _) && DiceRoll.SupportsMode(notation);
+    // Räknaren eller slaget som redigeras (B66), och fälten för det.
+    private Guid? editingUid;
+    private string editLabel = "";
+    private int editMax;
+    private string editNotation = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -289,14 +315,67 @@
 
     private async Task AddRollAsync()
     {
-        var mode = NewRollSupportsMode ? newRollMode : DiceMode.Normal;
-        if (await EditAsync(new CharacterStatusChange.AddSavedRoll(newRollLabel, newRollNotation, mode)))
+        if (await EditAsync(new CharacterStatusChange.AddSavedRoll(newRollLabel, newRollNotation)))
         {
             newRollLabel = "";
             newRollNotation = "";
-            newRollMode = DiceMode.Normal;
         }
     }
+
+    private void StartEdit(Guid uid, string label, int max, string notation)
+    {
+        editingUid = uid;
+        editLabel = label;
+        editMax = max;
+        editNotation = notation;
+        error = null;
+    }
+
+    private void CancelEdit()
+    {
+        editingUid = null;
+        error = null;
+    }
+
+    private async Task SaveCounterAsync()
+    {
+        if (editingUid is { } uid && await EditAsync(new CharacterStatusChange.EditCounter(uid, editLabel, editMax)))
+            editingUid = null;
+    }
+
+    private async Task SaveRollAsync()
+    {
+        if (editingUid is { } uid && await EditAsync(new CharacterStatusChange.UpdateSavedRoll(uid, editLabel, editNotation)))
+            editingUid = null;
+    }
+
+    // Enter sparar och Escape avbryter i redigeringsfälten.
+    private async Task EditKeyAsync(KeyboardEventArgs e, Func<Task> save)
+    {
+        if (e.Key == "Enter")
+            await save();
+        else if (e.Key == "Escape")
+            CancelEdit();
+    }
+
+    private static int IndexOf<T>(IReadOnlyList<T> items, T item) => items.ToList().IndexOf(item);
+
+    // Pilar, penna och kryss till höger på en räknare eller ett slag (B66). Den översta kan inte flyttas upp och den
+    // nedersta inte ned.
+    private RenderFragment ItemActions(Guid uid, string name, int count, int index, Action startEdit, CharacterStatusChange remove, string what) =>
+        @<span class="status-actions">
+            @if (count > 1)
+            {
+                <button type="button" class="btn btn-sm btn-link text-secondary status-move-up" title="Move up" aria-label="Move @name up"
+                        disabled="@(index == 0)" @onclick="() => EditAsync(new CharacterStatusChange.Move(uid, -1))">↑</button>
+                <button type="button" class="btn btn-sm btn-link text-secondary status-move-down" title="Move down" aria-label="Move @name down"
+                        disabled="@(index == count - 1)" @onclick="() => EditAsync(new CharacterStatusChange.Move(uid, 1))">↓</button>
+            }
+            <button type="button" class="btn btn-sm btn-link text-secondary status-edit-button" title="Edit @what" aria-label="Edit @name"
+                    @onclick="startEdit">✎</button>
+            <button type="button" class="btn btn-sm btn-link text-secondary status-remove" title="Remove @what" aria-label="Remove @name"
+                    @onclick="() => EditAsync(remove)">✕</button>
+        </span>;
 
     private Guid? iconPickerFor;
     private string iconPickerName = "";

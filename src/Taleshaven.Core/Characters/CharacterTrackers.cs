@@ -33,6 +33,9 @@ public class CharacterCounter
     }
 
     internal void Adjust(int delta) => Current = CharacterTrackers.ClampCurrent(Current + delta);
+
+    /// <summary>Byter namn och max (B66). Är värdet över det nya maxet sänks det till max.</summary>
+    internal void Edit(string? label, int max) => Set(label, Math.Min(Current, max), max);
 }
 
 /// <summary>Ett tillstånd på en karaktär (B56), t.ex. "Poisoned" eller "Bloodied".</summary>
@@ -55,38 +58,35 @@ public class CharacterCondition
     internal void SetIcon(int? iconId) => IconId = iconId;
 }
 
-/// <summary>Ett sparat tärningsslag på en karaktär (B56), t.ex. "Shortsword 1d20+5". Slås först i ett inlägg (B57).</summary>
+/// <summary>
+/// Ett sparat tärningsslag på en karaktär (B56), t.ex. "Shortsword 1d20+5". Slås först i ett inlägg (B57), där man också
+/// väljer fördel eller nackdel (B66); slaget själv har inget läge.
+/// </summary>
 public class SavedRoll
 {
     private SavedRoll() { }
 
-    internal SavedRoll(string? label, string? notation, DiceMode mode)
+    internal SavedRoll(string? label, string? notation)
     {
         Uid = Guid.CreateVersion7();
-        Set(label, notation, mode);
+        Set(label, notation);
     }
 
     public Guid Uid { get; private set; }
     public string Label { get; private set; } = "";
     public string Notation { get; private set; } = "";
-    public DiceMode Mode { get; private set; }
 
     /// <summary>Ikon ur biblioteket (B58), eller null.</summary>
     public int? IconId { get; private set; }
 
     internal void SetIcon(int? iconId) => IconId = iconId;
 
-    internal void Set(string? label, string? notation, DiceMode mode)
+    internal void Set(string? label, string? notation)
     {
         Label = CharacterTrackers.ValidateLabel(label, "dice roll");
         if (!DiceNotation.TryParse(notation, out var parsed, out var error))
             throw new CampaignRuleException(string.IsNullOrWhiteSpace(notation) ? "Enter the dice, e.g. 1d20+5." : error!);
-        if (!Enum.IsDefined(mode))
-            throw new CampaignRuleException("Unknown roll mode.");
-        if (mode != DiceMode.Normal && !DiceRoll.SupportsMode(parsed))
-            throw new CampaignRuleException("Advantage and disadvantage only work with a single d20.");
         Notation = parsed.ToString();
-        Mode = mode;
     }
 }
 

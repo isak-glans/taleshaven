@@ -218,7 +218,7 @@
                                     {
                                         <text>🎲</text>
                                     }
-                                    @saved.Label <span class="text-secondary">@saved.Notation@(saved.Mode == DiceMode.Normal ? "" : $" {PostHtml.ModeText(saved.Mode).ToLowerInvariant()}")</span>
+                                    @saved.Label <span class="text-secondary">@saved.Notation</span>
                                 </button>
                             }
                         </div>
@@ -555,7 +555,8 @@
     {
         if (rollRows.Count >= ThreadLimits.MaxRollsPerPost)
             return;
-        var row = new RollRow { Notation = saved.Notation, Label = saved.Label, Mode = saved.Mode, IconId = saved.IconId };
+        // Läget väljs på raden i skrivfältet (B66); ett sparat slag läggs alltid till som Normal.
+        var row = new RollRow { Notation = saved.Notation, Label = saved.Label, IconId = saved.IconId };
         row.Validate();
         rollRows.Add(row);
         savedRollQuery = "";
