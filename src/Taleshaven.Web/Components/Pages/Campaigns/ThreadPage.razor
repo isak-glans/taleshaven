@@ -487,7 +487,10 @@
     {
         if (rollRows.Count >= ThreadLimits.MaxRollsPerPost)
             return;
-        rollRows.Add(new RollRow());
+        // Formeln fylls i med kampanjens standardtärning (B46), så att man bara skriver till modifieraren.
+        var row = new RollRow { Notation = campaign!.DefaultRoll };
+        row.Validate();
+        rollRows.Add(row);
         await SaveRollsAsync();
         focusNewRoll = true;
     }
@@ -829,7 +832,13 @@
                         {
                             <span class="small text-success" role="status">Link copied</span>
                         }
-                        <div class="menu-anchor ms-auto">
+                        @* Reply syns alltid uppe till höger; övriga åtgärder ligger i "…"-menyn (B44). *@
+                        @if (thread!.CanWrite)
+                        {
+                            <button type="button" class="btn btn-sm btn-link post-action ms-auto" title="Reply" aria-label="Reply"
+                                    @onclick="() => ReplyAsync(post)"><Icon Name="reply" /></button>
+                        }
+                        <div class="menu-anchor @(thread!.CanWrite ? "" : "ms-auto")">
                             <button type="button" class="btn btn-sm btn-link post-menu-toggle" title="More" aria-label="More actions"
                                     aria-expanded="@(openMenu == $"post-{post.Id}" ? "true" : "false")" @onclick="@(() => ToggleMenu($"post-{post.Id}"))">
                                 <Icon Name="three-dots" />
@@ -838,6 +847,16 @@
                             {
                                 <div class="menu-backdrop" @onclick="CloseMenu"></div>
                                 <div class="action-menu border rounded shadow-sm" role="menu">
+                                    @if (thread!.CanWrite)
+                                    {
+                                        <button type="button" class="action-menu-item" role="menuitem"
+                                                @onclick="() => { openMenu = null; return QuoteAsync(post); }"><Icon Name="quote" /> Quote</button>
+                                    }
+                                    @if (post.CanEdit)
+                                    {
+                                        <button type="button" class="action-menu-item" role="menuitem"
+                                                @onclick="() => { editingPostId = post.Id; confirmDeleteId = null; openMenu = null; }"><Icon Name="pencil" /> Edit</button>
+                                    }
                                     <button type="button" class="action-menu-item" role="menuitem" @onclick="() => CopyLinkAsync(post)"><Icon Name="link" /> Copy link</button>
                                     @if (post.CanDelete)
                                     {
@@ -881,21 +900,6 @@
                                 Delete this post?
                                 <button type="button" class="btn btn-sm btn-danger py-0 ms-1" @onclick="() => DeleteAsync(post.Id)">Yes, delete</button>
                                 <button type="button" class="btn btn-sm btn-link py-0" @onclick="() => confirmDeleteId = null">Cancel</button>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="post-actions">
-                                @if (thread!.CanWrite)
-                                {
-                                    <button type="button" class="post-action" title="Reply" aria-label="Reply" @onclick="() => ReplyAsync(post)"><Icon Name="reply" /></button>
-                                    <button type="button" class="post-action" title="Quote" aria-label="Quote" @onclick="() => QuoteAsync(post)"><Icon Name="quote" /></button>
-                                }
-                                @if (post.CanEdit)
-                                {
-                                    <button type="button" class="post-action" title="Edit" aria-label="Edit"
-                                            @onclick="() => { editingPostId = post.Id; confirmDeleteId = null; }"><Icon Name="pencil" /></button>
-                                }
                             </div>
                         }
                     }

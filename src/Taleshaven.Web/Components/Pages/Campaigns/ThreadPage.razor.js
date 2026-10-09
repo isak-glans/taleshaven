@@ -38,5 +38,9 @@ export function saveRolls(key, json) {
 
 export function focusLastRoll() {
     const inputs = document.querySelectorAll('.roll-editor .roll-notation');
-    inputs[inputs.length - 1]?.focus();
+    const input = inputs[inputs.length - 1];
+    if (!input) return;
+    input.focus();
+    // Markören hamnar efter standardtärningen, så att man kan skriva t.ex. "+5" direkt (B46).
+    input.setSelectionRange(input.value.length, input.value.length);
 }

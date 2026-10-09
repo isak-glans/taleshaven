@@ -12,3 +12,14 @@
 .campaign-tabs .nav-link {
     white-space: nowrap;
 }
+
+/* Kampanjens taggar (B47) leder till kampanjlistan filtrerad på taggen. */
+.campaign-tag {
+    color: var(--bs-secondary-color);
+    text-decoration: none;
+}
+
+.campaign-tag:hover {
+    color: var(--bs-link-color);
+    text-decoration: underline;
+}

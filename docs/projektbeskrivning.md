@@ -68,6 +68,12 @@ Besluten nedan ersätter B1, B3, B6–B10, B13, B14, F2 (delvis), F13 och F14 n�
 | B41 | Trådlistan med filter och sidor | Trådlistan får filtret **Active · Completed** (Active är förvalt) med antal trådar och antal olästa inlägg per filter. Varje filter visas **20 trådar per sida** med samma sidnavigering som i trådarna, men utan Latest. ↑/↓ fungerar som förut, och man stannar på samma filter och sida. Avslutade trådar visas med den senaste först. |
 | B42 | Tärningsslag som lista | Tärningar skrivs **inte längre i texten**. Under skrivfältet finns **🎲 Add roll**; varje rad har formel (`1d20+5`), beskrivning och **Normal / Advantage / Disadvantage** (bara för en ensam d20). Formeln kontrolleras medan man skriver och felet visas när man lämnar fältet. Slagen sparas i utkastet, visas som "rolls when posted" i förhandsgranskningen och **slås på servern när inlägget postas**. I inlägget visas de som en **lista under texten**: beskrivning, formel, tärningarna och summan; vid fördel eller nackdel visas båda tärningarna och den som inte räknas är överstruken. Ett inlägg kan bestå av bara slag. Vid redigering ändras bara texten. Högst 10 slag per inlägg, och inlägg med slag kan bara tas bort av GM (som i B31). `[dice]` i texten slås inte längre, och **`/roll` tas bort**. Ersätter B31:s taggar i texten. |
 | B43 | Ny exempelkampanj (2026-10-02) | Alla kampanjer raderas och en ny kampanj skrivs: *Lanterns of Greywater* (GM Leif, spelare Gunnar och Freja), med slag som lista, fördel och nackdel, spoilers, OOC-text och en dold NPC. |
+| B44 | Inläggets åtgärder (2026-10-07) | **Reply** är en liten ikon i inläggets övre högra hörn, bredvid "…". **Quote, Edit, Copy link och Delete** ligger i "…"-menyn. Ikonraden under texten tas bort (ändrar B35). |
+| B45 | Sidindelning av trådar | Finns redan: trådlistan visar 20 trådar per sida och filter (B41), och inläggen 20 per sida (B35). Frågan gällde kampanjlistan, se B48. |
+| B46 | Standardtärning per kampanj | GM väljer under *Settings* (och när kampanjen skapas) en **standardformel**, t.ex. `1d20`, `1d100` eller `2d6`, ur en lista med förslag eller som egen formel. Den kontrolleras som andra formler och sparas normaliserad (`d100` → `1d100`). **Add roll** fyller i formeln och lägger markören sist, så att man bara skriver t.ex. `+5`. Standard är `1d20`. |
+| B47 | Taggar på kampanjer | GM sätter **upp till 10 taggar** på kampanjen, t.ex. `#dnd5e #horror`, när den skapas och under *Settings*. Samma regler som för porträtt: små bokstäver, högst 30 tecken, bokstäver, siffror och bindestreck. Taggar som används på andra kampanjer visas som förslag. Taggarna visas i kampanjlistan och i kampanjens huvud; ett klick filtrerar kampanjlistan på taggen. |
+| B48 | Kompakt kampanjlista | Kampanjlistan visar en **rad per kampanj**: namn, status, taggar, olästa, GM och antal spelare, och Apply eller "Application sent". **Beskrivningen visas inte** i listan, bara under "About the campaign". Kampanjer man är GM eller spelare i ligger överst under **My campaigns**; övriga under **Other campaigns** (eller **All campaigns** om man inte är med i någon), **25 per sida**. |
+| B49 | Filter i kampanjlistan | En sökruta överst filtrerar på **namn och taggar**: varje ord ska matcha början av ett ord i namnet eller början av en tagg, och kampanjen visas om **alla** ord matchar. Filtret ligger i adressen (`/?q=horror`) och fungerar utan JavaScript; sidindelningen behåller filtret. |
 
 ### 1.2 Arbetsförslag (ej slutligt beslutade)
 
@@ -553,6 +559,12 @@ Ordningen gör att sajten fungerar mellan stegen.
 44. ✅ Tärningsslag som lista med fördel och nackdel (B42). Slagen sparar läget (`Mode`) i inläggets jsonb; migreringen ger äldre
     slag läget Normal. `[dice]`-taggarna, Dice-knappen och `/roll` är borttagna.
 45. ✅ Ny exempelkampanj *Lanterns of Greywater* (B43): 7 trådar (3 avslutade), 135 inlägg.
+
+### Fas 10 – Kampanjlistan, taggar och standardtärning (B44–B49)
+46. ✅ Reply som ikon i inläggets huvud; Quote, Edit, Copy link och Delete i "…"-menyn (B44).
+47. ✅ Standardtärning per kampanj som fylls i av Add roll (B46). Kolumnen `DefaultRoll`, standard `1d20`.
+48. ✅ Taggar på kampanjer (B47), som `text[]`-kolumnen `Tags`. Taggreglerna är gemensamma med porträtten (`TagList`).
+49. ✅ Kompakt kampanjlista med My campaigns överst och 25 kampanjer per sida (B48), och filter på namn och taggar (B49).
 
 ### Senare
 Social inloggning, privata meddelanden, notiser/e-postnotiser, privata

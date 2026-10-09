@@ -1,6 +1,10 @@
 @page "/"
 
+@using Taleshaven.Core.Text
 @using Taleshaven.Web.Components.Account.Shared
+
+@* Kampanjlistan (B48, B49): kompakta rader med namn, status och taggar. Kampanjer man är med i ligger överst under
+   "My campaigns"; övriga visas 25 per sida. Sökrutan filtrerar på namn och taggar och fungerar utan JavaScript. *@
 
 @inject ICampaignService CampaignService
 @inject IUnreadService Unread
@@ -12,72 +16,60 @@
 
 <AuthorizeView>
     <Authorized>
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <h1 class="mb-0">Campaigns</h1>
             <a class="btn btn-primary" href="campaigns/new">Create campaign</a>
         </div>
 
-        @if (campaigns is null)
+        <form method="get" action="" class="campaign-search d-flex gap-2 mb-3" role="search">
+            <input type="search" name="q" value="@Query" class="form-control" placeholder="Filter by name or tag, e.g. horror dnd5e"
+                   aria-label="Filter campaigns by name or tag" maxlength="100" />
+            <button type="submit" class="btn btn-outline-secondary">Filter</button>
+            @if (HasQuery)
+            {
+                <a class="btn btn-link px-1 campaign-search-clear" href="">Clear</a>
+            }
+        </form>
+
+        @if (mine is null || others is null)
         {
             <p>Loading…</p>
         }
-        else if (campaigns.Count == 0)
+        else if (mine.Count == 0 && otherCount == 0)
         {
-            <p>There are no campaigns yet. Be the first to <a href="campaigns/new">create one</a>!</p>
+            @if (HasQuery)
+            {
+                <p class="text-secondary campaign-search-empty">No campaigns match “@Query”. <a href="">Show all campaigns</a></p>
+            }
+            else
+            {
+                <p>There are no campaigns yet. Be the first to <a href="campaigns/new">create one</a>!</p>
+            }
         }
         else
         {
-            <ul class="list-group">
-                @foreach (var campaign in campaigns)
-                {
-                    <li class="list-group-item py-3">
-                        <div class="d-flex justify-content-between align-items-start gap-3">
-                            <div class="campaign-summary">
-                                <h2 class="h5 mb-1">
-                                    <a href="campaigns/@campaign.Id">@campaign.Name</a>
-                                    @if (unreadTotals.TryGetValue(campaign.Id, out var unreadCount))
-                                    {
-                                        <span class="badge rounded-pill text-bg-primary align-middle ms-1 unread-count">@UnreadDisplay.Format(unreadCount) new</span>
-                                    }
-                                </h2>
-                                <div class="text-secondary small mb-1">
-                                    GM: @campaign.GameMasterName
-                                    · @campaign.PlayerCount@(campaign.MaxPlayers is { } max ? $"/{max}" : "") players
-                                </div>
-                                @if (campaign.Description.Length > 0)
-                                {
-                                    <p class="mb-0 campaign-description">@campaign.Description</p>
-                                }
-                            </div>
-                            <div class="text-end flex-shrink-0">
-                                <CampaignStatusBadge Status="campaign.Status" />
-                                <div class="small text-secondary mt-1">
-                                    @if (campaign.ViewerRole == CampaignRole.GameMaster)
-                                    {
-                                        <span>You are the GM</span>
-                                    }
-                                    else if (campaign.ViewerRole == CampaignRole.Player)
-                                    {
-                                        <span>You are playing</span>
-                                    }
-                                    else if (campaign.ViewerHasPendingApplication)
-                                    {
-                                        <span>Application sent</span>
-                                    }
-                                    else if (campaign.CanViewerApply)
-                                    {
-                                        <a class="btn btn-sm btn-outline-primary" href="campaigns/@(campaign.Id)/players#apply">Apply</a>
-                                    }
-                                    else if (campaign.Status == CampaignStatus.OpenForApplications && !campaign.AcceptsApplications)
-                                    {
-                                        <span>Full</span>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </li>
-                }
-            </ul>
+            @if (mine.Count > 0)
+            {
+                <h2 class="h6 text-uppercase text-secondary campaign-group">My campaigns</h2>
+                <ul class="list-group mb-4 campaign-list campaign-list-mine">
+                    @foreach (var campaign in mine)
+                    {
+                        @Row(campaign)
+                    }
+                </ul>
+            }
+
+            @if (otherCount > 0)
+            {
+                <h2 class="h6 text-uppercase text-secondary campaign-group">@(mine.Count > 0 ? "Other campaigns" : "All campaigns")</h2>
+                <ul class="list-group mb-3 campaign-list campaign-list-others">
+                    @foreach (var campaign in others)
+                    {
+                        @Row(campaign)
+                    }
+                </ul>
+                <Pager Page="pageNumber" PageCount="pageCount" ShowLatest="false" Href="PageHref" />
+            }
         }
     </Authorized>
     <NotAuthorized>
@@ -94,16 +86,84 @@
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
 
-    private IReadOnlyList<CampaignListItem>? campaigns;
+    /// <summary>Sökord för namn och taggar (B49).</summary>
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? Query { get; set; }
+
+    [SupplyParameterFromQuery(Name = "page")]
+    public int? PageQuery { get; set; }
+
+    private List<CampaignListItem>? mine;
+    private List<CampaignListItem>? others;
+    private int otherCount;
+    private int pageNumber = 1;
+    private int pageCount = 1;
     private IReadOnlyDictionary<int, int> unreadTotals = new Dictionary<int, int>();
+
+    private bool HasQuery => !string.IsNullOrWhiteSpace(Query);
 
     protected override async Task OnInitializedAsync()
     {
         var user = (await AuthenticationState).User;
-        if (user.GetUserId() is { } userId)
-        {
-            campaigns = await CampaignService.GetCampaignsAsync(userId);
-            unreadTotals = await Unread.GetUnreadTotalsAsync(userId);
-        }
+        if (user.GetUserId() is not { } userId)
+            return;
+
+        var campaigns = await CampaignService.GetCampaignsAsync(userId, Query);
+        unreadTotals = await Unread.GetUnreadTotalsAsync(userId);
+
+        mine = [.. campaigns.Where(c => c.IsViewerIn)];
+        var rest = campaigns.Where(c => !c.IsViewerIn).ToList();
+        otherCount = rest.Count;
+        pageCount = Paging.PageCount(otherCount, CampaignLimits.CampaignsPerPage);
+        pageNumber = Paging.Clamp(PageQuery ?? 1, pageCount);
+        others = [.. rest.Skip((pageNumber - 1) * CampaignLimits.CampaignsPerPage).Take(CampaignLimits.CampaignsPerPage)];
     }
+
+    private string PageHref(int page)
+    {
+        var query = new List<string>();
+        if (HasQuery)
+            query.Add("q=" + Uri.EscapeDataString(Query!.Trim()));
+        if (page > 1)
+            query.Add($"page={page}");
+        return query.Count == 0 ? "" : "?" + string.Join("&", query);
+    }
+
+    // En klickad tagg filtrerar listan på den taggen.
+    private static string TagHref(string tag) => "?q=" + Uri.EscapeDataString(tag);
+
+    private RenderFragment Row(CampaignListItem campaign) =>
+        @<li class="list-group-item campaign-row" data-campaign-id="@campaign.Id">
+            <div class="d-flex flex-wrap align-items-baseline gap-2">
+                <a class="campaign-name fw-semibold" href="campaigns/@campaign.Id">@campaign.Name</a>
+                <CampaignStatusBadge Status="campaign.Status" />
+                @foreach (var tag in campaign.Tags)
+                {
+                    <a class="campaign-tag" href="@TagHref(tag)" title="Show campaigns tagged #@tag">#@tag</a>
+                }
+                @if (unreadTotals.TryGetValue(campaign.Id, out var unreadCount))
+                {
+                    <span class="badge rounded-pill text-bg-danger unread-count">@UnreadDisplay.Format(unreadCount) new</span>
+                }
+                <span class="ms-auto small text-secondary d-flex flex-wrap align-items-center gap-2 campaign-meta">
+                    <span>GM @campaign.GameMasterName · @campaign.PlayerCount@(campaign.MaxPlayers is { } max ? $"/{max}" : "") players</span>
+                    @if (campaign.ViewerRole == CampaignRole.GameMaster)
+                    {
+                        <span class="badge rounded-pill text-bg-dark">GM</span>
+                    }
+                    else if (campaign.ViewerHasPendingApplication)
+                    {
+                        <span>Application sent</span>
+                    }
+                    else if (campaign.CanViewerApply)
+                    {
+                        <a class="btn btn-sm btn-outline-primary py-0" href="campaigns/@(campaign.Id)/players#apply">Apply</a>
+                    }
+                    else if (campaign.ViewerRole == CampaignRole.None && campaign.Status == CampaignStatus.OpenForApplications && !campaign.AcceptsApplications)
+                    {
+                        <span>Full</span>
+                    }
+                </span>
+            </div>
+        </li>;
 }

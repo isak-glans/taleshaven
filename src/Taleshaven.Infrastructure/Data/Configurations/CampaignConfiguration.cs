@@ -32,6 +32,14 @@ internal sealed class CampaignConfiguration : IEntityTypeConfiguration<Campaign>
             .HasForeignKey(a => a.CampaignId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // Taggarna lagras som en text[]-kolumn, som porträttens (B47).
+        builder.Property(c => c.Tags).IsRequired();
+
+        builder.Property(c => c.DefaultRoll)
+            .IsRequired()
+            .HasMaxLength(CampaignLimits.DefaultRollMaxLength)
+            .HasDefaultValue(CampaignLimits.DefaultRoll);
+
         builder.HasIndex(c => c.Status);
     }
 }

@@ -2,10 +2,12 @@
 @attribute [Authorize]
 
 @using System.ComponentModel.DataAnnotations
+@using Taleshaven.Core.Text
 @using Taleshaven.Web.Components.Account
 @using Taleshaven.Web.Components.Account.Shared
 
-@* GM administrerar kampanjen: namn, beskrivning, max antal spelare, status och radering (A-2, A-3). *@
+@* GM administrerar kampanjen: namn, beskrivning, max antal spelare, status, taggar, standardtärning och radering
+   (A-2, A-3, B46, B47). *@
 
 @inject ICampaignService CampaignService
 @inject IdentityRedirectManager RedirectManager
@@ -70,6 +72,8 @@
             </div>
         </div>
 
+        <CampaignTagRollFields Prefix="Input" Tags="@Input.Tags" DefaultRoll="@Input.DefaultRoll" UsedTags="usedTags" />
+
         <button type="submit" class="btn btn-primary">Save settings</button>
     </EditForm>
 
@@ -114,6 +118,7 @@
     private CampaignDetails? campaign;
     private string? settingsError;
     private string? deleteError;
+    private IReadOnlyList<string> usedTags = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -133,7 +138,10 @@
             Description = campaign.Description,
             MaxPlayers = campaign.MaxPlayers,
             Status = campaign.Status,
+            Tags = TagList.Format(campaign.Tags),
+            DefaultRoll = campaign.DefaultRoll,
         };
+        usedTags = [.. (await CampaignService.GetCampaignTagsAsync()).Except(campaign.Tags)];
         DeleteInput ??= new();
     }
 
@@ -142,7 +150,7 @@
         try
         {
             await CampaignService.UpdateCampaignAsync(CampaignId, userId,
-                new CampaignSettings(Input.Name, Input.Description, Input.MaxPlayers, Input.Status));
+                new CampaignSettings(Input.Name, Input.Description, Input.MaxPlayers, Input.Status, Input.Tags, Input.DefaultRoll));
         }
         catch (CampaignRuleException ex)
         {
@@ -199,6 +207,10 @@
         public int? MaxPlayers { get; set; }
 
         public CampaignStatus Status { get; set; }
+
+        public string? Tags { get; set; }
+
+        public string? DefaultRoll { get; set; }
     }
 
     private sealed class DeleteInputModel

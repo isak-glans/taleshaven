@@ -1,11 +1,29 @@
-.campaign-summary {
-    min-width: 0;
+/* Kampanjlistan (B48): kompakta rader som trådlistan. */
+.campaign-group {
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
 }
 
-.campaign-description {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    white-space: pre-line;
+.campaign-row {
+    padding: 0.6rem 0.9rem;
+}
+
+.campaign-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.campaign-tag {
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+.campaign-tag:hover {
+    color: var(--bs-link-color);
+    text-decoration: underline;
+}
+
+.campaign-search {
+    max-width: 36rem;
 }

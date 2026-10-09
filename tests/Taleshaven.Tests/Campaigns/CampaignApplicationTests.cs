@@ -197,7 +197,7 @@ public class CampaignApplicationTests
     [Fact]
     public void Details_CanViewerApply_FollowsViewerApplication()
     {
-        var details = new CampaignDetails(1, "Namn", "", "GM", 4, CampaignStatus.OpenForApplications, Now, [], CampaignRole.None, null);
+        var details = new CampaignDetails(1, "Namn", "", "GM", 4, CampaignStatus.OpenForApplications, Now, [], CampaignRole.None, null, [], "1d20");
 
         Assert.True(details.CanViewerApply);
         Assert.False((details with { ViewerApplication = new(ApplicationStatus.Pending, Now, null) }).CanViewerApply);

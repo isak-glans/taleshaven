@@ -1,3 +1,6 @@
+using Taleshaven.Core.Dice;
+using Taleshaven.Core.Text;
+
 namespace Taleshaven.Core.Campaigns;
 
 public class Campaign
@@ -11,12 +14,19 @@ public class Campaign
     public int? MaxPlayers { get; private set; }
     public CampaignStatus Status { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
+
+    /// <summary>Taggar som gör kampanjen lätt att hitta, t.ex. "dnd5e" och "horror" (B47).</summary>
+    public List<string> Tags { get; private set; } = [];
+
+    /// <summary>Tärningen som fylls i när man lägger till ett slag i ett inlägg, t.ex. "1d20" (B46).</summary>
+    public string DefaultRoll { get; private set; } = CampaignLimits.DefaultRoll;
     public List<CampaignMembership> Memberships { get; private set; } = [];
 
     // Vid laddning från databasen räcker det att ta med ansökningar som väntar på beslut.
     public List<CampaignApplication> Applications { get; private set; } = [];
 
-    public static Campaign Create(string gameMasterId, string name, string? description, int? maxPlayers, DateTimeOffset now)
+    public static Campaign Create(string gameMasterId, string name, string? description, int? maxPlayers, DateTimeOffset now,
+        string? tags = null, string? defaultRoll = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(gameMasterId);
 
@@ -28,19 +38,39 @@ public class Campaign
             MaxPlayers = ValidateMaxPlayers(maxPlayers),
             Status = CampaignStatus.OpenForApplications,
             CreatedAt = now,
+            Tags = [.. ParseTags(tags)],
+            DefaultRoll = ValidateDefaultRoll(defaultRoll),
         };
     }
 
-    /// <summary>GM ändrar namn, beskrivning och max antal spelare (A-2).</summary>
-    public void UpdateDetails(string? name, string? description, int? maxPlayers)
+    /// <summary>GM ändrar namn, beskrivning, max antal spelare, taggar och standardtärning (A-2, B46, B47).</summary>
+    public void UpdateDetails(string? name, string? description, int? maxPlayers, string? tags = null, string? defaultRoll = null)
     {
         var validatedMax = ValidateMaxPlayers(maxPlayers);
         if (validatedMax < Memberships.Count)
             throw new CampaignRuleException($"The campaign already has {Memberships.Count} players. Remove players first or choose a higher number.");
 
+        var validatedTags = ParseTags(tags);
+        var validatedRoll = ValidateDefaultRoll(defaultRoll);
+
         Name = ValidateName(name);
         Description = ValidateDescription(description);
         MaxPlayers = validatedMax;
+        Tags = [.. validatedTags];
+        DefaultRoll = validatedRoll;
+    }
+
+    /// <summary>
+    /// Matchar kampanjen sökningen i kampanjlistan (B49)? Varje sökord ska matcha början av ett ord i namnet eller
+    /// början av en tagg, så "lan dnd" hittar "Lanterns of Greywater" med #dnd5e. Inga sökord matchar allt.
+    /// </summary>
+    public static bool MatchesSearch(string name, IEnumerable<string> tags, IReadOnlyList<string> terms)
+    {
+        if (terms.Count == 0)
+            return true;
+
+        var words = TagList.ParseSearch(name).Concat(tags).ToList();
+        return terms.All(term => words.Any(word => word.StartsWith(term, StringComparison.Ordinal)));
     }
 
     /// <summary>GM öppnar, stänger, arkiverar eller återställer kampanjen (A-3).</summary>
@@ -146,6 +176,19 @@ public class Campaign
         if (description.Length > CampaignLimits.DescriptionMaxLength)
             throw new CampaignRuleException($"The description can be at most {CampaignLimits.DescriptionMaxLength} characters.");
         return description;
+    }
+
+    private static IReadOnlyList<string> ParseTags(string? tags) =>
+        TagList.Parse(tags, CampaignLimits.MaxTags, required: false, "A campaign");
+
+    // Tom standardtärning ger 1d20. Formeln sparas normaliserad, t.ex. "d20" som "1d20".
+    private static string ValidateDefaultRoll(string? defaultRoll)
+    {
+        if (string.IsNullOrWhiteSpace(defaultRoll))
+            return CampaignLimits.DefaultRoll;
+        if (!DiceNotation.TryParse(defaultRoll, out var notation, out var error))
+            throw new CampaignRuleException($"Default roll: {error}");
+        return notation.ToString();
     }
 
     private static int? ValidateMaxPlayers(int? maxPlayers)

@@ -1,0 +1,46 @@
+@using Taleshaven.Core.Text
+
+@* Fälten för kampanjens taggar (B47) och standardtärning (B46), gemensamma för att skapa kampanj och för inställningarna.
+   Sidorna är statiska, så fälten är vanliga formulärfält med namn som binds av föräldern. Förslagen på standardtärning
+   är en datalist, så man kan också skriva en egen formel. *@
+
+<div class="mb-3">
+    <label for="@($"{Prefix}.Tags")" class="form-label">Tags</label>
+    <input id="@($"{Prefix}.Tags")" name="@($"{Prefix}.Tags")" value="@Tags" class="form-control" autocomplete="off"
+           placeholder="#dnd5e #horror #beginner-friendly" />
+    <div class="form-text">
+        Up to @CampaignLimits.MaxTags tags that help players find the campaign, e.g. the rule system or the genre.
+        @if (UsedTags.Count > 0)
+        {
+            <span class="campaign-used-tags">Used on other campaigns: @TagList.Format(UsedTags)</span>
+        }
+    </div>
+</div>
+
+<div class="mb-3">
+    <label for="@($"{Prefix}.DefaultRoll")" class="form-label">Default dice roll</label>
+    <input id="@($"{Prefix}.DefaultRoll")" name="@($"{Prefix}.DefaultRoll")" value="@DefaultRoll" class="form-control"
+           style="max-width: 10rem" list="common-rolls" maxlength="@CampaignLimits.DefaultRollMaxLength" autocomplete="off" />
+    <datalist id="common-rolls">
+        @foreach (var roll in CampaignLimits.CommonRolls)
+        {
+            <option value="@roll"></option>
+        }
+    </datalist>
+    <div class="form-text">Filled in when someone adds a dice roll to a post, e.g. 1d20 for D&amp;D, 1d100 for Call of Cthulhu or 2d6 for PbtA games.</div>
+</div>
+
+@code {
+    /// <summary>Formulärets prefix, t.ex. "Input", så att fälten heter "Input.Tags" och "Input.DefaultRoll".</summary>
+    [Parameter, EditorRequired]
+    public string Prefix { get; set; } = "";
+
+    [Parameter]
+    public string? Tags { get; set; }
+
+    [Parameter]
+    public string? DefaultRoll { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<string> UsedTags { get; set; } = [];
+}

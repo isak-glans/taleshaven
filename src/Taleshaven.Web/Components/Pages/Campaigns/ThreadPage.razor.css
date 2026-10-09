@@ -80,13 +80,7 @@
     max-width: 72ch;
 }
 
-/* Små ikonknappar under texten (B35). */
-.post-actions {
-    display: flex;
-    gap: 0.25rem;
-    margin-left: -0.35rem;
-}
-
+/* Små ikonknappar i inläggets huvud: Reply och "…" (B35, B44). */
 .post-action,
 .post-menu-toggle {
     background: none;

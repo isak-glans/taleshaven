@@ -29,7 +29,7 @@
             <div class="mb-3">
                 <label for="Input.Description" class="form-label">Description</label>
                 <InputTextArea @bind-Value="Input.Description" id="Input.Description" class="form-control" rows="6" maxlength="@CampaignLimits.DescriptionMaxLength" />
-                <div class="form-text">At most @CampaignLimits.DescriptionMaxLength characters. Shown in the campaign list.</div>
+                <div class="form-text">At most @CampaignLimits.DescriptionMaxLength characters. Shown under "About the campaign".</div>
                 <ValidationMessage For="() => Input.Description" class="text-danger" />
             </div>
 
@@ -40,6 +40,8 @@
                 <div class="form-text">Leave empty for no limit.</div>
                 <ValidationMessage For="() => Input.MaxPlayers" class="text-danger" />
             </div>
+
+            <CampaignTagRollFields Prefix="Input" Tags="@Input.Tags" DefaultRoll="@Input.DefaultRoll" UsedTags="usedTags" />
 
             <button type="submit" class="btn btn-primary">Create campaign</button>
             <a href="" class="btn btn-link">Cancel</a>
@@ -55,10 +57,12 @@
     private InputModel Input { get; set; } = default!;
 
     private string? errorMessage;
+    private IReadOnlyList<string> usedTags = [];
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         Input ??= new();
+        usedTags = await CampaignService.GetCampaignTagsAsync();
     }
 
     private async Task CreateAsync()
@@ -69,7 +73,7 @@
         int campaignId;
         try
         {
-            campaignId = await CampaignService.CreateCampaignAsync(userId, new NewCampaign(Input.Name, Input.Description, Input.MaxPlayers));
+            campaignId = await CampaignService.CreateCampaignAsync(userId, new NewCampaign(Input.Name, Input.Description, Input.MaxPlayers, Input.Tags, Input.DefaultRoll));
         }
         catch (CampaignRuleException ex)
         {
@@ -91,5 +95,9 @@
 
         [Range(CampaignLimits.MinPlayers, CampaignLimits.MaxPlayers, ErrorMessage = "Enter a value between {1} and {2}.")]
         public int? MaxPlayers { get; set; }
+
+        public string? Tags { get; set; }
+
+        public string? DefaultRoll { get; set; } = CampaignLimits.DefaultRoll;
     }
 }

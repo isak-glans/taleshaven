@@ -1,3 +1,5 @@
+using Taleshaven.Core.Text;
+
 namespace Taleshaven.Core.Portraits;
 
 /// <summary>
@@ -49,54 +51,19 @@ public class Portrait
     }
 }
 
-/// <summary>Taggar på porträtt: små bokstäver, utan #, bara bokstäver, siffror och bindestreck (PB-2).</summary>
+/// <summary>Taggar på porträtt (PB-2). Reglerna är gemensamma med kampanjernas taggar, se <see cref="TagList"/>.</summary>
 public static class PortraitTags
 {
-    public const int TagMaxLength = 30;
+    public const int TagMaxLength = TagList.TagMaxLength;
     public const int MaxTags = 20;
     public const int SourceMaxLength = 300;
 
-    private static readonly char[] Separators = [' ', ',', '\t', '\r', '\n'];
+    /// <summary>Tolkar taggar skrivna som "#dvärg #krigare" eller "dvärg, krigare". Ett porträtt måste ha minst en tagg.</summary>
+    public static IReadOnlyList<string> Parse(string? input) => TagList.Parse(input, MaxTags, required: true, "A portrait");
 
-    /// <summary>
-    /// Tolkar taggar skrivna som "#dvärg #krigare" eller "dvärg, krigare". Dubbletter tas bort och ordningen behålls.
-    /// Kastar <see cref="CampaignRuleException"/> om ingen tagg anges eller om en tagg är ogiltig.
-    /// </summary>
-    public static IReadOnlyList<string> Parse(string? input)
-    {
-        var tags = new List<string>();
-        foreach (var tag in Split(input))
-        {
-            if (tag.Length > TagMaxLength)
-                throw new CampaignRuleException($"The tag \"{tag}\" is too long (at most {TagMaxLength} characters).");
-            if (!tag.All(c => char.IsLetterOrDigit(c) || c == '-'))
-                throw new CampaignRuleException($"The tag \"{tag}\" can only contain letters, digits and hyphens.");
-            if (!tags.Contains(tag))
-                tags.Add(tag);
-        }
-
-        if (tags.Count == 0)
-            throw new CampaignRuleException("Enter at least one tag, e.g. #dwarf #warrior.");
-        if (tags.Count > MaxTags)
-            throw new CampaignRuleException($"A portrait can have at most {MaxTags} tags.");
-
-        return tags;
-    }
-
-    /// <summary>Sökorden i väljaren, normaliserade som taggar. Ogiltiga tecken ignoreras i stället för att ge fel.</summary>
-    public static IReadOnlyList<string> ParseSearch(string? query) =>
-        Split(query)
-            .Select(term => new string(term.Where(c => char.IsLetterOrDigit(c) || c == '-').ToArray()))
-            .Where(term => term.Length > 0)
-            .Distinct()
-            .ToList();
+    /// <summary>Sökorden i väljaren, normaliserade som taggar.</summary>
+    public static IReadOnlyList<string> ParseSearch(string? query) => TagList.ParseSearch(query);
 
     /// <summary>Taggarna som text att visa eller redigera, t.ex. "#dvärg #krigare".</summary>
-    public static string Format(IEnumerable<string> tags) => string.Join(" ", tags.Select(t => "#" + t));
-
-    private static IEnumerable<string> Split(string? input) =>
-        (input ?? "")
-            .Split(Separators, StringSplitOptions.RemoveEmptyEntries)
-            .Select(part => part.Trim().TrimStart('#').ToLowerInvariant())
-            .Where(part => part.Length > 0);
+    public static string Format(IEnumerable<string> tags) => TagList.Format(tags);
 }

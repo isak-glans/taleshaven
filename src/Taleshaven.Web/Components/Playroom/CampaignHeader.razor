@@ -19,6 +19,10 @@
 <p class="text-secondary mb-2">
     GM: @Campaign.GameMasterName
     · @Campaign.Players.Count@(Campaign.MaxPlayers is { } max ? $"/{max}" : "") players
+    @foreach (var tag in Campaign.Tags)
+    {
+        <a class="campaign-tag ms-1" href="@($"?q={Uri.EscapeDataString(tag)}")">#@tag</a>
+    }
 </p>
 
 @if (Campaign.Description.Length > 0)
