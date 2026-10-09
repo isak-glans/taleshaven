@@ -137,18 +137,23 @@
                 <button type="button" class="btn btn-link btn-sm p-0 ms-1" aria-label="Cancel reply" @onclick="() => replyTo = null">✕</button>
             </div>
         }
-        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        @* "Post as" visas alltid, så att man ser vem man skriver som även utan karaktärer eller NPC:er (B55). *@
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2 post-as-row">
+            <label for="post-as" class="small text-secondary">Post as</label>
             @if (postingOptions.Count > 0)
             {
-                <label for="post-as" class="small text-secondary">Post as</label>
                 <CharacterPicker Id="post-as" Options="postingOptions" @bind-Value="selectedCharacterId"
-                                 NoneLabel="@(campaign.ViewerRole == CampaignRole.GameMaster ? "GM (narrator)" : "Myself, no character")"
-                                 NoneFirst="campaign.ViewerRole == CampaignRole.GameMaster" />
+                                 NoneLabel="@NoneLabel" NoneFirst="campaign.ViewerRole == CampaignRole.GameMaster" />
             }
-            else if (campaign.ViewerRole == CampaignRole.Player)
+            else
             {
-                <span class="small text-secondary">
-                    Create a character under <a href="campaigns/@CampaignId/characters">Characters</a> to post as it.
+                <span id="post-as" class="post-as-fixed d-inline-flex align-items-center gap-1 border rounded px-2 py-1 small">
+                    <Avatar Name="@ownName" ImageUrl="@ownAvatarUrl" ColorKey="@userId" Size="20" />
+                    <span class="post-as-name">@NoneLabel</span>
+                </span>
+                <span class="small text-secondary post-as-hint">
+                    @(campaign.ViewerRole == CampaignRole.GameMaster ? "Create an NPC" : "Create a character")
+                    under <a href="campaigns/@CampaignId/characters">Characters</a> to post as it.
                 </span>
             }
         </div>
@@ -235,6 +240,8 @@
     private long? confirmDeleteId;
     private bool confirmComplete;
     private int? postingLoadedFor;
+    private string ownName = "";
+    private string? ownAvatarUrl;
     private string? openMenu;
     private long? copiedPostId;
     private DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -255,13 +262,18 @@
 
     private string RollsDraftKey => $"thread-{ThreadId}";
 
+    private string NoneLabel => campaign?.ViewerRole == CampaignRole.GameMaster ? "GM (narrator)" : "Myself, no character";
+
     private bool OnLastPage => page is not null && page.Page >= page.PageCount;
 
     private bool TracksReading => campaign?.ViewerRole is CampaignRole.Player or CampaignRole.GameMaster;
 
     protected override async Task OnParametersSetAsync()
     {
-        userId = (await AuthenticationState).User.GetUserId() ?? "";
+        var principal = (await AuthenticationState).User;
+        userId = principal.GetUserId() ?? "";
+        ownName = principal.GetDisplayName();
+        ownAvatarUrl = principal.GetAvatarUrl();
 
         // Samma adress ska inte ladda om (t.ex. när förrenderingen blir interaktiv behövs ingen ny hämtning i onödan).
         var key = $"{CampaignId}/{ThreadId}?{PageQuery}/{PostQuery}/{ReplyQuery}/{QuoteQuery}";

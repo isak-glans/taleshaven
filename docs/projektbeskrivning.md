@@ -79,6 +79,7 @@ Besluten nedan ersätter B1, B3, B6–B10, B13, B14, F2 (delvis), F13 och F14 n�
 | B52 | Profilsida (2026-10-09) | Varje användare har en **profilsida** (`/users/{id}`) som alla inloggade kan se: profilbild, namn, **"Member since"** (när kontot skapades), **antal inlägg** (borttagna räknas inte), texten **"About me"** och kampanjerna personen är GM eller spelare i. "About me" skrivs under Account › Profile (Markdown, högst 2 000 tecken). Namn och bild för inlägg skrivna utan karaktär, spelarens namn bredvid en karaktär, namnen i spelarlistan och ansökningarna samt GM:s namn i kampanjens huvud **länkar till profilsidan**. Borttagna konton har ingen profil och länkas inte. För konton från tiden före B52 räknas skapandedatumet fram från deras tidigaste aktivitet. |
 | B53 | Profilbilder i biblioteket (2026-10-09) | **168 profilbilder** klipps ut ur tre ark i `assets/` (runda, 256×256 WebP med genomskinliga hörn) och läggs in i porträttbiblioteket med taggen `profile` och beskrivande taggar (t.ex. `fox animal`, `dragon creature`, `elf woman character`, `lantern object`). De utklippta filerna ligger i `assets/profile_images/` men versionshanteras inte. De 25 tidigare uppladdade dubbletterna tas bort. Profilbildsväljaren visar **40 bilder per sida** (ändrar B51). |
 | B54 | Tydligare profilsida (2026-10-09) | Profilbilden ligger **först** på Account › Profile, och **ett klick på en bild sparar den direkt** (utan JavaScript finns knappen *Use selected picture* kvar). Namn och About me ligger under rubriken *Name and about me* med knappen *Save name and about me*, så att det inte ser ut som att bilden kräver den knappen. Exempel-NPC:erna i *Lanterns of Greywater* får bilder ur de nya profilbilderna. |
+| B55 | "Post as" syns alltid (2026-10-09) | Raden **Post as** visas alltid ovanför skrivfältet, även när man inte har något att välja mellan. Utan NPC:er ser GM *GM (narrator)* med sin profilbild och "Create an NPC under Characters to post as it"; en spelare utan karaktärer ser *Myself, no character* och motsvarande länk. Tidigare försvann raden helt, så att GM inte såg att det går att skriva som NPC:er. |
 
 ### 1.2 Arbetsförslag (ej slutligt beslutade)
 
@@ -572,7 +573,7 @@ Ordningen gör att sajten fungerar mellan stegen.
 48. ✅ Taggar på kampanjer (B47), som `text[]`-kolumnen `Tags`. Taggreglerna är gemensamma med porträtten (`TagList`).
 49. ✅ Kompakt kampanjlista med My campaigns överst och 25 kampanjer per sida (B48), och filter på namn och taggar (B49).
 
-### Fas 11 – Profilbild och profilsida (B50–B54)
+### Fas 11 – Profilbild och profilsida (B50–B55)
 50. ✅ Profilbild ur porträttbiblioteket under Account › Profile, med `#profile` förvalt i sökningen (B50). Kolumnen
     `PortraitId` på användaren (nollställs när porträttet tas bort). Bilden ligger i inloggningskakan, så menyn visar
     den utan databasanrop; kakan förnyas när bilden sparas.
@@ -581,6 +582,7 @@ Ordningen gör att sajten fungerar mellan stegen.
     Kolumnerna `About` och `CreatedAt` på användaren.
 53. ✅ 168 taggade profilbilder i biblioteket och 40 bilder per sida i väljaren (B53).
 54. ✅ Profilbilden först på profilsidan och sparas med ett klick; egen rubrik och knapp för namn och About me (B54).
+55. ✅ "Post as" visas alltid, med länk till att skapa en NPC eller karaktär när man inte har någon (B55).
 
 ### Senare
 Social inloggning, privata meddelanden, notiser/e-postnotiser, privata

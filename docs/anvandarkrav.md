@@ -329,8 +329,9 @@ Skrivfältet (`#composer`) finns bara på **sista sidan**. Annars visas en av ra
 
 Skrivfältet innehåller, uppifrån och ner:
 
-1. **"Post as"** (avsnitt 9.3), om man har något att välja. En spelare utan karaktärer ser i stället
-   "Create a character under Characters to post as it."
+1. **"Post as"** (avsnitt 9.3) visas alltid. Har man inget att välja mellan visas det man skriver som (*GM (narrator)*
+   eller *Myself, no character*, med profilbild) och "Create an NPC under Characters to post as it." för GM, respektive
+   "Create a character under Characters to post as it." för en spelare.
 2. **Textfältet** för Markdown, högst **5 000 tecken**, med en teckenräknare ("123 / 5000"). Under fältet en kort
    hjälptext om formateringen (fetstil, kursiv, listor, citat, länkar, `[ooc]…[/ooc]`, `[spoiler]…[/spoiler]`).
 3. **Tärningsslagen** (avsnitt 10.2).
