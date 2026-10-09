@@ -1,0 +1,42 @@
+# Taggar per bild: "rad.kolumn: taggar". Positioner utan taggar läggs inte in. Se B64 i projektbeskrivningen.
+source: Item icons 1 (assets/sources/icons/items_1.png)
+1.1: longsword sword weapon
+1.2: shield armor
+1.3: bow arrows quiver weapon
+1.4: battleaxe axe weapon
+1.5: wizard-hat hat clothing
+1.6: backpack gear
+1.7: bedroll gear
+1.8: lantern light gear
+2.1: chainmail armor
+2.2: helmet armor
+2.3: boots clothing
+2.4: cloak clothing
+2.5: potion healing red-potion
+2.6: potion mana blue-potion
+2.7: potion green-potion herbal
+2.8: scroll magic
+3.1: books book
+3.2: spellbook book magic
+3.3: map treasure-map
+3.4: gold coins money
+3.5: gems treasure
+3.6: ring jewelry
+3.7: wand magic
+3.8: dagger weapon
+4.1: torch light
+4.2: daggers dagger throwing-knives weapon
+4.3: d20 dice
+4.4: lute instrument
+4.5: quill writing letter
+4.6: binoculars gear
+4.7: compass gear
+4.8: horn drinking-horn
+5.1: fishing-rod gear
+5.2: loot bag treasure
+5.3: hammer tool
+5.4: thieves-tools lockpicks tool
+5.5: grappling-hook gear
+5.6: rope gear
+5.7: manacles chain shackles
+5.8: vial bottle

@@ -1,0 +1,74 @@
+# Taggar per bild: "rad.kolumn: taggar". Positioner utan taggar läggs inte in. Se B64 i projektbeskrivningen.
+source: Profile set 2 (assets/sources/portraits/profile_images_2.png)
+1.1: owl snowy-owl bird animal
+1.2: fox animal
+1.3: raccoon animal
+1.4: bear animal
+1.5: frog animal
+1.6: cat black-cat animal
+1.7: deer animal
+1.8: raven bird animal
+1.9: turtle goggles adventurer animal
+2.1: dragon red-dragon creature
+2.2: ghost spirit creature
+2.3: goblin goggles creature
+2.4: treant tree nature creature
+2.5: unicorn creature
+2.6: elf fae character
+2.7: golem stone creature
+2.8: mushroom myconid creature
+2.9: rogue hooded shadow character
+3.1: owl wizard bird animal
+3.2: snail animal
+3.3: dog animal
+3.4: badger animal
+3.5: slime creature
+3.6: tiefling demon character
+3.7: lantern light object
+3.8: books object
+3.9: compass object
+4.1: sword weapon object
+4.2: crystal gem object
+4.3: teacup cute object
+4.4: map scroll object
+4.5: chest treasure object
+4.6: telescope object
+4.7: potion magic object
+4.8: quill writing object
+4.9: candle light object
+5.1: otter sea animal
+5.2: dragon blue-dragon creature
+5.3: rabbit animal
+5.4: eagle bird animal
+5.5: red-panda animal
+5.6: hedgehog animal
+5.7: squirrel animal
+5.8: snail animal
+5.9: bat animal
+6.1: shark fish sea animal
+6.2: jellyfish sea animal
+6.3: penguin bird animal
+6.4: dragon ice white-dragon creature
+6.5: fire elemental creature
+6.6: cactus plant
+6.7: witch druid character
+6.8: mug coffee object
+6.9: mountain landscape
+7.1: raven bird animal
+7.2: crocodile goggles animal
+7.3: lantern spirit magic object
+7.4: ice elemental creature
+7.5: golem automaton creature
+7.6: goat animal
+7.7: frog animal
+7.8: fox fennec animal
+7.9: sapling dryad plant creature
+8.1: cat sleeping animal
+8.2: wolf moon animal
+8.3: backpack object
+8.4: moose animal
+8.5: dragon black-dragon creature
+8.6: cardinal bird animal
+8.7: fish sea animal
+8.8: lantern hooded light character
+8.9: hourglass time object

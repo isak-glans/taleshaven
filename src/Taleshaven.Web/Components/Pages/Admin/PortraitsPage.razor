@@ -6,7 +6,8 @@
 @using Taleshaven.Core.Portraits
 @using Taleshaven.Core.Site
 
-@* Porträttbiblioteket (B19, PB-1–PB-3). Administratörer och managers laddar upp, taggar och tar bort porträtt. *@
+@* Bildbiblioteket (B19, PB-1–PB-3). Administratörer och managers laddar upp, taggar och tar bort porträtt och ikoner;
+   typen (B61) väljs vid uppladdning och kan ändras. *@
 
 @inject IPortraitService Portraits
 @inject ISiteRoleService RoleService
@@ -18,13 +19,15 @@
     return;
 }
 
-<PageTitle>Portraits</PageTitle>
+<PageTitle>Image library</PageTitle>
 
-<h1 class="h3 mb-1">Portraits</h1>
-<p class="text-secondary">The portraits can be chosen for any character or NPC on the site.</p>
+<h1 class="h3 mb-1">Image library</h1>
+<p class="text-secondary">
+    Portraits can be chosen for any character, NPC or profile on the site. Icons are shown on counters, conditions and dice rolls.
+</p>
 
 <section class="card card-body mb-4 portrait-upload">
-    <h2 class="h6">Add a portrait</h2>
+    <h2 class="h6">Add an image</h2>
     <div class="d-flex flex-wrap gap-3">
         @if (preview is not null)
         {
@@ -36,6 +39,18 @@
                 <InputFile id="portrait-file" @key="fileInputKey" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp" OnChange="OnImageSelectedAsync" />
                 <div class="form-text">JPG, PNG or WebP, at most 5 MB. The image is cropped to a square.</div>
             </div>
+            <fieldset>
+                <legend class="form-label small mb-1">Type</legend>
+                <div class="btn-group btn-group-sm image-kind" role="radiogroup" aria-label="Type">
+                    @foreach (var kind in Kinds)
+                    {
+                        <input type="radio" class="btn-check" name="new-kind" id="new-kind-@kind" checked="@(newKind == kind)"
+                               @onchange="() => SetNewKindAsync(kind)" />
+                        <label class="btn btn-outline-secondary" for="new-kind-@kind">@KindName(kind)</label>
+                    }
+                </div>
+                <div class="form-text">@(newKind == ImageKind.Icon ? "Small pictures for counters, conditions and dice rolls; never shown as portraits." : "For characters, NPCs and profiles.")</div>
+            </fieldset>
             <div>
                 <label for="portrait-tags" class="form-label small mb-1">Tags</label>
                 <input id="portrait-tags" class="form-control form-control-sm" placeholder="#dwarf #warrior" @bind="newTags" @bind:event="oninput" />
@@ -63,13 +78,22 @@
 
 <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
     <h2 class="h5 mb-0 me-auto">Library</h2>
+    <div class="btn-group btn-group-sm library-filter" role="group" aria-label="Show">
+        <button type="button" class="btn @(filterKind is null ? "btn-secondary" : "btn-outline-secondary")" aria-pressed="@(filterKind is null ? "true" : "false")"
+                @onclick="() => SetFilterAsync(null)">All</button>
+        @foreach (var kind in Kinds)
+        {
+            <button type="button" class="btn @(filterKind == kind ? "btn-secondary" : "btn-outline-secondary")" aria-pressed="@(filterKind == kind ? "true" : "false")"
+                    @onclick="() => SetFilterAsync(kind)">@(KindName(kind))s</button>
+        }
+    </div>
     <input type="search" class="form-control form-control-sm w-auto" placeholder="Search tags" aria-label="Search portraits by tag"
            @bind="query" @bind:event="oninput" @bind:after="OnQueryChangedAsync" />
 </div>
 
 @if (page is { Portraits.Count: 0 })
 {
-    <p class="text-secondary">@(string.IsNullOrWhiteSpace(query) ? "The library is empty." : "No portraits have those tags.")</p>
+    <p class="text-secondary">@(string.IsNullOrWhiteSpace(query) ? "The library is empty." : "No images have those tags.")</p>
 }
 else if (page is not null)
 {
@@ -81,6 +105,13 @@ else if (page is not null)
                 <div class="card-body p-2 small">
                     @if (editingId == portrait.Id)
                     {
+                        <label class="form-label small mb-1" for="edit-kind-@portrait.Id">Type</label>
+                        <select id="edit-kind-@portrait.Id" class="form-select form-select-sm mb-1 edit-kind" @bind="editKind">
+                            @foreach (var kind in Kinds)
+                            {
+                                <option value="@kind">@KindName(kind)</option>
+                            }
+                        </select>
                         <label class="form-label small mb-1" for="edit-tags-@portrait.Id">Tags</label>
                         <input id="edit-tags-@portrait.Id" class="form-control form-control-sm mb-1 edit-tags" @bind="editTags" @bind:event="oninput" />
                         <label class="form-label small mb-1" for="edit-source-@portrait.Id">Source and licence</label>
@@ -96,6 +127,10 @@ else if (page is not null)
                     }
                     else
                     {
+                        @if (portrait.Kind == ImageKind.Icon)
+                        {
+                            <span class="badge text-bg-secondary image-kind-badge">Icon</span>
+                        }
                         <div class="portrait-card-tags">@PortraitTags.Format(portrait.Tags)</div>
                         @if (portrait.Source is not null)
                         {
@@ -148,6 +183,10 @@ else if (page is not null)
     private string query = "";
     private int limit = PageSize;
     private int searchVersion;
+    private ImageKind? filterKind;
+
+    private static readonly ImageKind[] Kinds = Enum.GetValues<ImageKind>();
+    private ImageKind newKind = ImageKind.Portrait;
 
     private byte[]? image;
     private string? preview;
@@ -159,6 +198,7 @@ else if (page is not null)
     private int fileInputKey;
 
     private int? editingId;
+    private ImageKind editKind;
     private string? editTags;
     private string? editSource;
     private string? editError;
@@ -180,14 +220,14 @@ else if (page is not null)
 
     private async Task RefreshAsync()
     {
-        tags = await Portraits.GetTagsAsync();
+        tags = await Portraits.GetTagsAsync(newKind);
         await SearchAsync();
     }
 
     private async Task SearchAsync()
     {
         var version = ++searchVersion;
-        var result = await Portraits.SearchAsync(query, limit);
+        var result = await Portraits.SearchAsync(query, limit, kind: filterKind);
         if (version == searchVersion)
             page = result;
     }
@@ -197,6 +237,26 @@ else if (page is not null)
         limit = PageSize;
         await SearchAsync();
     }
+
+    private async Task SetFilterAsync(ImageKind? kind)
+    {
+        filterKind = kind;
+        limit = PageSize;
+        await SearchAsync();
+    }
+
+    // Taggförslagen gäller den typ som laddas upp.
+    private async Task SetNewKindAsync(ImageKind kind)
+    {
+        newKind = kind;
+        tags = await Portraits.GetTagsAsync(newKind);
+    }
+
+    private static string KindName(ImageKind kind) => kind switch
+    {
+        ImageKind.Icon => "Icon",
+        _ => "Portrait",
+    };
 
     private async Task ShowMoreAsync()
     {
@@ -246,7 +306,7 @@ else if (page is not null)
         uploadError = null;
         try
         {
-            await Portraits.UploadAsync(userId, image, newTags, newSource);
+            await Portraits.UploadAsync(userId, newKind, image, newTags, newSource);
         }
         catch (CampaignRuleException ex)
         {
@@ -262,13 +322,14 @@ else if (page is not null)
         image = null;
         preview = null;
         fileInputKey++;
-        uploadStatus = "The portrait has been added.";
+        uploadStatus = newKind == ImageKind.Icon ? "The icon has been added." : "The portrait has been added.";
         await RefreshAsync();
     }
 
     private void StartEdit(PortraitView portrait)
     {
         editingId = portrait.Id;
+        editKind = portrait.Kind;
         editTags = PortraitTags.Format(portrait.Tags);
         editSource = portrait.Source;
         editError = null;
@@ -282,7 +343,7 @@ else if (page is not null)
 
         try
         {
-            await Portraits.UpdateAsync(userId, id, editTags, editSource);
+            await Portraits.UpdateAsync(userId, id, editKind, editTags, editSource);
         }
         catch (CampaignRuleException ex)
         {

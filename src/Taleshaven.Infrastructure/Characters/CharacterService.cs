@@ -82,13 +82,13 @@ internal sealed class CharacterService(
         if (!CampaignPermissions.CanEditCharacter(access.Role, userId, character.OwnerId))
             throw new CampaignRuleException("You can't change this character.");
 
-        // En ikon som väljs för hand måste finnas i biblioteket och vara taggad som ikon (B58).
+        // En ikon som väljs för hand måste finnas i biblioteket och vara en ikon (B58, B61).
         if (change is CharacterStatusChange.SetIcon { IconId: { } iconId }
-            && !await db.Portraits.AnyAsync(p => p.Id == iconId && p.Tags.Contains(IconMatcher.IconTag), cancellationToken))
+            && !await db.Portraits.AnyAsync(p => p.Id == iconId && p.Kind == ImageKind.Icon, cancellationToken))
             throw new CampaignRuleException("The icon doesn't exist any more. Choose another one.");
 
         var icons = await db.Portraits.AsNoTracking()
-            .Where(p => p.Tags.Contains(IconMatcher.IconTag))
+            .Where(p => p.Kind == ImageKind.Icon)
             .Select(p => new { p.Id, p.Tags })
             .ToListAsync(cancellationToken);
         var candidates = icons.Select(i => (i.Id, (IReadOnlyList<string>)i.Tags)).ToList();
@@ -243,7 +243,7 @@ internal sealed class CharacterService(
 
     private static async Task EnsurePortraitExistsAsync(TaleshavenDbContext db, int? portraitId, CancellationToken cancellationToken)
     {
-        if (portraitId is { } id && !await db.Portraits.AnyAsync(p => p.Id == id, cancellationToken))
+        if (portraitId is { } id && !await db.Portraits.AnyAsync(p => p.Id == id && p.Kind == ImageKind.Portrait, cancellationToken))
             throw new CampaignRuleException("The portrait is no longer in the library. Choose another one.");
     }
 

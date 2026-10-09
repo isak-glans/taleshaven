@@ -345,8 +345,7 @@
 
     private async Task SearchIconsAsync()
     {
-        var query = $"{IconMatcher.IconTag} {iconQuery}";
-        iconResults = (await Portraits.SearchAsync(query, 40)).Portraits;
+        iconResults = (await Portraits.SearchAsync(iconQuery, 40, kind: ImageKind.Icon)).Portraits;
     }
 
     private async Task ChooseIconAsync(CharacterStatusChange change)

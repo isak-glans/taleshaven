@@ -1,0 +1,50 @@
+# Taggar per bild: "rad.kolumn: taggar". Positioner utan taggar läggs inte in. Se B64 i projektbeskrivningen.
+source: General icons 1 (assets/sources/icons/general_icons_1.png)
+1.1: hp health hit-points heart
+1.2: ac armor-class shield
+1.3: temp-hp temporary-hp
+1.4: damage hit-damage
+1.5: melee attack crossed-swords
+1.6: ranged bow attack
+1.7: spell spell-attack staff
+1.8: gold coins money
+2.1: initiative d20 dice
+2.2: healing-potion potion healing
+2.3: inventory backpack bag
+2.4: time hourglass rounds duration
+2.5: rest campfire long-rest short-rest
+2.6: quest scroll
+2.7: navigation compass
+2.8: treasure-map map
+3.1: speed boots movement
+3.2: dash running movement
+3.3: bloodied wounded claws condition
+3.4: death skull dead death-saves condition
+3.5: poisoned poison condition
+3.6: burning fire condition
+3.7: frozen cold ice condition
+3.8: shocked lightning condition
+4.1: charmed confused condition
+4.2: frightened fear scared condition
+4.3: blinded blindfold condition
+4.4: stunned dazed condition
+4.5: restrained bound rope condition
+4.6: prone lying condition
+4.7: grappled grab condition
+4.8: webbed web condition
+5.1: diseased sick nauseated condition
+5.2: bleeding blood condition
+5.3: zombie undead rotting condition
+5.4: vortex spiral water
+5.5: invisible unseen condition
+5.6: unconscious asleep sleeping condition
+5.7: petrified stone condition
+5.8: entangled vines condition
+6.1: crystal gem
+6.2: radiant sun holy
+6.3: necrotic shadow darkness
+6.4: spectral ghost spirit
+6.5: water waves
+6.6: flying wing
+6.7: earth rocks stone
+6.8: arcane force magic-circle

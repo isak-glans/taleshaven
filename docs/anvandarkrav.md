@@ -102,8 +102,8 @@ En arkiverad NPC kan inte väljas.
   - Inlägg och karaktärer ligger kvar och visas som skrivna av "Deleted user".
   - Medlemskap, ansökningar, roller och läspositioner raderas.
 - **KO-6 Profilbild:** användaren väljer en bild ur porträttbiblioteket (avsnitt 13) under *Mitt konto*; ingen egen
-  uppladdning. Väljaren söker först på taggen **`profile`** (finns inga sådana bilder visas hela biblioteket med en
-  förklaring), och man kan söka på andra taggar eller visa alla. Valet görs med radioknappar i ett rutnät, och
+  uppladdning. Väljaren visar alla porträtt (aldrig ikoner) med samma kategoriknappar som porträttväljaren (PB-10),
+  och man kan söka på taggar. Valet görs med radioknappar i ett rutnät, och
   **ett klick på en bild sparar den direkt** (en rad JavaScript skickar formuläret; utan JavaScript visas knappen
   *Use selected picture*). Bildvalet ligger först på sidan, före namn och About me, som har en egen spara-knapp
   (*Save name and about me*). **Remove picture** tar bort bilden. Rutnätet visar **40 bilder per sida** med sidnavigeringen
@@ -442,7 +442,7 @@ I PHP räcker ett formulär med raderna som fält i en array (`rolls[0][notation
   eller nackdel.
 - **TA-17:** Slaget som text, för citat och `title`: `Attack: 1d20+5 (advantage): [4, 18] + 5 = 23`.
 - **TA-18 Ikon:** ett slag som läggs till från ett sparat slag (KS-3) tar med dess ikon, om bilden finns och är
-  taggad `icon`. Annars föreslås en ikon efter beskrivningen (samma matchning som för karaktärens status). Ikonen
+  en ikon (PB-9). Annars föreslås en ikon efter beskrivningen (samma matchning som för karaktärens status). Ikonen
   sparas med slaget och ändras inte.
 
 ---
@@ -532,13 +532,13 @@ som renderas på servern.
 - **KS-6 I skrivfältet:** när man skriver som en karaktär visas dess sparade slag under *🎲 Add roll*: högst fem, och en
   sökruta (på namnet) om det finns fler. Ett klick lägger till en slagrad med formel, beskrivning och läge ifyllda
   (avsnitt 10.2).
-- **KS-7 Ikoner:** räknare, tillstånd och sparade slag kan ha en ikon ur porträttbiblioteket, bland bilder taggade
-  `icon`. När något läggs till föreslås en ikon automatiskt efter namnet: jämför namnets ord (och orden ihopskrivna)
+- **KS-7 Ikoner:** räknare, tillstånd och sparade slag kan ha en ikon ur porträttbiblioteket, bland bibliotekets
+  ikoner (PB-9). När något läggs till föreslås en ikon automatiskt efter namnet: jämför namnets ord (och orden ihopskrivna)
   med ikonernas taggar utan bindestreck; exakt träff väger tyngst, sedan en tagg som ingår i ett ord ("sword" i
   "shortsword"), sist ett ord som är början av en tagg ("spell" i "spellbook"). Kategoritaggar (weapon, armor, gear,
   magic, clothing, light, tool, jewelry, treasure, book, instrument, bag, money, coins) räknas inte. Förslaget sparas;
   den som får ändra kan välja en annan ikon (sökbar lista), föreslå igen eller ta bort ikonen. Porträtt- och
-  profilbildsväljaren visar inte ikoner om man inte söker på `icon`.
+  profilbildsväljaren visar aldrig ikoner.
 - **KS-8 Datamodell:** tabellerna `character_counters` (character_id, label, current, max, icon_id, sort_order),
   `character_conditions` (character_id, name, icon_id) och `saved_rolls` (character_id, label, notation, mode, icon_id,
   sort_order); icon_id pekar på `portraits` med `ON DELETE SET NULL`.
@@ -551,12 +551,12 @@ som renderas på servern.
 
 ---
 
-## 13. Porträttbiblioteket
+## 13. Bildbiblioteket
 
-Porträtt laddas **inte** upp per karaktär. Administratörer och managers sköter ett gemensamt bibliotek, och alla väljer
-porträtt därifrån.
+Porträtt laddas **inte** upp per karaktär. Administratörer och managers sköter ett gemensamt bibliotek med porträtt
+och ikoner, och alla väljer därifrån.
 
-- **PB-1 Ladda upp** (administratörer och managers, på sidan *Portraits*): JPG, PNG eller WebP, högst 5 MB och
+- **PB-1 Ladda upp** (administratörer och managers, på sidan *Image library*): JPG, PNG eller WebP, högst 5 MB och
   högst 8 000 px åt något håll.
 - **PB-2 Bearbetning:** bilden beskärs till en kvadrat (mitten), skalas till 256×256, all metadata (EXIF m.m.) tas
   bort och den sparas som **WebP** med ett **slumpat filnamn** **utanför webbroten**.
@@ -566,12 +566,23 @@ porträtt därifrån.
 - **PB-4 Taggar:** varje porträtt har taggar, t.ex. `#dwarf #fighter` (högst 20 taggar, högst 30 tecken var).
   Taggar sparas med små bokstäver utan `#`. Redan använda taggar föreslås när man skriver.
 - **PB-5 Källa och licens:** valfritt fält, högst 300 tecken.
-- **PB-6 Ändra och ta bort:** taggar och källa kan ändras. Ett porträtt får tas bort även om det används;
+- **PB-6 Ändra och ta bort:** typ, taggar och källa kan ändras. Ett porträtt får tas bort även om det används;
   karaktärerna som använde det får då initialer.
-- **PB-7 Välja porträtt** (på karaktärens redigeringssida): ett rutnät med porträtt och en sökruta. Varje sökord
+- **PB-7 Välja porträtt** (på karaktärens redigeringssida och för profilbilden, KO-6): ett rutnät med porträtt och en sökruta. Varje sökord
   matchar **början** av en tagg, och ett porträtt visas om det matchar **alla** sökord. Utan JavaScript räcker en
   vanlig sökning (GET-formulär) och ett rutnät av radioknappar.
 - **PB-8:** Porträtten ligger kvar när en kampanj raderas.
+- **PB-9 Typ:** varje bild är ett **porträtt** eller en **ikon**, vald vid uppladdning. Porträtt väljs till karaktärer,
+  NPC:er och profiler; ikoner till räknare, tillstånd och tärningsslag (KS-7, TA-18). Väljarna visar bara sin typ, och
+  servern kontrollerar typen när ett val sparas. Biblioteket kan filtreras på *All / Portraits / Icons*.
+- **PB-10 Kategoriknappar:** överst i porträttväljarna finns knappar för taggarna `human`, `elf`, `dwarf`, `monster`,
+  `animal` och `object` (de som finns, i den ordningen), följda av de vanligaste övriga taggarna, högst 12 knappar.
+- **PB-11 Taggstandard:** engelska, små bokstäver, singular, bindestreck mellan ord. Ett porträtt får först folkslag
+  eller kategori, sedan `man`/`woman`, kännetecken och roll. En ikon får först sitt namn, sedan synonymer och kategori.
+- **PB-12 Import av källark:** ett ark med många runda bilder delas upp automatiskt (rutnät av cirklar på ljus
+  bakgrund), och en taggfil anger taggarna per position (`rad.kolumn: taggar`). Importen lägger till nya bilder och
+  uppdaterar befintliga, igenkända på en importnyckel (`portraits/dwarves_1/7.8`), så den kan köras om utan dubbletter.
+  Den körs från kommandoraden av den som driftar sajten, inte från webbsidan.
 
 ---
 
@@ -651,7 +662,7 @@ users ──< user_roles
 | post_rolls | post_id, sort_order, notation, label (null), count, sides, modifier, mode (`normal` / `advantage` / `disadvantage`), results (t.ex. `"4,18"` eller JSON), total |
 | post_revisions | id, post_id, content, written_at, replaced_at |
 | characters | id, campaign_id, owner_id, is_npc, name, portrait_id (null), sheet, sheet_url, rule_system, gm_note, is_hidden, alias, is_archived, created_at, updated_at |
-| portraits | id, image_key (filnamn), tags, source, uploaded_by, created_at |
+| portraits | id, image_key (filnamn), kind (portrait/icon), tags, source, import_key (unik, kan vara null), uploaded_by, created_at |
 | read_markers | user_id, thread_id, last_read_post_id, updated_at |
 
 Kommentarer:
@@ -686,7 +697,7 @@ Kommentarer:
 | `/campaigns/{id}/characters/{cid}` | Karaktärens sida |
 | `/campaigns/{id}/characters/{cid}/edit` | Redigera karaktären |
 | `/campaigns/{id}/players` | Spelare och ansökningar |
-| `/portraits` | Porträttbiblioteket (manager, administratör) |
+| `/portraits` | Bildbiblioteket, *Image library* (manager, administratör) |
 | `/admin/roles` | Roller (administratör) |
 | `/media/portraits/{key}` | Porträttbild (inloggad) |
 

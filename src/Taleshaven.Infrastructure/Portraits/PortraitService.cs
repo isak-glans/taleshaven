@@ -13,7 +13,7 @@ internal sealed class PortraitService(
     IImageStore imageStore,
     TimeProvider timeProvider) : IPortraitService
 {
-    public async Task<PortraitPage> SearchAsync(string? query, int limit, int skip = 0, bool excludeIcons = false, CancellationToken cancellationToken = default)
+    public async Task<PortraitPage> SearchAsync(string? query, int limit, int skip = 0, ImageKind? kind = null, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
@@ -22,28 +22,31 @@ internal sealed class PortraitService(
         var terms = PortraitTags.ParseSearch(query);
         foreach (var term in terms)
             portraits = portraits.Where(p => p.Tags.Any(tag => tag.StartsWith(term)));
-        if (excludeIcons && !terms.Contains(IconMatcher.IconTag))
-            portraits = portraits.Where(p => !p.Tags.Contains(IconMatcher.IconTag));
+        if (kind is { } only)
+            portraits = portraits.Where(p => p.Kind == only);
 
         var total = await portraits.CountAsync(cancellationToken);
         var rows = await portraits
             .OrderByDescending(p => p.Id)
             .Skip(Math.Max(0, skip))
             .Take(limit + 1)
-            .Select(p => new { p.Id, p.ImageKey, p.Tags, p.Source, UsageCount = db.Characters.Count(c => c.PortraitId == p.Id) })
+            .Select(p => new { p.Id, p.ImageKey, p.Tags, p.Source, p.Kind, UsageCount = db.Characters.Count(c => c.PortraitId == p.Id) })
             .ToListAsync(cancellationToken);
 
         return new PortraitPage(
-            rows.Take(limit).Select(r => new PortraitView(r.Id, IImageStore.PortraitUrl(r.ImageKey), r.Tags, r.Source, r.UsageCount)).ToList(),
+            rows.Take(limit).Select(r => new PortraitView(r.Id, IImageStore.PortraitUrl(r.ImageKey), r.Tags, r.Source, r.UsageCount, r.Kind)).ToList(),
             HasMore: rows.Count > limit,
             TotalCount: total);
     }
 
-    public async Task<IReadOnlyList<TagCount>> GetTagsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TagCount>> GetTagsAsync(ImageKind? kind = null, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-        var tagLists = await db.Portraits.AsNoTracking().Select(p => p.Tags).ToListAsync(cancellationToken);
+        var tagLists = await db.Portraits.AsNoTracking()
+            .Where(p => kind == null || p.Kind == kind)
+            .Select(p => p.Tags)
+            .ToListAsync(cancellationToken);
         return tagLists
             .SelectMany(tags => tags)
             .GroupBy(tag => tag)
@@ -53,7 +56,7 @@ internal sealed class PortraitService(
             .ToList();
     }
 
-    public async Task<int> UploadAsync(string userId, byte[] image, string? tags, string? source, CancellationToken cancellationToken = default)
+    public async Task<int> UploadAsync(string userId, ImageKind kind, byte[] image, string? tags, string? source, CancellationToken cancellationToken = default)
     {
         await EnsureCanManageAsync(userId, cancellationToken);
 
@@ -64,7 +67,7 @@ internal sealed class PortraitService(
         var imageKey = await imageStore.SavePortraitAsync(image, cancellationToken);
         try
         {
-            var portrait = Portrait.Create(imageKey, userId, tags, source, timeProvider.GetUtcNow());
+            var portrait = Portrait.Create(imageKey, userId, kind, tags, source, timeProvider.GetUtcNow());
             db.Portraits.Add(portrait);
             await db.SaveChangesAsync(cancellationToken);
             return portrait.Id;
@@ -76,14 +79,14 @@ internal sealed class PortraitService(
         }
     }
 
-    public async Task UpdateAsync(string userId, int portraitId, string? tags, string? source, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(string userId, int portraitId, ImageKind kind, string? tags, string? source, CancellationToken cancellationToken = default)
     {
         await EnsureCanManageAsync(userId, cancellationToken);
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var portrait = await LoadAsync(db, portraitId, cancellationToken);
 
-        portrait.Update(tags, source);
+        portrait.Update(kind, tags, source);
         await db.SaveChangesAsync(cancellationToken);
     }
 

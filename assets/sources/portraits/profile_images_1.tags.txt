@@ -1,0 +1,58 @@
+# Taggar per bild: "rad.kolumn: taggar". Positioner utan taggar läggs inte in. Se B64 i projektbeskrivningen.
+source: Profile set 1 (assets/sources/portraits/profile_images_1.png)
+1.1: fox animal
+1.2: owl bird animal
+1.3: raccoon animal
+1.4: bear animal
+1.5: frog animal
+1.6: cat black-cat animal
+1.7: deer animal
+1.8: raven bird animal
+2.1: dog animal
+2.2: turtle adventurer animal
+2.3: rabbit animal
+2.4: dragon red-dragon creature
+2.5: ghost spirit creature
+2.6: goblin creature
+2.7: dryad fae nature character
+2.8: treant tree nature creature
+3.1: slime creature
+3.2: mushroom myconid creature
+3.3: wizard mage shadow creature
+3.4: demon creature
+3.5: dragon white-dragon creature
+3.6: golem stone creature
+3.7: sprite fae creature
+3.8: cat adventurer goggles animal
+4.1: lantern light object
+4.2: compass object
+4.3: books object
+4.4: teacup cute object
+4.5: crystal gem object
+4.6: sword weapon object
+4.7: staff magic object
+4.8: chest treasure object
+5.1: binoculars object
+5.2: map object
+5.3: backpack object
+5.4: telescope object
+5.5: potion magic object
+5.6: quill writing object
+5.7: key object
+5.8: candle light object
+6.1: owl snowy-owl bird animal
+6.2: fox fennec animal
+6.3: penguin bird animal
+6.4: badger animal
+6.5: hedgehog animal
+6.6: squirrel animal
+6.7: snail animal
+6.8: bat animal
+7.1: wolf animal
+7.2: shark fish sea animal
+7.3: jellyfish sea animal
+7.4: phoenix bird fire creature
+7.5: cactus plant
+7.6: mandrake plant creature
+7.7: mug coffee object
+7.8: mountain landscape

@@ -1,7 +1,8 @@
 @using Taleshaven.Core.Portraits
 
 @* Väljer en karaktärs porträtt ur sajtens bibliotek (B19, PB-4): rutnät med sökning på taggar.
-   Varje sökord matchar början av en tagg, och porträttet måste ha alla. *@
+   Varje sökord matchar början av en tagg, och porträttet måste ha alla. Bara porträtt visas, aldrig ikoner (B61);
+   kategorierna (B62) kommer först bland taggknapparna, sedan de vanligaste taggarna. *@
 
 @inject IPortraitService Portraits
 
@@ -32,9 +33,11 @@
             @if (tags.Count > 0)
             {
                 <div class="portrait-tags mt-2" aria-label="Common tags">
-                    @foreach (var tag in tags.Take(SuggestedTagCount))
+                    @foreach (var tag in PortraitTags.Suggest(tags, SuggestedTagCount))
                     {
-                        <button type="button" class="btn btn-sm btn-light border portrait-tag" @onclick="() => AddTagAsync(tag.Tag)">#@tag.Tag</button>
+                        var category = PortraitTags.Categories.Contains(tag);
+                        <button type="button" class="btn btn-sm border portrait-tag @(category ? "btn-outline-primary portrait-category" : "btn-light")"
+                                @onclick="() => AddTagAsync(tag)">#@tag</button>
                     }
                 </div>
             }
@@ -113,7 +116,7 @@
             return;
 
         focusSearch = true;
-        tags = await Portraits.GetTagsAsync();
+        tags = await Portraits.GetTagsAsync(ImageKind.Portrait);
         await SearchAsync();
     }
 
@@ -121,7 +124,7 @@
     {
         // Svaren kan komma i fel ordning när man skriver snabbt; bara det senaste visas.
         var version = ++searchVersion;
-        var result = await Portraits.SearchAsync(query, limit, excludeIcons: true);
+        var result = await Portraits.SearchAsync(query, limit, kind: ImageKind.Portrait);
         if (version == searchVersion)
             page = result;
     }

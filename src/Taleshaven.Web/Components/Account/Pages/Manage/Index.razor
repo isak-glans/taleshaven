@@ -19,7 +19,8 @@
 
 @* Profilbild ur porträttbiblioteket (B50). Sidan är statisk: sökningen är ett GET-formulär och valet ett vanligt
    formulär med radioknappar, så att inloggningskakan (och bilden i menyn) kan förnyas när bilden sparas.
-   Ett klick på en bild sparar den direkt (B54); knappen finns bara kvar för den som inte har JavaScript. *@
+   Ett klick på en bild sparar den direkt (B54); knappen finns bara kvar för den som inte har JavaScript.
+   Alla porträtt visas (inga ikoner), med samma taggknappar som porträttväljaren för karaktärer (B62). *@
 <section class="profile-picture mt-3" id="picture">
     <h4>Profile picture</h4>
     <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
@@ -41,18 +42,23 @@
 
     <form method="get" action="Account/Manage#picture" class="d-flex flex-wrap gap-2 mb-2 profile-picture-search" role="search">
         <input type="search" name="q" value="@SearchText" class="form-control" style="max-width: 24rem"
-               placeholder="Search tags, e.g. profile elf" aria-label="Search pictures by tag" />
-        @* En tom sökning ska visa alla bilder, inte bara #profile; en tom q-parameter kommer fram som null. *@
-        <input type="hidden" name="all" value="true" />
+               placeholder="Search tags, e.g. elf woman" aria-label="Search pictures by tag" />
         <button type="submit" class="btn btn-outline-secondary">Search</button>
         @if (SearchText != "")
         {
-            <a class="btn btn-link px-1 profile-picture-all" href="Account/Manage?all=true#picture">Show all pictures</a>
+            <a class="btn btn-link px-1 profile-picture-all" href="Account/Manage#picture">Show all pictures</a>
         }
     </form>
-    @if (fellBackToAll)
+    @if (suggestedTags.Count > 0)
     {
-        <p class="small text-secondary profile-picture-fallback">No pictures are tagged #@UserLimits.ProfilePortraitTag yet, so the whole library is shown.</p>
+        <nav class="portrait-tags mb-2" aria-label="Common tags">
+            @foreach (var tag in suggestedTags)
+            {
+                var category = PortraitTags.Categories.Contains(tag);
+                <a class="btn btn-sm border portrait-tag @(category ? "btn-outline-primary portrait-category" : "btn-light") @(SearchText == tag ? "active" : "")"
+                   href="@($"Account/Manage?q={Uri.EscapeDataString(tag)}#picture")">#@tag</a>
+            }
+        </nav>
     }
 
     @if (results is null || results.Portraits.Count == 0)
@@ -127,12 +133,9 @@
     [SupplyParameterFromForm(FormName = "picture")]
     private PictureModel? Picture { get; set; }
 
-    /// <summary>Sökningen i porträttbiblioteket. Utan sökning visas bilder taggade #profile (B50); tom sökning visar alla.</summary>
+    /// <summary>Sökningen i porträttbiblioteket. Utan sökning visas alla porträtt (B62).</summary>
     [SupplyParameterFromQuery(Name = "q")]
     private string? Query { get; set; }
-
-    [SupplyParameterFromQuery(Name = "all")]
-    private bool All { get; set; }
 
     [SupplyParameterFromQuery(Name = "page")]
     private int? PageQuery { get; set; }
@@ -145,9 +148,11 @@
 
     private ProfilePortrait? current;
     private PortraitPage? results;
-    private bool fellBackToAll;
+    private IReadOnlyList<string> suggestedTags = [];
 
-    private string SearchText => Query?.Trim() is { Length: > 0 } query ? query : All ? "" : UserLimits.ProfilePortraitTag;
+    private const int SuggestedTagCount = 12;
+
+    private string SearchText => Query?.Trim() ?? "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -166,28 +171,20 @@
         Input.About ??= user.About;
 
         current = await Accounts.GetProfilePortraitAsync(user.Id);
-        // Hela biblioteket visas om inga bilder har taggen #profile; sidnumret begränsas till sökningens sidor.
-        var search = SearchText;
-        var count = (await Portraits.SearchAsync(search, 0, excludeIcons: true)).TotalCount;
-        if (search == UserLimits.ProfilePortraitTag && Query is null && count == 0)
-        {
-            fellBackToAll = true;
-            search = "";
-            count = (await Portraits.SearchAsync(search, 0, excludeIcons: true)).TotalCount;
-        }
+        suggestedTags = PortraitTags.Suggest(await Portraits.GetTagsAsync(ImageKind.Portrait), SuggestedTagCount);
+        // Sidnumret begränsas till sökningens sidor.
+        var count = (await Portraits.SearchAsync(SearchText, 0, kind: ImageKind.Portrait)).TotalCount;
         pageCount = Paging.PageCount(count, PageSize);
         pageNumber = Paging.Clamp(PageQuery ?? 1, pageCount);
-        results = await Portraits.SearchAsync(search, PageSize, (pageNumber - 1) * PageSize, excludeIcons: true);
+        results = await Portraits.SearchAsync(SearchText, PageSize, (pageNumber - 1) * PageSize, kind: ImageKind.Portrait);
     }
 
     // Sidlänkarna behåller sökningen (B51).
     private string PageHref(int page)
     {
         var query = new List<string>();
-        if (Query?.Trim() is { Length: > 0 } q)
+        if (SearchText is { Length: > 0 } q)
             query.Add("q=" + Uri.EscapeDataString(q));
-        else if (All)
-            query.Add("all=true");
         if (page > 1)
             query.Add($"page={page}");
         return "Account/Manage" + (query.Count == 0 ? "" : "?" + string.Join("&", query)) + "#picture";

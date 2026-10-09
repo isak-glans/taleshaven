@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Taleshaven.Core;
 using Taleshaven.Core.Media;
+using Taleshaven.Core.Portraits;
 using Taleshaven.Core.Users;
 using Taleshaven.Infrastructure.Data;
 
@@ -107,7 +108,7 @@ internal sealed class AccountService(IDbContextFactory<TaleshavenDbContext> dbFa
         var user = await db.Users.SingleOrDefaultAsync(u => u.Id == userId, cancellationToken)
             ?? throw new InvalidOperationException("Användaren finns inte.");
 
-        if (portraitId is { } id && !await db.Portraits.AnyAsync(p => p.Id == id, cancellationToken))
+        if (portraitId is { } id && !await db.Portraits.AnyAsync(p => p.Id == id && p.Kind == ImageKind.Portrait, cancellationToken))
             throw new CampaignRuleException("The picture doesn't exist any more. Choose another one.");
 
         user.PortraitId = portraitId;

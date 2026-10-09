@@ -3,24 +3,22 @@ using System.Text.RegularExpressions;
 namespace Taleshaven.Core.Portraits;
 
 /// <summary>
-/// Föreslår en ikon ur biblioteket (bilder med taggen <see cref="IconTag"/>) för ett namn, t.ex. en räknare, ett tillstånd
+/// Föreslår en ikon ur biblioteket (bilder av typen <see cref="ImageKind.Icon"/>, B61) för ett namn, t.ex. en räknare, ett tillstånd
 /// eller ett sparat slag (B58). "Shortsword" ger ikonen taggad <c>shortsword</c> om den finns, annars en som är taggad
 /// <c>sword</c>. Jämförelsen bortser från stora och små bokstäver, mellanslag och bindestreck.
 /// </summary>
 public static partial class IconMatcher
 {
-    public const string IconTag = "icon";
-
     // Taggar som beskriver en kategori snarare än ett föremål ger för breda träffar ("Weapon attack" → vilket vapen som helst).
     private static readonly HashSet<string> GeneralTags =
     [
-        IconTag, "weapon", "armor", "gear", "magic", "clothing", "light", "tool", "jewelry", "treasure", "book",
+        "weapon", "armor", "gear", "magic", "clothing", "light", "tool", "jewelry", "treasure", "book",
         "instrument", "bag", "money", "coins",
     ];
 
     /// <summary>
     /// Bästa ikonen för namnet, eller null om ingen passar. <paramref name="icons"/> är ikonernas id och taggar; den första
-    /// taggen som inte är <c>icon</c> räknas som ikonens namn.
+    /// taggen räknas som ikonens namn.
     /// </summary>
     public static int? Suggest(string? name, IEnumerable<(int Id, IReadOnlyList<string> Tags)> icons)
     {
@@ -34,7 +32,7 @@ public static partial class IconMatcher
         var bestScore = 0;
         foreach (var (id, tags) in icons.OrderBy(i => i.Id))
         {
-            var primary = tags.FirstOrDefault(t => t != IconTag);
+            var primary = tags.FirstOrDefault();
             foreach (var tag in tags)
             {
                 if (GeneralTags.Contains(tag))

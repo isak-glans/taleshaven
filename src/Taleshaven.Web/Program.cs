@@ -4,11 +4,16 @@ using Taleshaven.Core.Media;
 using Taleshaven.Infrastructure;
 using Taleshaven.Infrastructure.Data;
 using Taleshaven.Infrastructure.Identity;
+using Taleshaven.Infrastructure.Portraits;
 using Taleshaven.Web;
 using Taleshaven.Web.Components;
 using Taleshaven.Web.Components.Account;
 
-var builder = WebApplication.CreateBuilder(args);
+// "images …" kör bildimporten (B64) i stället för webbplatsen, med samma inställningar (databas, bildmapp, administratörer).
+var imageCommand = args is ["images", ..] ? args[1..] : null;
+var builder = WebApplication.CreateBuilder(imageCommand is null ? args : []);
+if (imageCommand is not null)
+    builder.Logging.ClearProviders();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -50,6 +55,14 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
 var app = builder.Build();
+
+if (imageCommand is not null)
+{
+    if (app.Environment.IsDevelopment())
+        await app.Services.MigrateTaleshavenDatabaseAsync();
+    Environment.ExitCode = await ImageLibraryImport.RunAsync(app.Services, imageCommand, adminEmails, Console.Out);
+    return;
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

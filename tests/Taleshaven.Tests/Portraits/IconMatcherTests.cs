@@ -7,15 +7,15 @@ public class IconMatcherTests
 {
     private static readonly (int Id, IReadOnlyList<string> Tags)[] Icons =
     [
-        (1, ["longsword", "icon", "sword", "weapon"]),
-        (2, ["shortsword", "icon", "sword", "weapon"]),
-        (3, ["dagger", "icon", "weapon"]),
-        (4, ["daggers", "icon", "dagger", "throwing-knives", "weapon"]),
-        (5, ["thieves-tools", "icon", "lockpicks", "tool"]),
-        (6, ["bow", "icon", "arrows", "quiver", "weapon"]),
-        (7, ["spellbook", "icon", "book", "magic"]),
-        (8, ["potion", "icon", "healing", "red-potion"]),
-        (9, ["mace", "icon", "weapon"]),
+        (1, ["longsword", "sword", "weapon"]),
+        (2, ["shortsword", "sword", "weapon"]),
+        (3, ["dagger", "weapon"]),
+        (4, ["daggers", "dagger", "throwing-knives", "weapon"]),
+        (5, ["thieves-tools", "lockpicks", "tool"]),
+        (6, ["bow", "arrows", "quiver", "weapon"]),
+        (7, ["spellbook", "book", "magic"]),
+        (8, ["potion", "healing", "red-potion"]),
+        (9, ["mace", "weapon"]),
     ];
 
     [Theory]

@@ -164,7 +164,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         return (await ToPostItemsAsync(db, db.Posts.Where(p => p.Id == post.Id), viewer, cancellationToken)).Single();
     }
 
-    // Slagens ikoner (B60): en ikon från ett sparat slag måste finnas och vara taggad som ikon, annars tas den bort;
+    // Slagens ikoner (B60): en ikon från ett sparat slag måste finnas och vara en ikon, annars tas den bort;
     // ett slag utan ikon men med beskrivning får ett förslag efter beskrivningen, som på karaktären (B58).
     private static async Task<IReadOnlyList<RollRequest>?> WithIconsAsync(
         TaleshavenDbContext db, IReadOnlyList<RollRequest>? rolls, CancellationToken cancellationToken)
@@ -173,7 +173,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             return rolls;
 
         var icons = await db.Portraits.AsNoTracking()
-            .Where(p => p.Tags.Contains(IconMatcher.IconTag))
+            .Where(p => p.Kind == ImageKind.Icon)
             .Select(p => new { p.Id, p.Tags })
             .ToListAsync(cancellationToken);
         var candidates = icons.Select(i => (i.Id, (IReadOnlyList<string>)i.Tags)).ToList();

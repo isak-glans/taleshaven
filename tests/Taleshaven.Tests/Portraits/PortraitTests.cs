@@ -62,22 +62,34 @@ public class PortraitTests
     [Fact]
     public void Create_StoresNormalizedTagsAndSource()
     {
-        var portrait = Portrait.Create("abc.webp", "anna", "#Dvärg #krigare", "  Egen bild, CC BY 4.0  ", Now);
+        var portrait = Portrait.Create("abc.webp", "anna", ImageKind.Portrait, "#Dvärg #krigare", "  Egen bild, CC BY 4.0  ", Now);
 
         Assert.Equal(["dvärg", "krigare"], portrait.Tags);
         Assert.Equal("Egen bild, CC BY 4.0", portrait.Source);
         Assert.Equal("anna", portrait.UploadedById);
+        Assert.Equal(ImageKind.Portrait, portrait.Kind);
+        Assert.Null(portrait.ImportKey);
         Assert.Equal(Now, portrait.CreatedAt);
+    }
+
+    [Fact]
+    public void Create_KeepsImportKey()
+    {
+        var icon = Portrait.Create("abc.webp", "anna", ImageKind.Icon, "#hp", null, Now, "icons/general_icons_1/1.1");
+
+        Assert.Equal(ImageKind.Icon, icon.Kind);
+        Assert.Equal("icons/general_icons_1/1.1", icon.ImportKey);
     }
 
     [Fact]
     public void Update_ChangesTagsAndClearsEmptySource()
     {
-        var portrait = Portrait.Create("abc.webp", "anna", "#dvärg", "Källa", Now);
+        var portrait = Portrait.Create("abc.webp", "anna", ImageKind.Portrait, "#dvärg", "Källa", Now);
 
-        portrait.Update("#alv #magiker", " ");
+        portrait.Update(ImageKind.Icon, "#alv #magiker", " ");
 
         Assert.Equal(["alv", "magiker"], portrait.Tags);
+        Assert.Equal(ImageKind.Icon, portrait.Kind);
         Assert.Null(portrait.Source);
     }
 
@@ -85,6 +97,6 @@ public class PortraitTests
     public void Source_HasMaxLength()
     {
         Assert.Throws<CampaignRuleException>(() =>
-            Portrait.Create("abc.webp", "anna", "#dvärg", new string('a', PortraitTags.SourceMaxLength + 1), Now));
+            Portrait.Create("abc.webp", "anna", ImageKind.Portrait, "#dvärg", new string('a', PortraitTags.SourceMaxLength + 1), Now));
     }
 }

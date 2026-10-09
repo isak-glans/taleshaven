@@ -40,3 +40,15 @@
     outline: 2px solid var(--bs-primary);
     outline-offset: 2px;
 }
+
+/* Taggknapparna (B62), som i porträttväljaren. */
+.portrait-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.portrait-tag {
+    font-size: 0.75rem;
+    padding: 0 0.4rem;
+}

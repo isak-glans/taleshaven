@@ -27,3 +27,17 @@ direkt på sidan.
 ```bash
 dotnet ef migrations add <Namn> --project src/Taleshaven.Infrastructure --startup-project src/Taleshaven.Web --output-dir Data/Migrations
 ```
+
+### Bildbiblioteket
+
+Porträtt och ikoner kan läggas in från källark, bilder med många runda motiv. Arken ligger i
+`assets/sources/portraits/` eller `assets/sources/icons/` och versionshanteras inte; taggfilerna bredvid
+(`<ark>.tags.txt`) gör det. Se B64 i projektbeskrivningen.
+
+```bash
+# Klipp ut ett nytt ark, skapa översiktsark och en tom taggfil att fylla i
+dotnet run --project src/Taleshaven.Web -- images preview ../../assets/sources/portraits/<ark>.png
+# Lägg in nya bilder och uppdatera taggar (kan köras om; --dry-run visar bara vad som skulle hända)
+dotnet run --project src/Taleshaven.Web -- images import --dry-run
+dotnet run --project src/Taleshaven.Web -- images import
+```
