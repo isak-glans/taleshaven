@@ -65,7 +65,8 @@ public sealed record CampaignDetails(
     CampaignRole ViewerRole,
     ViewerApplication? ViewerApplication,
     IReadOnlyList<string> Tags,
-    string DefaultRoll)
+    string DefaultRoll,
+    string GameMasterId = "")
 {
     public bool AcceptsApplications => Campaign.CanAcceptApplications(Status, MaxPlayers, Players.Count);
 
@@ -75,7 +76,8 @@ public sealed record CampaignDetails(
         && AcceptsApplications;
 }
 
-public sealed record CampaignPlayer(string UserId, string DisplayName, DateTimeOffset JoinedAt);
+/// <summary>En spelare i kampanjen, med profilbild om hen har valt en (B50).</summary>
+public sealed record CampaignPlayer(string UserId, string DisplayName, DateTimeOffset JoinedAt, string? AvatarUrl = null);
 
 /// <summary>Den inloggade användarens senaste ansökan till kampanjen.</summary>
 public sealed record ViewerApplication(ApplicationStatus Status, DateTimeOffset SubmittedAt, DateTimeOffset? DecidedAt);

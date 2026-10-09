@@ -1,0 +1,42 @@
+/* Väljaren för profilbild (B50): ett rutnät av radioknappar med bilder. */
+.profile-picture-grid {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    max-width: 44rem;
+}
+
+.profile-picture-choice {
+    border: 2px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    justify-self: center;
+    line-height: 0;
+    padding: 2px;
+    position: relative;
+}
+
+.profile-picture-choice input {
+    opacity: 0;
+    position: absolute;
+}
+
+.profile-picture-choice img {
+    border-radius: 50%;
+    height: 72px;
+    object-fit: cover;
+    width: 72px;
+}
+
+.profile-picture-choice:hover {
+    border-color: var(--bs-border-color);
+}
+
+.profile-picture-choice:has(input:checked) {
+    border-color: var(--bs-primary);
+}
+
+.profile-picture-choice:has(input:focus-visible) {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}

@@ -1,0 +1,97 @@
+@page "/users/{UserId}"
+@attribute [Authorize]
+
+@using Taleshaven.Core.Users
+
+@* En användares profilsida (B52): bild, namn, när kontot skapades, antal inlägg, "About me" och kampanjerna hen är med i.
+   Alla inloggade kan se profiler, som de kan läsa kampanjer. Borttagna konton har ingen profil. *@
+
+@inject IAccountService Accounts
+@inject IMarkdownRenderer Markdown
+@inject NavigationManager NavigationManager
+
+@if (profile is null)
+{
+    return;
+}
+
+<PageTitle>@profile.DisplayName</PageTitle>
+
+<div class="user-profile">
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+        <Avatar Name="@profile.DisplayName" ImageUrl="@profile.AvatarUrl" ColorKey="@profile.Id" Size="112" />
+        <div>
+            <h1 class="h2 mb-1">@profile.DisplayName</h1>
+            <div class="text-secondary profile-facts">
+                @if (profile.CreatedAt is { } createdAt)
+                {
+                    <span class="profile-member-since">Member since @Dates.Date(createdAt)</span>
+                    <span aria-hidden="true"> · </span>
+                }
+                <span class="profile-post-count">@profile.PostCount @(profile.PostCount == 1 ? "post" : "posts")</span>
+            </div>
+            @if (isSelf)
+            {
+                <a class="btn btn-sm btn-outline-secondary mt-2" href="Account/Manage">Edit your profile</a>
+            }
+        </div>
+    </div>
+
+    <section class="mb-4">
+        <h2 class="h5">About me</h2>
+        @if (profile.About.Length > 0)
+        {
+            <div class="post-content profile-about">@((MarkupString)Markdown.ToSafeHtml(profile.About))</div>
+        }
+        else
+        {
+            <p class="text-secondary fst-italic profile-about-empty">
+                @(isSelf ? "You haven't written anything about yourself yet." : $"{profile.DisplayName} hasn't written anything yet.")
+            </p>
+        }
+    </section>
+
+    <section>
+        <h2 class="h5">Campaigns</h2>
+        @if (profile.Campaigns.Count == 0)
+        {
+            <p class="text-secondary profile-no-campaigns">Not in any campaigns yet.</p>
+        }
+        else
+        {
+            <ul class="list-group profile-campaigns" style="max-width: 40rem">
+                @foreach (var campaign in profile.Campaigns)
+                {
+                    <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+                        <a href="campaigns/@campaign.Id" class="fw-semibold">@campaign.Name</a>
+                        <CampaignStatusBadge Status="campaign.Status" />
+                        <span class="ms-auto small text-secondary">@(campaign.IsGameMaster ? "GM" : "Player")</span>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+</div>
+
+@code {
+    [Parameter]
+    public string UserId { get; set; } = "";
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private UserProfile? profile;
+    private bool isSelf;
+
+    protected override async Task OnInitializedAsync()
+    {
+        profile = await Accounts.GetProfileAsync(UserId);
+        if (profile is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        isSelf = (await AuthenticationState).User.GetUserId() == profile.Id;
+    }
+}

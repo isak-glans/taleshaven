@@ -12,4 +12,8 @@ public static class ClaimsPrincipalExtensions
         user.FindFirstValue(TaleshavenClaimTypes.DisplayName) is { Length: > 0 } displayName
             ? displayName
             : user.Identity?.Name ?? "";
+
+    /// <summary>Profilbilden (B50), eller null om användaren visas med initialer.</summary>
+    public static string? GetAvatarUrl(this ClaimsPrincipal user) =>
+        user.FindFirstValue(TaleshavenClaimTypes.AvatarUrl) is { Length: > 0 } url ? url : null;
 }

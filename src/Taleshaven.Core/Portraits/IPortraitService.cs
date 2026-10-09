@@ -8,8 +8,9 @@ public interface IPortraitService
 {
     /// <summary>
     /// Porträtt där varje sökord matchar början av någon tagg (PB-4), nyast först. Tom sökning ger alla.
+    /// <paramref name="skip"/> hoppar över de första träffarna, för sidindelning (B51).
     /// </summary>
-    Task<PortraitPage> SearchAsync(string? query, int limit, CancellationToken cancellationToken = default);
+    Task<PortraitPage> SearchAsync(string? query, int limit, int skip = 0, CancellationToken cancellationToken = default);
 
     /// <summary>Alla taggar som används, vanligast först, att föreslå vid uppladdning och sökning.</summary>
     Task<IReadOnlyList<TagCount>> GetTagsAsync(CancellationToken cancellationToken = default);
@@ -23,7 +24,8 @@ public interface IPortraitService
     Task DeleteAsync(string userId, int portraitId, CancellationToken cancellationToken = default);
 }
 
-public sealed record PortraitPage(IReadOnlyList<PortraitView> Portraits, bool HasMore);
+/// <summary>En sida med porträtt. <see cref="TotalCount"/> är antalet träffar för hela sökningen.</summary>
+public sealed record PortraitPage(IReadOnlyList<PortraitView> Portraits, bool HasMore, int TotalCount);
 
 /// <summary>Ett porträtt att visa. <see cref="UsageCount"/> är hur många karaktärer som använder det.</summary>
 public sealed record PortraitView(int Id, string Url, IReadOnlyList<string> Tags, string? Source, int UsageCount);

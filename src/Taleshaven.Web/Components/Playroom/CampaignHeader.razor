@@ -17,7 +17,7 @@
     }
 </div>
 <p class="text-secondary mb-2">
-    GM: @Campaign.GameMasterName
+    GM: <a class="campaign-gm" href="@UserLinks.Profile(Campaign.GameMasterId)">@Campaign.GameMasterName</a>
     · @Campaign.Players.Count@(Campaign.MaxPlayers is { } max ? $"/{max}" : "") players
     @foreach (var tag in Campaign.Tags)
     {

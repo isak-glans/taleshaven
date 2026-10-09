@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Taleshaven.Core;
 using Taleshaven.Core.Campaigns;
+using Taleshaven.Core.Media;
 using Taleshaven.Core.Text;
 using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Data;
@@ -82,13 +83,21 @@ internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbF
         if (campaign is null)
             return null;
 
-        var players = await (
+        var players = (await (
                 from m in db.CampaignMemberships.AsNoTracking()
                 where m.CampaignId == campaignId
                 join u in db.Users on m.UserId equals u.Id
                 orderby m.JoinedAt
-                select new CampaignPlayer(u.Id, u.DisplayName, m.JoinedAt))
-            .ToListAsync(cancellationToken);
+                select new
+                {
+                    u.Id,
+                    u.DisplayName,
+                    m.JoinedAt,
+                    AvatarKey = db.Portraits.Where(p => p.Id == u.PortraitId).Select(p => p.ImageKey).FirstOrDefault(),
+                })
+            .ToListAsync(cancellationToken))
+            .Select(r => new CampaignPlayer(r.Id, r.DisplayName, r.JoinedAt, r.AvatarKey is null ? null : IImageStore.PortraitUrl(r.AvatarKey)))
+            .ToList();
 
         var viewerRole = campaign.GameMasterId == viewerId ? CampaignRole.GameMaster
             : players.Any(p => p.UserId == viewerId) ? CampaignRole.Player
@@ -106,7 +115,8 @@ internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbF
             viewerRole,
             campaign.ViewerApplication,
             campaign.Tags,
-            campaign.DefaultRoll);
+            campaign.DefaultRoll,
+            campaign.GameMasterId);
     }
 
     public async Task<int> CreateCampaignAsync(string gameMasterId, NewCampaign campaign, CancellationToken cancellationToken = default)

@@ -309,7 +309,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
 
     private static PostAuthor AuthorOf(PostItem post) => post.Character is { } character
         ? new PostAuthor(character.Name, character.AvatarUrl, $"character-{character.Id}", character.IsHidden && character.AvatarUrl is null)
-        : new PostAuthor(post.AuthorName, null, post.AuthorId, false);
+        : new PostAuthor(post.AuthorName, post.AuthorAvatarUrl, post.AuthorId, false);
 
     /// <summary>Den som läser, för att maskera dolda NPC:er och räkna ut vad hen får göra med varje inlägg.</summary>
     private sealed record Viewer(string UserId, CampaignRole Role, CampaignStatus CampaignStatus, ThreadStatus ThreadStatus)
@@ -336,6 +336,8 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                     p.ThreadId,
                     p.AuthorId,
                     u.DisplayName,
+                    AuthorAvatarKey = db.Portraits.Where(pt => pt.Id == u.PortraitId).Select(pt => pt.ImageKey).FirstOrDefault(),
+                    AuthorIsDeleted = u.UserName == "deleted-" + u.Id,
                     IsGameMaster = p.AuthorId == c.GameMasterId,
                     ViewerIsGameMaster = c.GameMasterId == viewer.UserId,
                     p.Content,
@@ -403,7 +405,11 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                         : null,
                     IsDeleted: deleted,
                     CanEdit: !deleted && CampaignPermissions.CanEditPost(viewer.Role, viewer.CampaignStatus, viewer.ThreadStatus, viewer.UserId, r.AuthorId),
-                    CanDelete: !deleted && CampaignPermissions.CanDeletePost(viewer.Role, viewer.CampaignStatus, viewer.ThreadStatus, viewer.UserId, r.AuthorId, hasRolls));
+                    CanDelete: !deleted && CampaignPermissions.CanDeletePost(viewer.Role, viewer.CampaignStatus, viewer.ThreadStatus, viewer.UserId, r.AuthorId, hasRolls),
+                    // Profilbilden visas när inlägget är skrivet utan karaktär, t.ex. GM som berättare (B50).
+                    AuthorAvatarUrl: r.AuthorAvatarKey is null ? null : IImageStore.PortraitUrl(r.AuthorAvatarKey),
+                    // Borttagna konton (B21) har ingen profilsida att länka till (B52).
+                    AuthorIsDeleted: r.AuthorIsDeleted);
             })
             .ToList();
     }

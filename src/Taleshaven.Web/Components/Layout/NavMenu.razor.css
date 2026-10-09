@@ -107,3 +107,10 @@
         overflow-y: auto;
     }
 }
+
+/* Profilbilden i menyn (B50) tar samma plats som ikonerna. */
+.nav-avatar {
+    display: inline-flex;
+    margin-left: -0.15rem;
+    margin-right: 0.6rem;
+}

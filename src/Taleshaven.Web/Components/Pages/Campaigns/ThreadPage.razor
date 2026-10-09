@@ -784,6 +784,13 @@
                     <Avatar Name="@hidden.Name" ImageUrl="@hidden.AvatarUrl" ColorKey="@($"character-{hidden.Id}")" Size="56"
                             Silhouette="@(hidden.IsHidden && campaign!.ViewerRole != CampaignRole.GameMaster)" />
                 }
+                else if (!post.AuthorIsDeleted)
+                {
+                    @* Utan karaktär leder bilden och namnet till användarens profil (B52). *@
+                    <a href="@UserLinks.Profile(post.AuthorId)" class="post-avatar-link" tabindex="-1" aria-hidden="true">
+                        <Avatar Name="@post.AuthorName" ImageUrl="@post.AuthorAvatarUrl" ColorKey="@post.AuthorId" Size="56" />
+                    </a>
+                }
                 else
                 {
                     <Avatar Name="@post.AuthorName" ColorKey="@post.AuthorId" Size="56" />
@@ -801,6 +808,10 @@
                         {
                             <a class="post-author post-author-link" href="@nameLink">@named.Name</a>
                         }
+                        else if (post.Character is null && !post.AuthorIsDeleted)
+                        {
+                            <a class="post-author post-author-link post-user-link" href="@UserLinks.Profile(post.AuthorId)">@post.AuthorName</a>
+                        }
                         else
                         {
                             <strong class="post-author">@(post.Character?.Name ?? post.AuthorName)</strong>
@@ -815,7 +826,14 @@
                         }
                         else if (post.Character is not null)
                         {
-                            <span class="small text-secondary post-player">@post.AuthorName</span>
+                            @if (post.AuthorIsDeleted)
+                            {
+                                <span class="small text-secondary post-player">@post.AuthorName</span>
+                            }
+                            else
+                            {
+                                <a class="small text-secondary post-player" href="@UserLinks.Profile(post.AuthorId)">@post.AuthorName</a>
+                            }
                         }
                         else if (post.AuthorIsGameMaster)
                         {

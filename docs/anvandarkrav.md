@@ -101,8 +101,24 @@ En arkiverad NPC kan inte väljas.
   - Kontot blir en anonym "gravsten" med namnet **"Deleted user"**: e-post, lösenord och inloggningsmöjlighet tas bort.
   - Inlägg och karaktärer ligger kvar och visas som skrivna av "Deleted user".
   - Medlemskap, ansökningar, roller och läspositioner raderas.
-- **KO-6 Avatar:** användare har ingen egen bild. De visas med **initialer** i en färgad cirkel; färgen räknas fram
-  från användarens id så att den alltid är densamma.
+- **KO-6 Profilbild:** användaren väljer en bild ur porträttbiblioteket (avsnitt 13) under *Mitt konto*; ingen egen
+  uppladdning. Väljaren söker först på taggen **`profile`** (finns inga sådana bilder visas hela biblioteket med en
+  förklaring), och man kan söka på andra taggar eller visa alla. Valet görs med radioknappar i ett rutnät och
+  sparas med en knapp; **Remove picture** tar bort bilden. Rutnätet visar **20 bilder per sida** med sidnavigeringen
+  i avsnitt 8.2 (utan *Latest*), och sidbytet behåller sökningen (`?q=elf&page=2`).
+- **KO-7 Var bilden visas:** där användaren visas utan karaktär – inlägg skrivna som sig själv eller som GM-berättare,
+  "Latest" i trådlistan, spelarlistan, ansökningar hos GM och sidomenyn. Utan bild visas **initialer** i en färgad
+  cirkel; färgen räknas fram från användarens id så att den alltid är densamma. Tas porträttet bort ur biblioteket
+  får användaren initialer igen, och ett borttaget konto (KO-5) förlorar bilden.
+- **KO-8 Profilsida** (`/users/{id}`), synlig för alla inloggade: profilbild, visningsnamn, "Member since" (när kontot
+  skapades), antal inlägg (borttagna räknas inte), texten **"About me"** och kampanjerna personen är GM eller spelare
+  i (namn, status och roll). Den egna profilen har länken *Edit your profile*. Utan text visas "*Namn* hasn't written
+  anything yet." Ett borttaget konto har ingen profil (404).
+- **KO-9 About me** skrivs på *Mitt konto* tillsammans med visningsnamnet: Markdown, högst 2 000 tecken, renderas
+  enligt avsnitt 11.
+- **KO-10 Länkar till profilen:** namn och bild på inlägg skrivna utan karaktär, spelarens namn bredvid en karaktär
+  (IN-2), namnen i spelarlistan och i GM:s ansökningslista samt GM:s namn i kampanjens huvud. Borttagna konton
+  ("Deleted user") länkas inte.
 
 ---
 
@@ -273,7 +289,7 @@ Inlägget visas som ett ljust kort:
 - **IN-2 Namn:** karaktärens namn, och spelarens namn i grått bredvid. Utan karaktär: användarens namn.
   Märken: **NPC** för NPC:er, **GM** när GM skriver som berättare, **Hidden** (bara för GM) på dolda NPC:er.
 - **IN-3 Länk till karaktären:** namn och porträtt på en karaktär eller NPC länkar till karaktärens sida, utom en
-  dold NPC för spelarna. Inlägg utan karaktär länkas inte.
+  dold NPC för spelarna. Inlägg utan karaktär länkar till användarens profilsida (KO-10).
 - **IN-4 Tid:** relativ tid ("just now", "5 minutes ago", "yesterday", "3 days ago", sedan datum) med exakt datum och
   klockslag vid hovring (`title`). Tiden är en länk till inläggets fasta adress. Tider visas på engelska men i
   svensk tid (Europe/Stockholm).
@@ -586,7 +602,7 @@ users ──< user_roles
 
 | Tabell | Viktiga kolumner |
 |---|---|
-| users | id, email (unik, null för borttaget konto), email_confirmed, display_name, password_hash, is_deleted, failed_logins, locked_until, created_at |
+| users | id, email (unik, null för borttaget konto), email_confirmed, display_name, portrait_id (null, `ON DELETE SET NULL`), about, password_hash, is_deleted, failed_logins, locked_until, created_at |
 | user_roles | user_id, role (`admin` / `manager`) |
 | campaigns | id, name, description, game_master_id, max_players, status (`open` / `ongoing` / `closed` / `archived`), tags, default_roll (standard `1d20`), created_at, updated_at |
 | campaign_memberships | campaign_id, user_id, joined_at |
@@ -618,7 +634,8 @@ Kommentarer:
 |---|---|
 | `/` | Startsida för besökare; kampanjlistan för inloggade |
 | `/account/register`, `/account/login`, `/account/logout`, `/account/forgot-password`, `/account/reset-password`, `/account/confirm-email` | Konto |
-| `/account` | Mitt konto: namn, e-post, lösenord, ta bort kontot |
+| `/account` | Mitt konto: namn, About me, profilbild, e-post, lösenord, ta bort kontot |
+| `/users/{id}` | Profilsida (KO-8) |
 | `/campaigns/new` | Skapa kampanj |
 | `/campaigns/{id}` | Trådlistan (`?status=completed&page=N`) |
 | `/campaigns/{id}/settings` | Inställningar och radering (GM) |

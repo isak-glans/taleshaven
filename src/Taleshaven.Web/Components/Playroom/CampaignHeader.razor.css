@@ -23,3 +23,8 @@
     color: var(--bs-link-color);
     text-decoration: underline;
 }
+
+/* GM:ns namn leder till profilsidan (B52). */
+.campaign-gm {
+    color: inherit;
+}

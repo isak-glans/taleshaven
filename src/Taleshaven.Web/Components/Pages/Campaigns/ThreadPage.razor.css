@@ -200,3 +200,12 @@
         grid-row: 1;
     }
 }
+
+/* Spelarens namn bredvid karaktären leder till profilsidan (B52). */
+a.post-player {
+    text-decoration: none;
+}
+
+a.post-player:hover {
+    text-decoration: underline;
+}

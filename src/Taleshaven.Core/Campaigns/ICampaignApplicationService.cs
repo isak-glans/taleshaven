@@ -18,4 +18,5 @@ public interface ICampaignApplicationService
     Task RejectAsync(int campaignId, Guid applicationId, string gameMasterId, CancellationToken cancellationToken = default);
 }
 
-public sealed record PendingApplication(Guid Id, string ApplicantName, string Message, DateTimeOffset SubmittedAt);
+public sealed record PendingApplication(Guid Id, string ApplicantName, string Message, DateTimeOffset SubmittedAt,
+    string ApplicantId = "", string? ApplicantAvatarUrl = null);

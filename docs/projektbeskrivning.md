@@ -74,6 +74,9 @@ Besluten nedan ersätter B1, B3, B6–B10, B13, B14, F2 (delvis), F13 och F14 n�
 | B47 | Taggar på kampanjer | GM sätter **upp till 10 taggar** på kampanjen, t.ex. `#dnd5e #horror`, när den skapas och under *Settings*. Samma regler som för porträtt: små bokstäver, högst 30 tecken, bokstäver, siffror och bindestreck. Taggar som används på andra kampanjer visas som förslag. Taggarna visas i kampanjlistan och i kampanjens huvud; ett klick filtrerar kampanjlistan på taggen. |
 | B48 | Kompakt kampanjlista | Kampanjlistan visar en **rad per kampanj**: namn, status, taggar, olästa, GM och antal spelare, och Apply eller "Application sent". **Beskrivningen visas inte** i listan, bara under "About the campaign". Kampanjer man är GM eller spelare i ligger överst under **My campaigns**; övriga under **Other campaigns** (eller **All campaigns** om man inte är med i någon), **25 per sida**. |
 | B49 | Filter i kampanjlistan | En sökruta överst filtrerar på **namn och taggar**: varje ord ska matcha början av ett ord i namnet eller början av en tagg, och kampanjen visas om **alla** ord matchar. Filtret ligger i adressen (`/?q=horror`) och fungerar utan JavaScript; sidindelningen behåller filtret. |
+| B50 | Profilbild (2026-10-09) | Användaren väljer en **profilbild ur porträttbiblioteket** under Account › Profile; ingen egen uppladdning (B19). Väljaren visar först bilder med taggen **`#profile`** (finns inga visas hela biblioteket), och man kan söka på andra taggar eller visa alla. Bilden visas där användaren visas utan karaktär: inlägg skrivna som sig själv eller **som GM-berättare**, "Latest" i trådlistan, spelarlistan, ansökningar hos GM och i sidomenyn. Utan bild visas initialer. Tas porträttet bort ur biblioteket får användaren initialer igen (som B20), och ett borttaget konto förlorar bilden (B21). |
+| B51 | Sidor i profilbildsväljaren | Väljaren visar **20 bilder per sida** med samma sidnavigering som i trådarna (utan Latest), så att den fungerar även med hundratals bilder. Sidbytet behåller sökningen. |
+| B52 | Profilsida (2026-10-09) | Varje användare har en **profilsida** (`/users/{id}`) som alla inloggade kan se: profilbild, namn, **"Member since"** (när kontot skapades), **antal inlägg** (borttagna räknas inte), texten **"About me"** och kampanjerna personen är GM eller spelare i. "About me" skrivs under Account › Profile (Markdown, högst 2 000 tecken). Namn och bild för inlägg skrivna utan karaktär, spelarens namn bredvid en karaktär, namnen i spelarlistan och ansökningarna samt GM:s namn i kampanjens huvud **länkar till profilsidan**. Borttagna konton har ingen profil och länkas inte. För konton från tiden före B52 räknas skapandedatumet fram från deras tidigaste aktivitet. |
 
 ### 1.2 Arbetsförslag (ej slutligt beslutade)
 
@@ -125,7 +128,8 @@ kan vara GM i en kampanj och spelare i en annan.
 - K-1: En besökare kan registrera ett konto med e-post, visningsnamn och lösenord.
 - K-2: En användare kan logga in och ut.
 - K-3: En användare kan återställa sitt lösenord via e-post.
-- K-4: En användare har en profil med visningsnamn och eventuell profilbild.
+- K-4: En användare har en profil med visningsnamn, eventuell profilbild ur porträttbiblioteket (B50) och en
+  profilsida med "About me" som andra kan se (B52).
 - K-5 (senare): Extern inloggning via Google, Facebook och/eller Discord.
 
 ### 3.2 Kampanjlista
@@ -566,6 +570,14 @@ Ordningen gör att sajten fungerar mellan stegen.
 48. ✅ Taggar på kampanjer (B47), som `text[]`-kolumnen `Tags`. Taggreglerna är gemensamma med porträtten (`TagList`).
 49. ✅ Kompakt kampanjlista med My campaigns överst och 25 kampanjer per sida (B48), och filter på namn och taggar (B49).
 
+### Fas 11 – Profilbild och profilsida (B50–B52)
+50. ✅ Profilbild ur porträttbiblioteket under Account › Profile, med `#profile` förvalt i sökningen (B50). Kolumnen
+    `PortraitId` på användaren (nollställs när porträttet tas bort). Bilden ligger i inloggningskakan, så menyn visar
+    den utan databasanrop; kakan förnyas när bilden sparas.
+51. ✅ 20 bilder per sida i profilbildsväljaren, med sidnavigering som behåller sökningen (B51).
+52. ✅ Profilsida med About me, Member since, antal inlägg och kampanjer, och länkar dit från namn och bilder (B52).
+    Kolumnerna `About` och `CreatedAt` på användaren.
+
 ### Senare
 Social inloggning, privata meddelanden, notiser/e-postnotiser, privata
 tärningskast, reaktioner, bilder i inlägg, sökning, bokmärken, export, dolda
@@ -574,6 +586,7 @@ scener, mer avancerad tärningssyntax (t.ex. `4d6kh3`), PWA.
 Möjliga förbättringar att ta ställning till senare:
 - ~~"Story so far"~~: löses av en vanlig Chronicle-tråd (B37).
 - **Spelare skapar egna trådar** (B25 säger bara GM i första versionen).
+- **Egen berättarbild per kampanj:** GM väljer en bild för berättarens inlägg, skild från sin profilbild (B50 använder profilbilden).
 - **Förhandsvisning av karaktären** när man håller över namnet eller porträttet i en tråd (B37 börjar med en länk).
 - **Privata tärningskast:** GM slår dolt. Kan byggas ovanpå tärningarna i texten (B31).
 - **Export av kampanj:** behövs inte nu; säkerhetskopior av databasen räcker.

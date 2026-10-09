@@ -13,7 +13,7 @@ internal sealed class PortraitService(
     IImageStore imageStore,
     TimeProvider timeProvider) : IPortraitService
 {
-    public async Task<PortraitPage> SearchAsync(string? query, int limit, CancellationToken cancellationToken = default)
+    public async Task<PortraitPage> SearchAsync(string? query, int limit, int skip = 0, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
@@ -22,15 +22,18 @@ internal sealed class PortraitService(
         foreach (var term in PortraitTags.ParseSearch(query))
             portraits = portraits.Where(p => p.Tags.Any(tag => tag.StartsWith(term)));
 
+        var total = await portraits.CountAsync(cancellationToken);
         var rows = await portraits
             .OrderByDescending(p => p.Id)
+            .Skip(Math.Max(0, skip))
             .Take(limit + 1)
             .Select(p => new { p.Id, p.ImageKey, p.Tags, p.Source, UsageCount = db.Characters.Count(c => c.PortraitId == p.Id) })
             .ToListAsync(cancellationToken);
 
         return new PortraitPage(
             rows.Take(limit).Select(r => new PortraitView(r.Id, IImageStore.PortraitUrl(r.ImageKey), r.Tags, r.Source, r.UsageCount)).ToList(),
-            HasMore: rows.Count > limit);
+            HasMore: rows.Count > limit,
+            TotalCount: total);
     }
 
     public async Task<IReadOnlyList<TagCount>> GetTagsAsync(CancellationToken cancellationToken = default)

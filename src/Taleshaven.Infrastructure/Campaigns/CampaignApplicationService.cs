@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Taleshaven.Core;
 using Taleshaven.Core.Campaigns;
+using Taleshaven.Core.Media;
 using Taleshaven.Infrastructure.Data;
 using Taleshaven.Infrastructure.Threads;
 
@@ -33,15 +34,26 @@ internal sealed class CampaignApplicationService(IDbContextFactory<TaleshavenDbC
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-        return await (
+        return (await (
                 from a in db.CampaignApplications.AsNoTracking()
                 where a.CampaignId == campaignId
                     && a.Status == ApplicationStatus.Pending
                     && db.Campaigns.Any(c => c.Id == campaignId && c.GameMasterId == gameMasterId)
                 join u in db.Users on a.UserId equals u.Id
                 orderby a.SubmittedAt
-                select new PendingApplication(a.Id, u.DisplayName, a.Message, a.SubmittedAt))
-            .ToListAsync(cancellationToken);
+                select new
+                {
+                    a.Id,
+                    a.UserId,
+                    u.DisplayName,
+                    a.Message,
+                    a.SubmittedAt,
+                    AvatarKey = db.Portraits.Where(p => p.Id == u.PortraitId).Select(p => p.ImageKey).FirstOrDefault(),
+                })
+            .ToListAsync(cancellationToken))
+            .Select(r => new PendingApplication(r.Id, r.DisplayName, r.Message, r.SubmittedAt,
+                r.UserId, r.AvatarKey is null ? null : IImageStore.PortraitUrl(r.AvatarKey)))
+            .ToList();
     }
 
     public async Task ApproveAsync(int campaignId, Guid applicationId, string gameMasterId, CancellationToken cancellationToken = default)
