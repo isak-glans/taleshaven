@@ -98,7 +98,8 @@ public static class PortraitTags
     /// Kategorierna som visas som filterknappar i porträttväljarna (B62), i den här ordningen, om någon bild har taggen.
     /// Taggstandarden står i projektbeskrivningen (B64).
     /// </summary>
-    public static readonly IReadOnlyList<string> Categories = ["human", "elf", "dwarf", "monster", "animal", "object"];
+    public static readonly IReadOnlyList<string> Categories =
+        ["human", "elf", "dwarf", "halfling", "orc", "tiefling", "dragonborn", "monster", "animal", "object"];
 
     /// <summary>Taggknapparna i en väljare: kategorierna som finns först, sedan de vanligaste övriga taggarna.</summary>
     public static IReadOnlyList<string> Suggest(IEnumerable<TagCount> tags, int count)

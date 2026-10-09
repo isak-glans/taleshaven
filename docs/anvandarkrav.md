@@ -575,8 +575,8 @@ och ikoner, och alla väljer därifrån.
 - **PB-9 Typ:** varje bild är ett **porträtt** eller en **ikon**, vald vid uppladdning. Porträtt väljs till karaktärer,
   NPC:er och profiler; ikoner till räknare, tillstånd och tärningsslag (KS-7, TA-18). Väljarna visar bara sin typ, och
   servern kontrollerar typen när ett val sparas. Biblioteket kan filtreras på *All / Portraits / Icons*.
-- **PB-10 Kategoriknappar:** överst i porträttväljarna finns knappar för taggarna `human`, `elf`, `dwarf`, `monster`,
-  `animal` och `object` (de som finns, i den ordningen), följda av de vanligaste övriga taggarna, högst 12 knappar.
+- **PB-10 Kategoriknappar:** överst i porträttväljarna finns knappar för taggarna `human`, `elf`, `dwarf`, `halfling`,
+  `orc`, `tiefling`, `dragonborn`, `monster`, `animal` och `object` (de som finns, i den ordningen), följda av de vanligaste övriga taggarna, högst 12 knappar.
 - **PB-11 Taggstandard:** engelska, små bokstäver, singular, bindestreck mellan ord. Ett porträtt får först folkslag
   eller kategori, sedan `man`/`woman`, kännetecken och roll. En ikon får först sitt namn, sedan synonymer och kategori.
 - **PB-12 Manifest:** bredvid bilderna ligger `manifest.csv` med en rad per bild (`file,kind,tags,source`), som
