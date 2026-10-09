@@ -487,8 +487,10 @@ som renderas på servern.
 
 - **KR-1:** Karaktärerna visas som kort med porträtt och namn i två grupper: spelarnas karaktärer (med spelarens
   namn) och **NPCs**.
-- **KR-2:** Dolda NPC:er syns bara för GM, märkta *Hidden*. Arkiverade NPC:er ligger i en hopfälld del
-  "Archived NPCs", bara för GM.
+- **KR-2:** Dolda NPC:er syns bara för GM, märkta *Hidden*. Arkiverade karaktärer (spelarkaraktärer och NPC:er)
+  ligger i en hopfälld del "Archived characters".
+- **KR-4 Sök och sidor:** en sökruta filtrerar alla listor på namn (och spelarens namn för spelarkaraktärer). NPC:er
+  och arkiverade karaktärer visas 20 per sida med sidväljare; spelarkaraktärerna visas alltid alla.
 - **KR-3:** Knappen **New character** för spelare och GM. Det GM skapar är alltid en NPC.
 
 ### 12.2 Spelarnas karaktärer
@@ -498,7 +500,13 @@ som renderas på servern.
   i Markdown (högst 10 000 tecken) för beskrivning, HP, utrustning, tillstånd och anteckningar.
 - **KC-2 Karaktärens sida:** porträtt, namn, "Played by *spelare*", regelsystem, länk till rollformuläret och
   dokumentet. Knappen *Edit* för ägaren och GM.
-- **KC-3:** En spelare kan ha flera karaktärer i samma kampanj. En karaktär hör till en kampanj.
+- **KC-3:** En spelare kan ha flera karaktärer i samma kampanj, högst **10 aktiva** (ej arkiverade). Gränsen gäller
+  när man skapar, duplicerar och återställer en karaktär. En karaktär hör till en kampanj.
+- **KC-4 Arkivera:** ägaren och GM kan arkivera en spelarkaraktär och återställa den, som för NPC:er (KN-5).
+- **KC-5 Duplicera:** knappen *Duplicate* skapar en kopia med nästa lediga nummer ("Goblin" → "Goblin 2"; ett
+  avslutande nummer räknas bort). Kopian får porträtt, dokument, länk, regelsystem, GM-anteckning, dold/alias,
+  räknare (värdet satt till max) och sparade slag med ikoner, men inga tillstånd. Spelare duplicerar sina egna
+  karaktärer, GM sina NPC:er.
 
 ### 12.3 NPC:er
 

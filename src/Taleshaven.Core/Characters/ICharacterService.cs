@@ -22,7 +22,10 @@ public interface ICharacterService
     /// <summary>Uppdaterar karaktären och dess porträtt (null = initialer).</summary>
     Task UpdateAsync(int campaignId, int characterId, string userId, CharacterInput input, int? portraitId, CancellationToken cancellationToken = default);
 
-    /// <summary>Arkiverar eller återställer en NPC (B17). Bara GM.</summary>
+    /// <summary>
+    /// Arkiverar eller återställer en karaktär (B17, B68). GM för NPC:er, ägaren eller GM för spelarkaraktärer. Att
+    /// återställa en spelarkaraktär räknas mot taket på aktiva karaktärer (<see cref="CharacterLimits.MaxActivePlayerCharacters"/>).
+    /// </summary>
     Task SetArchivedAsync(int campaignId, int characterId, string userId, bool archived, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -35,14 +38,21 @@ public interface ICharacterService
     /// <summary>Förslag på tillstånd: D&amp;D 5e:s, Bloodied och de som redan används i kampanjen (B56).</summary>
     Task<IReadOnlyList<string>> GetConditionSuggestionsAsync(int campaignId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Skapar en kopia med nästa lediga numrerade namn (B68), t.ex. "Goblin 2". GM duplicerar NPC:er, spelare sina egna
+    /// karaktärer (inom taket). Returnerar kopians id.
+    /// </summary>
+    Task<int> DuplicateAsync(int campaignId, int characterId, string userId, CancellationToken cancellationToken = default);
+
     /// <summary>Tar bort karaktären. Går inte om den har skrivit inlägg, så att gamla inlägg behåller sin karaktär.</summary>
     Task DeleteAsync(int campaignId, int characterId, string userId, CancellationToken cancellationToken = default);
 }
 
+/// <summary>Karaktärerna på fliken Karaktärer. <see cref="Archived"/> är arkiverade spelarkaraktärer och NPC:er (B68).</summary>
 public sealed record CharacterList(
     IReadOnlyList<CharacterSummary> PlayerCharacters,
     IReadOnlyList<CharacterSummary> Npcs,
-    IReadOnlyList<CharacterSummary> ArchivedNpcs,
+    IReadOnlyList<CharacterSummary> Archived,
     bool CanCreate);
 
 public sealed record CharacterSummary(
@@ -74,7 +84,8 @@ public sealed record CharacterDetails(
     bool IsArchived = false,
     bool IsHidden = false,
     string? Alias = null,
-    CharacterStatus? Status = null);
+    CharacterStatus? Status = null,
+    bool CanDuplicate = false);
 
 /// <summary>
 /// Karaktärens räknare, tillstånd och sparade slag (B56). För en NPC får bara GM räknarna och slagen; andra får tomma listor

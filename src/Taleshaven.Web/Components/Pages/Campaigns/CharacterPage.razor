@@ -55,22 +55,31 @@
             <a class="small" href="@character.SheetUrl" target="_blank" rel="nofollow noopener noreferrer">Full character sheet ↗</a>
         }
     </div>
-    @if (character.CanEdit)
+    @if (character.CanEdit || character.CanDuplicate)
     {
         <div class="d-flex gap-2 ms-auto">
-            @if (character.IsNpc)
+            @if (character.CanDuplicate)
             {
-                @* Arkiverade NPC:er göms i "Skriv som" men finns kvar i gamla inlägg (B17). *@
+                @* En kopia med nästa lediga nummer, utan tillstånd och med räknarna på max (B68). *@
+                <form method="post" @formname="duplicate" @onsubmit="DuplicateAsync">
+                    <AntiforgeryToken />
+                    <button type="submit" class="btn btn-outline-secondary btn-sm character-duplicate"
+                            title="Create a copy with the same portrait, counters and dice rolls">Duplicate</button>
+                </form>
+            }
+            @if (character.CanEdit)
+            {
+                @* Arkiverade karaktärer göms i "Skriv som" men finns kvar i gamla inlägg (B17, B68). *@
                 <form method="post" @formname="archive" @onsubmit="SetArchivedAsync">
                     <AntiforgeryToken />
                     <input type="hidden" name="Archive" value="@(character.IsArchived ? "false" : "true")" />
-                    <button type="submit" class="btn btn-outline-secondary btn-sm"
-                            title="@(character.IsArchived ? "Show the NPC in Post as again" : "Hide the NPC from Post as")">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm character-archive"
+                            title="@(character.IsArchived ? "Show the character in Post as again" : "Hide the character from Post as")">
                         @(character.IsArchived ? "Restore" : "Archive")
                     </button>
                 </form>
+                <a class="btn btn-outline-secondary btn-sm" href="campaigns/@CampaignId/characters/@character.Id/edit">Edit</a>
             }
-            <a class="btn btn-outline-secondary btn-sm" href="campaigns/@CampaignId/characters/@character.Id/edit">Edit</a>
         </div>
     }
 </div>
@@ -113,7 +122,7 @@ else
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
 
-    // Binds från GM:ns arkivera-formulär.
+    // Binds från arkivera-formuläret.
     [SupplyParameterFromForm]
     private bool? Archive { get; set; }
 
@@ -148,5 +157,21 @@ else
         }
 
         NavigationManager.NavigateTo($"campaigns/{CampaignId}/characters/{CharacterId}");
+    }
+
+    private async Task DuplicateAsync()
+    {
+        int copyId;
+        try
+        {
+            copyId = await CharacterService.DuplicateAsync(CampaignId, CharacterId, userId);
+        }
+        catch (CampaignRuleException ex)
+        {
+            errorMessage = ex.Message;
+            return;
+        }
+
+        NavigationManager.NavigateTo($"campaigns/{CampaignId}/characters/{copyId}");
     }
 }

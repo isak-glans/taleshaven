@@ -25,8 +25,11 @@ public static partial class IconMatcher
         var words = Words(name);
         if (words.Count == 0)
             return null;
-        var whole = string.Concat(words);
-        var terms = words.Append(whole).Distinct().ToList();
+        // Orden får sin plats i namnet; hela namnet ihopskrivet räknas som första ordet.
+        var terms = words.Select((word, index) => (Text: word, Position: index))
+            .Prepend((Text: string.Concat(words), Position: 0))
+            .DistinctBy(t => t.Text)
+            .ToList();
 
         int? best = null;
         var bestScore = 0;
@@ -50,17 +53,24 @@ public static partial class IconMatcher
 
     // Exakt träff väger tyngst, sedan en tagg som ingår i ett ord ("sword" i "shortsword") och sist ett ord som är början
     // av en tagg ("spell" i "spellbook"). Längre träffar väger tyngre än kortare, och ikonens namn tyngre än övriga taggar.
-    private static int Score(string tag, IReadOnlyList<string> terms, bool isPrimary)
+    // Ett ord längre fram i namnet väger lite mindre, eftersom det första ordet oftast är saken och de följande beskriver
+    // den: "Spear (damage)" ska få spjutet, inte skadeikonen.
+    private const int PositionPenalty = 20;
+
+    private static int Score(string tag, IReadOnlyList<(string Text, int Position)> terms, bool isPrimary)
     {
         var score = 0;
-        foreach (var term in terms)
+        foreach (var (term, position) in terms)
         {
+            var match = 0;
             if (term == tag)
-                score = Math.Max(score, 1000 + tag.Length);
+                match = 1000 + tag.Length;
             else if (tag.Length >= 3 && term.Contains(tag, StringComparison.Ordinal))
-                score = Math.Max(score, 500 + tag.Length * 10);
+                match = 500 + tag.Length * 10;
             else if (term.Length >= 4 && tag.StartsWith(term, StringComparison.Ordinal))
-                score = Math.Max(score, 200 + term.Length * 10);
+                match = 200 + term.Length * 10;
+            if (match > 0)
+                score = Math.Max(score, match - position * PositionPenalty);
         }
         return score > 0 && isPrimary ? score + 50 : score;
     }

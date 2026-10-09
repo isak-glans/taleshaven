@@ -132,12 +132,59 @@ public class CharacterTests
     }
 
     [Fact]
-    public void PlayerCharacter_CannotBeArchived()
+    public void PlayerCharacter_CanBeArchived()
     {
         var character = Character.Create(7, "anna", isNpc: false, Input(), Now);
 
-        Assert.Throws<CampaignRuleException>(() => character.SetArchived(true));
-        Assert.False(character.IsArchived);
+        character.SetArchived(true);
+        Assert.True(character.IsArchived);
+    }
+
+    [Theory]
+    [InlineData("Goblin", new string[0], "Goblin 2")]
+    [InlineData("Goblin", new[] { "Goblin" }, "Goblin 2")]
+    [InlineData("Goblin", new[] { "Goblin", "goblin 2", "Goblin 7", "Goblin King" }, "Goblin 8")]
+    [InlineData("Goblin 3", new[] { "Goblin", "Goblin 3" }, "Goblin 4")]
+    [InlineData("Agent 47", new[] { "Agent 47" }, "Agent 48")]
+    public void NextNumberedName_FindsTheNextFreeNumber(string name, string[] existing, string expected)
+    {
+        Assert.Equal(expected, Character.NextNumberedName(name, existing));
+    }
+
+    [Fact]
+    public void NextNumberedName_ShortensLongNames()
+    {
+        var name = new string('a', CharacterLimits.NameMaxLength);
+
+        var next = Character.NextNumberedName(name, [name]);
+
+        Assert.Equal(CharacterLimits.NameMaxLength, next.Length);
+        Assert.EndsWith(" 2", next);
+    }
+
+    [Fact]
+    public void Duplicate_CopiesEverythingButConditionsWithCountersAtMax()
+    {
+        var goblin = Character.Create(7, "gm", isNpc: true,
+            new CharacterInput("Goblin", null, null, null, GmNote: "Cowardly", Hidden: true, Alias: "Small shape"), Now);
+        goblin.SetPortrait(42, Now);
+        goblin.AddCounter("HP", 3, 7, Now);
+        goblin.AddCondition("Frightened", Now);
+        var scimitar = goblin.AddSavedRoll("Scimitar", "1d20+4", Now);
+        goblin.SetStatusIcon(scimitar, 9, Now);
+        goblin.SetArchived(true);
+        var later = Now.AddDays(1);
+
+        var copy = goblin.Duplicate("Goblin 2", later);
+
+        Assert.Equal(("Goblin 2", 7, "gm", true), (copy.Name, copy.CampaignId, copy.OwnerId, copy.IsNpc));
+        Assert.Equal(("Cowardly", true, "Small shape", 42), (copy.GmNote, copy.IsHidden, copy.Alias, copy.PortraitId));
+        Assert.False(copy.IsArchived);
+        Assert.Empty(copy.Conditions);
+        Assert.Equal(("HP", 7, 7), (copy.Counters.Single().Label, copy.Counters.Single().Current, copy.Counters.Single().Max));
+        Assert.Equal(("Scimitar", "1d20+4", 9), (copy.SavedRolls.Single().Label, copy.SavedRolls.Single().Notation, copy.SavedRolls.Single().IconId));
+        Assert.NotEqual(goblin.SavedRolls.Single().Uid, copy.SavedRolls.Single().Uid);
+        Assert.Equal(later, copy.CreatedAt);
     }
 
     [Fact]

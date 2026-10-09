@@ -2,6 +2,10 @@
 @attribute [Authorize]
 
 @using Taleshaven.Core.Characters
+@using Taleshaven.Core.Threads
+
+@* Kampanjens karaktärer. NPC:er och arkiverade karaktärer visas sida för sida, och sökrutan filtrerar alla listor på
+   namn (eller spelarens namn) (B68). Spelarkaraktärerna är få och visas alltid alla. *@
 
 @inject ICampaignService CampaignService
 @inject ICharacterService CharacterService
@@ -16,53 +20,91 @@
 
 <CampaignHeader Campaign="campaign" Active="CampaignTab.Characters" />
 
-@if (characters.CanCreate)
-{
-    <a class="btn btn-primary btn-sm mb-3" href="campaigns/@CampaignId/characters/new">
-        @(campaign.ViewerRole == CampaignRole.GameMaster ? "New NPC" : "New character")
-    </a>
-}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    @if (characters.CanCreate)
+    {
+        <a class="btn btn-primary btn-sm" href="campaigns/@CampaignId/characters/new">
+            @(campaign.ViewerRole == CampaignRole.GameMaster ? "New NPC" : "New character")
+        </a>
+    }
+    <form method="get" action="campaigns/@CampaignId/characters" class="d-flex gap-2 ms-auto character-search" role="search">
+        <input type="search" name="q" value="@SearchText" class="form-control form-control-sm" placeholder="Search by name"
+               aria-label="Search characters by name" />
+        <button type="submit" class="btn btn-sm btn-outline-secondary">Search</button>
+        @if (SearchText.Length > 0)
+        {
+            <a class="btn btn-sm btn-link px-1" href="campaigns/@CampaignId/characters">Clear</a>
+        }
+    </form>
+</div>
 
 <h2 class="h5">Player characters</h2>
-@if (characters.PlayerCharacters.Count == 0)
+@if (playerCharacters.Count == 0)
 {
-    <p class="text-secondary">No characters yet.</p>
+    <p class="text-secondary">@(SearchText.Length > 0 ? "No player characters match." : "No characters yet.")</p>
 }
 else
 {
-    <CharacterGrid CampaignId="CampaignId" Characters="characters.PlayerCharacters" />
+    <CharacterGrid CampaignId="CampaignId" Characters="playerCharacters" />
 }
 
-<h2 class="h5 mt-4">NPCs</h2>
-@if (characters.Npcs.Count == 0)
+<h2 class="h5 mt-4">NPCs @CountText(npcs.Count)</h2>
+@if (npcs.Count == 0)
 {
-    <p class="text-secondary">@(characters.ArchivedNpcs.Count > 0 ? "All NPCs are archived." : "The GM hasn't added any NPCs.")</p>
+    <p class="text-secondary">
+        @(SearchText.Length > 0 ? "No NPCs match." : characters.Archived.Any(c => c.IsNpc) ? "All NPCs are archived." : "The GM hasn't added any NPCs.")
+    </p>
 }
 else
 {
-    <CharacterGrid CampaignId="CampaignId" Characters="characters.Npcs" />
+    <CharacterGrid CampaignId="CampaignId" Characters="PageOf(npcs, npcPage)" />
+    <div class="mt-2 npc-pager">
+        <Pager Page="npcPage" PageCount="Paging.PageCount(npcs.Count, PageSize)" ShowLatest="false" Href="@(p => Href(p, archivedPage, archivedPager: false))" />
+    </div>
 }
 
-@if (characters.ArchivedNpcs.Count > 0)
+@if (archived.Count > 0)
 {
-    @* Arkiverade NPC:er syns inte i "Skriv som" men finns kvar i gamla inlägg (B17). *@
-    <details class="mt-3">
-        <summary class="text-secondary">Archived NPCs (@characters.ArchivedNpcs.Count)</summary>
+    @* Arkiverade karaktärer syns inte i "Skriv som" men finns kvar i gamla inlägg (B17, B68). *@
+    <details class="mt-4 archived-characters" open="@(ArchivedPageQuery is not null || SearchText.Length > 0)">
+        <summary class="text-secondary">Archived characters (@archived.Count)</summary>
         <div class="mt-2">
-            <CharacterGrid CampaignId="CampaignId" Characters="characters.ArchivedNpcs" />
+            <CharacterGrid CampaignId="CampaignId" Characters="PageOf(archived, archivedPage)" />
+            <div class="mt-2 archived-pager">
+                <Pager Page="archivedPage" PageCount="Paging.PageCount(archived.Count, PageSize)" ShowLatest="false" Href="@(p => Href(npcPage, p, archivedPager: true))" />
+            </div>
         </div>
     </details>
 }
 
 @code {
+    /// <summary>NPC:er och arkiverade karaktärer per sida (B68).</summary>
+    private const int PageSize = 20;
+
     [Parameter]
     public int CampaignId { get; set; }
 
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
 
+    [SupplyParameterFromQuery(Name = "q")]
+    private string? Query { get; set; }
+
+    [SupplyParameterFromQuery(Name = "page")]
+    private int? PageQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "archived")]
+    private int? ArchivedPageQuery { get; set; }
+
     private CampaignDetails? campaign;
     private CharacterList? characters;
+    private IReadOnlyList<CharacterSummary> playerCharacters = [];
+    private IReadOnlyList<CharacterSummary> npcs = [];
+    private IReadOnlyList<CharacterSummary> archived = [];
+    private int npcPage = 1;
+    private int archivedPage = 1;
+
+    private string SearchText => Query?.Trim() ?? "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,5 +118,35 @@ else
         }
 
         characters = await CharacterService.GetCharactersAsync(CampaignId, userId);
+        playerCharacters = Matching(characters.PlayerCharacters);
+        npcs = Matching(characters.Npcs);
+        archived = Matching(characters.Archived);
+        npcPage = Paging.Clamp(PageQuery ?? 1, Paging.PageCount(npcs.Count, PageSize));
+        archivedPage = Paging.Clamp(ArchivedPageQuery ?? 1, Paging.PageCount(archived.Count, PageSize));
+    }
+
+    private IReadOnlyList<CharacterSummary> Matching(IReadOnlyList<CharacterSummary> list) =>
+        SearchText.Length == 0
+            ? list
+            : list.Where(c => c.Name.Contains(SearchText, StringComparison.CurrentCultureIgnoreCase)
+                              || (!c.IsNpc && c.OwnerName.Contains(SearchText, StringComparison.CurrentCultureIgnoreCase))).ToList();
+
+    private static IReadOnlyList<CharacterSummary> PageOf(IReadOnlyList<CharacterSummary> list, int page) =>
+        list.Skip((page - 1) * PageSize).Take(PageSize).ToList();
+
+    private static string CountText(int count) => count > PageSize ? $"({count})" : "";
+
+    // Sidlänkarna behåller sökningen och den andra listans sida. Arkivets länkar har alltid med sin sida, så att det
+    // står utfällt efter klicket.
+    private string Href(int page, int archivedPageNumber, bool archivedPager)
+    {
+        var parts = new List<string>();
+        if (SearchText.Length > 0)
+            parts.Add("q=" + Uri.EscapeDataString(SearchText));
+        if (page > 1)
+            parts.Add($"page={page}");
+        if (archivedPageNumber > 1 || archivedPager)
+            parts.Add($"archived={archivedPageNumber}");
+        return $"campaigns/{CampaignId}/characters" + (parts.Count == 0 ? "" : "?" + string.Join("&", parts));
     }
 }

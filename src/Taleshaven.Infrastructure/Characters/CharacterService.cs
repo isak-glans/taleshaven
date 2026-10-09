@@ -33,9 +33,9 @@ internal sealed class CharacterService(
             .ToList();
 
         return new CharacterList(
-            summaries.Where(c => !c.IsNpc).ToList(),
+            summaries.Where(c => !c.IsNpc && !c.IsArchived).ToList(),
             summaries.Where(c => c.IsNpc && !c.IsArchived).ToList(),
-            summaries.Where(c => c.IsNpc && c.IsArchived).ToList(),
+            summaries.Where(c => c.IsArchived).ToList(),
             CampaignPermissions.CanCreateCharacter(access.Role));
     }
 
@@ -67,7 +67,8 @@ internal sealed class CharacterService(
             IsArchived: character.IsArchived,
             IsHidden: character.IsHidden,
             Alias: isGameMaster ? character.Alias : null,
-            Status: StatusFor(character, isGameMaster, await IconUrlsAsync(db, IconIds(character), cancellationToken)));
+            Status: StatusFor(character, isGameMaster, await IconUrlsAsync(db, IconIds(character), cancellationToken)),
+            CanDuplicate: CanDuplicate(access.Role, viewerId, character));
     }
 
     public async Task<CharacterStatus> EditStatusAsync(int campaignId, int characterId, string userId, CharacterStatusChange change,
@@ -150,7 +151,7 @@ internal sealed class CharacterService(
         var characters = access.Role switch
         {
             CampaignRole.GameMaster => db.Characters.Where(c => c.CampaignId == campaignId && c.IsNpc && !c.IsArchived),
-            CampaignRole.Player => db.Characters.Where(c => c.CampaignId == campaignId && !c.IsNpc && c.OwnerId == userId),
+            CampaignRole.Player => db.Characters.Where(c => c.CampaignId == campaignId && !c.IsNpc && c.OwnerId == userId && !c.IsArchived),
             _ => null,
         };
 
@@ -186,6 +187,8 @@ internal sealed class CharacterService(
         await EnsurePortraitExistsAsync(db, portraitId, cancellationToken);
 
         // GM:s karaktärer är alltid NPC:er, spelares aldrig.
+        if (access.Role != CampaignRole.GameMaster)
+            await EnsureRoomForPlayerCharacterAsync(db, campaignId, userId, cancellationToken);
         var now = timeProvider.GetUtcNow();
         var character = Character.Create(campaignId, userId, isNpc: access.Role == CampaignRole.GameMaster, input, now);
         character.SetPortrait(portraitId, now);
@@ -211,8 +214,43 @@ internal sealed class CharacterService(
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var character = await LoadEditableAsync(db, campaignId, characterId, userId, cancellationToken);
 
+        if (!archived && character.IsArchived && !character.IsNpc)
+            await EnsureRoomForPlayerCharacterAsync(db, campaignId, character.OwnerId, cancellationToken);
         character.SetArchived(archived);
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<int> DuplicateAsync(int campaignId, int characterId, string userId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var access = await CampaignAccess.GetAsync(db, campaignId, userId, cancellationToken);
+        var character = await db.Characters.AsNoTracking().SingleOrDefaultAsync(c => c.CampaignId == campaignId && c.Id == characterId, cancellationToken)
+            ?? throw new CampaignRuleException("The character doesn't exist.");
+        if (!CanDuplicate(access.Role, userId, character))
+            throw new CampaignRuleException(character.IsNpc ? "Only the GM can duplicate NPCs." : "You can only duplicate your own characters.");
+        if (!character.IsNpc)
+            await EnsureRoomForPlayerCharacterAsync(db, campaignId, userId, cancellationToken);
+
+        var names = await db.Characters.Where(c => c.CampaignId == campaignId).Select(c => c.Name).ToListAsync(cancellationToken);
+        var copy = character.Duplicate(Character.NextNumberedName(character.Name, names), timeProvider.GetUtcNow());
+        db.Characters.Add(copy);
+        await db.SaveChangesAsync(cancellationToken);
+        return copy.Id;
+    }
+
+    // GM duplicerar NPC:er; spelare sina egna karaktärer (B68).
+    private static bool CanDuplicate(CampaignRole role, string userId, Character character) => character.IsNpc
+        ? role == CampaignRole.GameMaster
+        : role == CampaignRole.Player && character.OwnerId == userId;
+
+    // En spelare har högst ett visst antal aktiva (ej arkiverade) karaktärer per kampanj (B68).
+    private static async Task EnsureRoomForPlayerCharacterAsync(TaleshavenDbContext db, int campaignId, string ownerId, CancellationToken cancellationToken)
+    {
+        var active = await db.Characters.CountAsync(
+            c => c.CampaignId == campaignId && c.OwnerId == ownerId && !c.IsNpc && !c.IsArchived, cancellationToken);
+        if (active >= CharacterLimits.MaxActivePlayerCharacters)
+            throw new CampaignRuleException(
+                $"A player can have at most {CharacterLimits.MaxActivePlayerCharacters} active characters in a campaign. Archive one first.");
     }
 
     public async Task DeleteAsync(int campaignId, int characterId, string userId, CancellationToken cancellationToken = default)

@@ -6,7 +6,7 @@ namespace Taleshaven.Core.Characters;
 /// räknare, tillstånd och sparade tärningsslag (B56).
 /// NPC:er har bara namn, porträtt och en anteckning som bara GM ser (B15).
 /// </summary>
-public class Character
+public partial class Character
 {
     private Character() { }
 
@@ -27,7 +27,10 @@ public class Character
     /// <summary>Anteckning om en NPC som bara GM ser (B15). Alltid null för spelarkaraktärer.</summary>
     public string? GmNote { get; private set; }
 
-    /// <summary>Arkiverade NPC:er göms i "Skriv som" men finns kvar i gamla inlägg (B17). Alltid false för spelarkaraktärer.</summary>
+    /// <summary>
+    /// Arkiverade karaktärer göms i "Skriv som" och läggs i en egen lista på Karaktärer, men finns kvar i gamla inlägg
+    /// (B17 för NPC:er, B68 även för spelarkaraktärer).
+    /// </summary>
     public bool IsArchived { get; private set; }
 
     /// <summary>Dold NPC (B16): spelarna ser bara <see cref="Alias"/> och en siluett, varken på Karaktärer eller i chatten.</summary>
@@ -116,14 +119,63 @@ public class Character
         UpdatedAt = now;
     }
 
-    /// <summary>Arkiverar eller återställer en NPC (B17). Spelarkaraktärer kan inte arkiveras.</summary>
-    public void SetArchived(bool archived)
-    {
-        if (!IsNpc)
-            throw new CampaignRuleException("Only NPCs can be archived.");
+    /// <summary>Arkiverar eller återställer karaktären (B17, B68).</summary>
+    public void SetArchived(bool archived) => IsArchived = archived;
 
-        IsArchived = archived;
+    /// <summary>
+    /// En kopia av karaktären med namnet <paramref name="name"/> (B68): porträtt, dokument, länk, regelsystem, GM-anteckning,
+    /// dold/alias, räknare (på max) och sparade slag med sina ikoner. Tillstånd följer inte med, och kopian är aldrig arkiverad.
+    /// </summary>
+    public Character Duplicate(string name, DateTimeOffset now)
+    {
+        var copy = new Character
+        {
+            CampaignId = CampaignId,
+            OwnerId = OwnerId,
+            IsNpc = IsNpc,
+            Name = name,
+            Sheet = Sheet,
+            SheetUrl = SheetUrl,
+            RuleSystem = RuleSystem,
+            GmNote = GmNote,
+            IsHidden = IsHidden,
+            Alias = Alias,
+            PortraitId = PortraitId,
+            CreatedAt = now,
+            UpdatedAt = now,
+            Counters = Counters.Select(c => c.Fresh()).ToList(),
+            SavedRolls = SavedRolls.Select(r => r.Fresh()).ToList(),
+        };
+        if (copy.Name.Length is 0 or > CharacterLimits.NameMaxLength)
+            throw new ArgumentException("Ogiltigt namn på kopian.", nameof(name));
+        return copy;
     }
+
+    /// <summary>
+    /// Nästa lediga numrerade namn (B68): "Goblin" och "Goblin 2" finns, då blir det "Goblin 3". Ett avslutande nummer i
+    /// <paramref name="name"/> räknas bort, så en kopia av "Goblin 3" blir också nästa lediga. Namnet kortas vid behov så
+    /// att det får plats.
+    /// </summary>
+    public static string NextNumberedName(string name, IEnumerable<string> existingNames)
+    {
+        var baseName = TrailingNumber().Replace(name.Trim(), "");
+        if (baseName.Length == 0)
+            baseName = name.Trim();
+        var used = existingNames
+            .Select(n => n.Trim())
+            .Select(n => string.Equals(n, baseName, StringComparison.OrdinalIgnoreCase) ? 1
+                : n.Length > baseName.Length + 1 && n.StartsWith(baseName + " ", StringComparison.OrdinalIgnoreCase)
+                  && int.TryParse(n[(baseName.Length + 1)..], out var number) ? number : 0)
+            .DefaultIfEmpty(0)
+            .Max();
+        var suffix = $" {Math.Max(used, 1) + 1}";
+        if (baseName.Length + suffix.Length > CharacterLimits.NameMaxLength)
+            baseName = baseName[..(CharacterLimits.NameMaxLength - suffix.Length)].TrimEnd();
+        return baseName + suffix;
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\s+\d+$")]
+    private static partial System.Text.RegularExpressions.Regex TrailingNumber();
 
     public void SetPortrait(int? portraitId, DateTimeOffset now)
     {
@@ -214,24 +266,28 @@ public class Character
     /// <summary>
     /// Flyttar en räknare eller ett sparat slag <paramref name="offset"/> steg i listan (B66), t.ex. −1 för ett steg upp.
     /// Ordningen syns på karaktärssidan och bland de sparade slagen i skrivfältet. Utanför listan stannar den i änden.
+    /// Listorna lagras som JSON, och EF Core märker inte att samma element bytt plats; därför byts alla element mot
+    /// kopior i den nya ordningen, så att listan skrivs om.
     /// </summary>
     public void MoveStatusItem(Guid uid, int offset, DateTimeOffset now)
     {
         if (Counters.FindIndex(c => c.Uid == uid) is var counter and >= 0)
-            Move(Counters, counter, offset);
+            Counters = Move(Counters, counter, offset, c => c.Copy());
         else if (SavedRolls.FindIndex(r => r.Uid == uid) is var roll and >= 0)
-            Move(SavedRolls, roll, offset);
+            SavedRolls = Move(SavedRolls, roll, offset, r => r.Copy());
         else
             throw new CampaignRuleException("The item doesn't exist any more.");
         UpdatedAt = now;
     }
 
-    private static void Move<T>(List<T> items, int index, int offset)
+    private static List<T> Move<T>(List<T> items, int index, int offset, Func<T, T> copy)
     {
         var target = Math.Clamp(index + offset, 0, items.Count - 1);
-        var item = items[index];
-        items.RemoveAt(index);
-        items.Insert(target, item);
+        var moved = items.ToList();
+        var item = moved[index];
+        moved.RemoveAt(index);
+        moved.Insert(target, item);
+        return moved.Select(copy).ToList();
     }
 
     /// <summary>Sätter ikonen (B58) på en räknare, ett tillstånd eller ett sparat slag; null tar bort den.</summary>
@@ -289,4 +345,7 @@ public static class CharacterLimits
     public const int SheetUrlMaxLength = 500;
     public const int RuleSystemMaxLength = 60;
     public const int GmNoteMaxLength = 2_000;
+
+    /// <summary>Högst så många aktiva (ej arkiverade) spelarkaraktärer per spelare och kampanj (B68).</summary>
+    public const int MaxActivePlayerCharacters = 10;
 }

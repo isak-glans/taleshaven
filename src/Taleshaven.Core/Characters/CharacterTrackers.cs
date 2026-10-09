@@ -34,6 +34,12 @@ public class CharacterCounter
 
     internal void Adjust(int delta) => Current = CharacterTrackers.ClampCurrent(Current + delta);
 
+    /// <summary>En kopia med samma innehåll, se <see cref="Character.MoveStatusItem"/>.</summary>
+    internal CharacterCounter Copy() => new() { Uid = Uid, Label = Label, Current = Current, Max = Max, IconId = IconId };
+
+    /// <summary>En ny räknare med samma namn, max och ikon, på max (B68).</summary>
+    internal CharacterCounter Fresh() => new() { Uid = Guid.CreateVersion7(), Label = Label, Current = Max, Max = Max, IconId = IconId };
+
     /// <summary>Byter namn och max (B66). Är värdet över det nya maxet sänks det till max.</summary>
     internal void Edit(string? label, int max) => Set(label, Math.Min(Current, max), max);
 }
@@ -80,6 +86,12 @@ public class SavedRoll
     public int? IconId { get; private set; }
 
     internal void SetIcon(int? iconId) => IconId = iconId;
+
+    /// <summary>En kopia med samma innehåll, se <see cref="Character.MoveStatusItem"/>.</summary>
+    internal SavedRoll Copy() => new() { Uid = Uid, Label = Label, Notation = Notation, IconId = IconId };
+
+    /// <summary>Ett nytt slag med samma innehåll (B68).</summary>
+    internal SavedRoll Fresh() => new() { Uid = Guid.CreateVersion7(), Label = Label, Notation = Notation, IconId = IconId };
 
     internal void Set(string? label, string? notation)
     {

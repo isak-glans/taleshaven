@@ -16,6 +16,8 @@ public class IconMatcherTests
         (7, ["spellbook", "book", "magic"]),
         (8, ["potion", "healing", "red-potion"]),
         (9, ["mace", "weapon"]),
+        (10, ["spear", "weapon"]),
+        (11, ["damage", "hit-damage"]),
     ];
 
     [Theory]
@@ -30,6 +32,9 @@ public class IconMatcherTests
     [InlineData("Spell slots (1st)", 7)]
     [InlineData("Potion of healing", 8)]
     [InlineData("MACE", 9)]
+    [InlineData("Spear (damage)", 10)]        // det första ordet är saken; "damage" beskriver den
+    [InlineData("Longsword (damage)", 1)]
+    [InlineData("Damage", 11)]
     public void SuggestsTheBestIcon(string name, int expected)
     {
         Assert.Equal(expected, IconMatcher.Suggest(name, Icons));
