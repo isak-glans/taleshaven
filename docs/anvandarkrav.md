@@ -557,9 +557,11 @@ som renderas på servern.
 
 ### 12.5 Ta bort karaktär
 
-- **KD-1:** En karaktär kan bara tas bort om den **inte har skrivit några inlägg**, så att gamla inlägg behåller sin
-  karaktär. Annars visas "*Namn* has written posts and can't be deleted." (för NPC:er: arkivera i stället).
-- **KD-2:** Borttagning kräver bekräftelse.
+- **KD-1:** En **spelarkaraktär** kan bara tas bort om den **inte har skrivit några inlägg**. Annars visas
+  "The character has written posts and can't be deleted. Archive it instead."
+- **KD-2:** En **NPC** kan alltid tas bort. Dess inlägg ligger kvar: namnet sparas i inläggen (för en dold NPC namnet
+  spelarna såg, aliaset eller "Unknown") och visas med initialer och märket NPC, utan länk och porträtt.
+- **KD-3:** Knappen *Delete* finns på karaktärssidan för den som får redigera, och borttagning kräver bekräftelse.
 
 ---
 
@@ -676,7 +678,7 @@ users ──< user_roles
 | campaign_memberships | campaign_id, user_id, joined_at |
 | campaign_applications | id, campaign_id, user_id, message, status (`pending` / `approved` / `rejected` / `withdrawn`), submitted_at, decided_at, decided_by |
 | threads | id, campaign_id, title, status (`active` / `completed`), position, created_by, created_at, updated_at |
-| posts | id, thread_id, author_id, character_id (null), content, reply_to_post_id (null), created_at, edited_at (null), deleted_at (null), deleted_by (null) |
+| posts | id, thread_id, author_id, character_id (null), deleted_character_name (null), content, reply_to_post_id (null), created_at, edited_at (null), deleted_at (null), deleted_by (null) |
 | post_rolls | post_id, sort_order, notation, label (null), count, sides, modifier, mode (`normal` / `advantage` / `disadvantage`), results (t.ex. `"4,18"` eller JSON), total |
 | post_revisions | id, post_id, content, written_at, replaced_at |
 | characters | id, campaign_id, owner_id, is_npc, name, portrait_id (null), sheet, sheet_url, rule_system, gm_note, is_hidden, alias, is_archived, created_at, updated_at |

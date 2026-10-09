@@ -38,6 +38,8 @@ internal sealed class PostConfiguration : IEntityTypeConfiguration<Post>
 {
     public void Configure(EntityTypeBuilder<Post> builder)
     {
+        builder.Property(p => p.DeletedCharacterName).HasMaxLength(CharacterLimits.NameMaxLength);
+
         builder.Property(p => p.Content)
             .IsRequired()
             .HasMaxLength(ThreadLimits.PostStorageMaxLength);

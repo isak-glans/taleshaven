@@ -377,6 +377,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                     CharacterAvatarKey = db.Portraits.Where(pt => pt.Id == ch.PortraitId).Select(pt => pt.ImageKey).FirstOrDefault(),
                     CharacterIsHidden = (bool?)ch.IsHidden,
                     CharacterAlias = ch.Alias,
+                    p.DeletedCharacterName,
                 })
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -400,12 +401,13 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                         CharacterName = ch.Name,
                         CharacterIsHidden = (bool?)ch.IsHidden,
                         CharacterAlias = ch.Alias,
+                        p.DeletedCharacterName,
                     })
                 .AsNoTracking()
                 .ToListAsync(cancellationToken))
             .ToDictionary(
                 r => r.Id,
-                r => r.CharacterName is null ? r.DisplayName
+                r => r.CharacterName is null ? r.DeletedCharacterName ?? r.DisplayName
                     : r.ViewerIsGameMaster ? r.CharacterName
                     : Core.Characters.Character.NameForPlayers(r.CharacterName, r.CharacterIsHidden ?? false, r.CharacterAlias));
 
@@ -431,10 +433,12 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                     Content: deleted ? "" : r.Content,
                     r.CreatedAt, r.EditedAt,
                     Rolls: deleted ? [] : r.Rolls.Select(View).ToList(),
-                    Character: r.CharacterId is not { } characterId ? null : PostCharacter.ForViewer(
-                        characterId, r.CharacterName!, r.CharacterIsNpc ?? false,
-                        r.CharacterAvatarKey is null ? null : IImageStore.PortraitUrl(r.CharacterAvatarKey),
-                        r.CharacterIsHidden ?? false, r.CharacterAlias, r.ViewerIsGameMaster),
+                    Character: r.CharacterId is not { } characterId
+                        ? r.DeletedCharacterName is { } deletedName ? PostCharacter.Deleted(deletedName) : null
+                        : PostCharacter.ForViewer(
+                            characterId, r.CharacterName!, r.CharacterIsNpc ?? false,
+                            r.CharacterAvatarKey is null ? null : IImageStore.PortraitUrl(r.CharacterAvatarKey),
+                            r.CharacterIsHidden ?? false, r.CharacterAlias, r.ViewerIsGameMaster),
                     ReplyTo: r.ReplyToPostId is { } replyId && replies.TryGetValue(replyId, out var replyName)
                         ? new PostReference(replyId, replyName)
                         : null,

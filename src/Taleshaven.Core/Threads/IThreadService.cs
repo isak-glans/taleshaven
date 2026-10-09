@@ -113,8 +113,15 @@ public sealed record PostReference(long PostId, string Name);
 /// Karaktären ett inlägg är skrivet som. För en dold NPC (B16) är <see cref="IsHidden"/> satt: GM får riktigt namn,
 /// porträtt och <see cref="Alias"/>; alla andra får bara aliaset och ingen bild.
 /// </summary>
-public sealed record PostCharacter(int Id, string Name, bool IsNpc, string? AvatarUrl, bool IsHidden = false, string? Alias = null)
+/// <summary>
+/// Karaktären ett inlägg är skrivet som. <see cref="IsDeleted"/>: NPC:n har tagits bort (B69); bara namnet finns kvar, utan
+/// sida att länka till och utan porträtt.
+/// </summary>
+public sealed record PostCharacter(int Id, string Name, bool IsNpc, string? AvatarUrl, bool IsHidden = false, string? Alias = null,
+    bool IsDeleted = false)
 {
+    public static PostCharacter Deleted(string name) => new(0, name, IsNpc: true, AvatarUrl: null, IsDeleted: true);
+
     public static PostCharacter ForViewer(int id, string name, bool isNpc, string? avatarUrl, bool isHidden, string? alias, bool viewerIsGameMaster)
     {
         if (!isHidden)

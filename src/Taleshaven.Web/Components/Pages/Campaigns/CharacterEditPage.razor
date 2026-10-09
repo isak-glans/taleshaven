@@ -95,26 +95,7 @@
 
     <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
         <a class="btn btn-link px-0" href="@BackLink">Cancel</a>
-
-        @if (LoadedCharacter is not null)
-        {
-            @if (!confirmDelete)
-            {
-                <button type="button" class="btn btn-outline-danger ms-auto" @onclick="() => confirmDelete = true">Delete character</button>
-            }
-            else
-            {
-                <span class="ms-auto">Delete @LoadedCharacter.Name for good?</span>
-                <button type="button" class="btn btn-danger" @onclick="DeleteAsync">Yes, delete</button>
-                <button type="button" class="btn btn-outline-secondary" @onclick="() => confirmDelete = false">Cancel</button>
-            }
-        }
     </div>
-
-    @if (deleteError is not null)
-    {
-        <div class="text-danger mt-2" role="alert">@deleteError</div>
-    }
 </div>
 
 @code {
@@ -143,8 +124,6 @@
     private string? alias;
     private int? portraitId;
     private string? portraitUrl;
-    private bool confirmDelete;
-    private string? deleteError;
 
     private bool IsGameMaster => LoadedCampaign?.ViewerRole == CampaignRole.GameMaster;
 
@@ -229,23 +208,6 @@
         catch (CampaignRuleException ex)
         {
             return ex.Message;
-        }
-    }
-
-    private async Task DeleteAsync()
-    {
-        if (LoadedCharacter is null)
-            return;
-
-        try
-        {
-            await CharacterService.DeleteAsync(CampaignId, LoadedCharacter.Id, userId);
-            NavigationManager.NavigateTo($"campaigns/{CampaignId}/characters");
-        }
-        catch (CampaignRuleException ex)
-        {
-            deleteError = ex.Message;
-            confirmDelete = false;
         }
     }
 }

@@ -17,6 +17,12 @@ public class Post
     /// <summary>Karaktären inlägget är skrivet som (Story-trådar), eller null om det är skrivet som användaren själv (B29).</summary>
     public int? CharacterId { get; private set; }
 
+    /// <summary>
+    /// Namnet på en NPC som har tagits bort (B69). Inlägget ligger kvar och visar namnet, men utan länk och porträtt;
+    /// <see cref="CharacterId"/> är då null. Var NPC:n dold är det namnet spelarna såg (aliaset eller "Unknown").
+    /// </summary>
+    public string? DeletedCharacterName { get; private set; }
+
     /// <summary>Tärningsslagen (B42) i den ordning skribenten lade till dem. De visas som en lista under texten.</summary>
     public List<DiceRoll> Rolls { get; private set; } = [];
 

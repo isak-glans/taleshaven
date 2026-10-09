@@ -44,7 +44,10 @@ public interface ICharacterService
     /// </summary>
     Task<int> DuplicateAsync(int campaignId, int characterId, string userId, CancellationToken cancellationToken = default);
 
-    /// <summary>Tar bort karaktären. Går inte om den har skrivit inlägg, så att gamla inlägg behåller sin karaktär.</summary>
+    /// <summary>
+    /// Tar bort karaktären. En spelarkaraktär som har skrivit inlägg kan inte tas bort (den kan arkiveras). En NPC kan
+    /// alltid tas bort; dess inlägg ligger kvar och visar namnet utan länk och porträtt (B69).
+    /// </summary>
     Task DeleteAsync(int campaignId, int characterId, string userId, CancellationToken cancellationToken = default);
 }
 

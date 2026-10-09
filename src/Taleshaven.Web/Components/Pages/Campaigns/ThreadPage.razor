@@ -686,8 +686,9 @@
     private static string DisplayName(PostItem post) => post.Character?.Name ?? post.AuthorName;
 
     // Namn och porträtt leder till karaktärens sida (B37), utom för en dold NPC som spelarna inte får se.
+    // En borttagen NPC (B69) har ingen sida, och en dold NPC länkas bara för GM.
     private string? CharacterLink(PostCharacter character) =>
-        character.IsHidden && campaign!.ViewerRole != CampaignRole.GameMaster
+        character.IsDeleted || (character.IsHidden && campaign!.ViewerRole != CampaignRole.GameMaster)
             ? null
             : $"campaigns/{CampaignId}/characters/{character.Id}";
 

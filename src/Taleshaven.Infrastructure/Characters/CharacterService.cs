@@ -258,12 +258,25 @@ internal sealed class CharacterService(
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var character = await LoadEditableAsync(db, campaignId, characterId, userId, cancellationToken);
 
-        if (await db.Posts.AnyAsync(p => p.CharacterId == characterId, cancellationToken))
-            throw new CampaignRuleException("The character has written posts and can't be deleted.");
+        // En spelarkaraktär med inlägg tas inte bort; den kan arkiveras (B68). En NPC:s inlägg ligger kvar och behåller
+        // namnet, men utan länk och porträtt (B69). Var NPC:n dold sparas namnet spelarna såg, så att det riktiga inte läcker.
+        var hasPosts = await db.Posts.AnyAsync(p => p.CharacterId == characterId, cancellationToken);
+        if (hasPosts && !character.IsNpc)
+            throw new CampaignRuleException("The character has written posts and can't be deleted. Archive it instead.");
+
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        if (hasPosts)
+        {
+            var shownName = Character.NameForPlayers(character.Name, character.IsHidden, character.Alias);
+            await db.Posts.Where(p => p.CharacterId == characterId).ExecuteUpdateAsync(setters => setters
+                .SetProperty(p => p.CharacterId, (int?)null)
+                .SetProperty(p => p.DeletedCharacterName, shownName), cancellationToken);
+        }
 
         // Porträttet ligger kvar i biblioteket.
         db.Characters.Remove(character);
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     private static async Task<Character> LoadEditableAsync(

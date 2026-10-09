@@ -79,10 +79,34 @@
                     </button>
                 </form>
                 <a class="btn btn-outline-secondary btn-sm" href="campaigns/@CampaignId/characters/@character.Id/edit">Edit</a>
+                <a class="btn btn-outline-danger btn-sm character-delete" href="campaigns/@CampaignId/characters/@character.Id?delete=true#delete">Delete</a>
             }
         </div>
     }
 </div>
+
+@* Ta bort (B69): sidan är statisk, så bekräftelsen är en egen ruta (?delete=true) med ett formulär. *@
+@if (character.CanEdit && ConfirmDelete)
+{
+    <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2 character-delete-confirm" id="delete" role="alert">
+        <span class="me-auto">
+            Delete <strong>@character.Name</strong> for good?
+            @if (character.IsNpc)
+            {
+                <text> Its posts stay and show its name, without a link or portrait.</text>
+            }
+            else
+            {
+                <text> A character that has written posts can't be deleted – archive it instead.</text>
+            }
+        </span>
+        <form method="post" @formname="delete" @onsubmit="DeleteAsync">
+            <AntiforgeryToken />
+            <button type="submit" class="btn btn-danger btn-sm">Yes, delete</button>
+        </form>
+        <a class="btn btn-outline-secondary btn-sm" href="campaigns/@CampaignId/characters/@character.Id">Cancel</a>
+    </div>
+}
 
 @if (errorMessage is not null)
 {
@@ -122,6 +146,9 @@ else
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
 
+    [SupplyParameterFromQuery(Name = "delete")]
+    private bool ConfirmDelete { get; set; }
+
     // Binds från arkivera-formuläret.
     [SupplyParameterFromForm]
     private bool? Archive { get; set; }
@@ -157,6 +184,21 @@ else
         }
 
         NavigationManager.NavigateTo($"campaigns/{CampaignId}/characters/{CharacterId}");
+    }
+
+    private async Task DeleteAsync()
+    {
+        try
+        {
+            await CharacterService.DeleteAsync(CampaignId, CharacterId, userId);
+        }
+        catch (CampaignRuleException ex)
+        {
+            errorMessage = ex.Message;
+            return;
+        }
+
+        NavigationManager.NavigateTo($"campaigns/{CampaignId}/characters");
     }
 
     private async Task DuplicateAsync()
