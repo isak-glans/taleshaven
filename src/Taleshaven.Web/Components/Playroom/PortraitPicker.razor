@@ -121,7 +121,7 @@
     {
         // Svaren kan komma i fel ordning när man skriver snabbt; bara det senaste visas.
         var version = ++searchVersion;
-        var result = await Portraits.SearchAsync(query, limit);
+        var result = await Portraits.SearchAsync(query, limit, excludeIcons: true);
         if (version == searchVersion)
             page = result;
     }

@@ -8,9 +8,10 @@ public interface IPortraitService
 {
     /// <summary>
     /// Porträtt där varje sökord matchar början av någon tagg (PB-4), nyast först. Tom sökning ger alla.
-    /// <paramref name="skip"/> hoppar över de första träffarna, för sidindelning (B51).
+    /// <paramref name="skip"/> hoppar över de första träffarna, för sidindelning (B51). Med <paramref name="excludeIcons"/>
+    /// visas inte ikonerna (B58), om man inte söker på taggen <c>icon</c>.
     /// </summary>
-    Task<PortraitPage> SearchAsync(string? query, int limit, int skip = 0, CancellationToken cancellationToken = default);
+    Task<PortraitPage> SearchAsync(string? query, int limit, int skip = 0, bool excludeIcons = false, CancellationToken cancellationToken = default);
 
     /// <summary>Alla taggar som används, vanligast först, att föreslå vid uppladdning och sökning.</summary>
     Task<IReadOnlyList<TagCount>> GetTagsAsync(CancellationToken cancellationToken = default);

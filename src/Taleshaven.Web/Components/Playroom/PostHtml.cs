@@ -8,13 +8,13 @@ using Taleshaven.Core.Threads;
 namespace Taleshaven.Web.Components.Playroom;
 
 /// <summary>
-/// Renderar inläggstext till sanerad HTML med spoilers (B40) och OOC-text (B36), och tärningsslagen som text för
-/// citat och titlar (B42). Själva slaglistan under ett inlägg ritas av <see cref="DiceRolls"/>.
+/// Renderar inläggstext till sanerad HTML med bildförhandsvisning (B59), spoilers (B40) och OOC-text (B36), och
+/// tärningsslagen som text för citat och titlar (B42). Själva slaglistan under ett inlägg ritas av <see cref="DiceRolls"/>.
 /// </summary>
 public static class PostHtml
 {
     public static MarkupString Render(IMarkdownRenderer markdown, string content) =>
-        new(OocMarkup.Apply(SpoilerMarkup.Apply(markdown.ToSafeHtml(content))));
+        new(OocMarkup.Apply(SpoilerMarkup.Apply(ImagePreviews.Apply(markdown.ToSafeHtml(ImagePreviews.PrepareMarkdown(content))))));
 
     /// <summary>Förhandsgranskning: texten och de slag som ska slås när inlägget publiceras ("rolls when posted").</summary>
     public static MarkupString Preview(IMarkdownRenderer markdown, string content, IReadOnlyList<RollRequest>? pendingRolls = null)

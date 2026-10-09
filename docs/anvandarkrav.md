@@ -435,12 +435,15 @@ I PHP räcker ett formulär med raderna som fält i en array (`rolls[0][notation
 
 ### 10.4 Visa
 
-- **TA-14:** Varje slag är en rad under inläggets text: 🎲, beskrivningen i fetstil, formeln i grått, ett märke
+- **TA-14:** Varje slag är en rad under inläggets text: slagets ikon (22×22) eller 🎲, beskrivningen i fetstil, formeln i grått, ett märke
   *Advantage* eller *Disadvantage*, tärningarna som små rutor, modifieraren och **= summan**.
 - **TA-15:** Vid fördel och nackdel är tärningen som inte räknas överstruken och nedtonad.
 - **TA-16:** En naturlig 20 (grön) eller 1 (röd) markeras på en ensam d20, och på den tärning som räknas vid fördel
   eller nackdel.
 - **TA-17:** Slaget som text, för citat och `title`: `Attack: 1d20+5 (advantage): [4, 18] + 5 = 23`.
+- **TA-18 Ikon:** ett slag som läggs till från ett sparat slag (KS-3) tar med dess ikon, om bilden finns och är
+  taggad `icon`. Annars föreslås en ikon efter beskrivningen (samma matchning som för karaktärens status). Ikonen
+  sparas med slaget och ändras inte.
 
 ---
 
@@ -469,7 +472,12 @@ som renderas på servern.
 - **FT-5 Ordning:** OOC och spoilers tolkas **efter** att Markdown renderats och sanerats, på den färdiga HTML:en.
   Det som läggs till är fasta element; en spoilerrubrik får inte innehålla `<`, `>`, `"`, `[` eller `]` och är högst
   60 tecken. Taggar som inte stängs visas som vanlig text.
-- **FT-6 Teckengränser** syns för den som skriver och kontrolleras på servern (avsnitt 15).
+- **FT-6 Bildlänkar (bara inlägg):** en länk vars adress är `https://…` och slutar på `.png`, `.jpg`, `.jpeg`, `.gif`
+  eller `.webp` (ev. följt av `?…`) får en förhandsvisning direkt efter länken: `<a target="_blank" rel="nofollow
+  noopener noreferrer"><img src alt="" loading="lazy" referrerpolicy="no-referrer"></a>`, högst 480×300 px (CSS).
+  Högst 5 per inlägg. `![alt](url)` blir en vanlig länk `[alt](url)` före renderingen och får samma förhandsvisning.
+  Förhandsvisningen läggs på efter saneringen (som FT-5) och kan bara bli en bild, aldrig text eller skript.
+- **FT-7 Teckengränser** syns för den som skriver och kontrolleras på servern (avsnitt 15).
 
 ---
 
@@ -507,7 +515,35 @@ som renderas på servern.
 - **KN-5 Arkivera:** GM kan arkivera en NPC som inte längre behövs och återställa den. En arkiverad NPC kan inte
   väljas i "Post as" men ligger kvar i gamla inlägg.
 
-### 12.4 Ta bort karaktär
+### 12.4 Räknare, tillstånd och sparade slag
+
+- **KS-1 Räknare:** namn (högst 40 tecken), värde och max (1–9 999), t.ex. *HP 28 / 38* eller *Arrows 12 / 20*. Visas
+  med en stapel (röd när värdet är högst en fjärdedel av max). Den som får ändra har − och + och kan skriva in ett värde.
+  Värdet får gå över max (t.ex. tillfälliga HP) och ligger inom −9 999 till 9 999.
+- **KS-2 Tillstånd:** ett namn (högst 40 tecken), t.ex. *Poisoned*. Samma tillstånd två gånger (oavsett stora och små
+  bokstäver) blir ett. Fältet föreslår D&D 5e:s tillstånd (*Blinded, Charmed, Deafened, Exhaustion, Frightened, Grappled,
+  Incapacitated, Invisible, Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned, Unconscious*), *Bloodied* och
+  de tillstånd som redan används i kampanjen (en `<datalist>` räcker). *Bloodied* och *Unconscious* markeras rött.
+- **KS-3 Sparade slag:** namn, formel (TA-1) och läge (Normal/Advantage/Disadvantage, bara för en ensam d20).
+- **KS-4 Gränser:** högst 20 räknare, 20 tillstånd och 30 sparade slag per karaktär.
+- **KS-5 Vem ser och ändrar:** ägaren och GM ändrar; alla som får se karaktären ser listorna. För en **NPC** visas
+  räknare och sparade slag bara för GM (de får inte finnas i HTML:en till andra), medan tillstånden visas för alla.
+  En dold NPC visas inte alls (KN-2).
+- **KS-6 I skrivfältet:** när man skriver som en karaktär visas dess sparade slag under *🎲 Add roll*: högst fem, och en
+  sökruta (på namnet) om det finns fler. Ett klick lägger till en slagrad med formel, beskrivning och läge ifyllda
+  (avsnitt 10.2).
+- **KS-7 Ikoner:** räknare, tillstånd och sparade slag kan ha en ikon ur porträttbiblioteket, bland bilder taggade
+  `icon`. När något läggs till föreslås en ikon automatiskt efter namnet: jämför namnets ord (och orden ihopskrivna)
+  med ikonernas taggar utan bindestreck; exakt träff väger tyngst, sedan en tagg som ingår i ett ord ("sword" i
+  "shortsword"), sist ett ord som är början av en tagg ("spell" i "spellbook"). Kategoritaggar (weapon, armor, gear,
+  magic, clothing, light, tool, jewelry, treasure, book, instrument, bag, money, coins) räknas inte. Förslaget sparas;
+  den som får ändra kan välja en annan ikon (sökbar lista), föreslå igen eller ta bort ikonen. Porträtt- och
+  profilbildsväljaren visar inte ikoner om man inte söker på `icon`.
+- **KS-8 Datamodell:** tabellerna `character_counters` (character_id, label, current, max, icon_id, sort_order),
+  `character_conditions` (character_id, name, icon_id) och `saved_rolls` (character_id, label, notation, mode, icon_id,
+  sort_order); icon_id pekar på `portraits` med `ON DELETE SET NULL`.
+
+### 12.5 Ta bort karaktär
 
 - **KD-1:** En karaktär kan bara tas bort om den **inte har skrivit några inlägg**, så att gamla inlägg behåller sin
   karaktär. Annars visas "*Namn* has written posts and can't be deleted." (för NPC:er: arkivera i stället).

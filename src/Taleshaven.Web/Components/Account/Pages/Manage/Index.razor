@@ -168,16 +168,16 @@
         current = await Accounts.GetProfilePortraitAsync(user.Id);
         // Hela biblioteket visas om inga bilder har taggen #profile; sidnumret begränsas till sökningens sidor.
         var search = SearchText;
-        var count = (await Portraits.SearchAsync(search, 0)).TotalCount;
+        var count = (await Portraits.SearchAsync(search, 0, excludeIcons: true)).TotalCount;
         if (search == UserLimits.ProfilePortraitTag && Query is null && count == 0)
         {
             fellBackToAll = true;
             search = "";
-            count = (await Portraits.SearchAsync(search, 0)).TotalCount;
+            count = (await Portraits.SearchAsync(search, 0, excludeIcons: true)).TotalCount;
         }
         pageCount = Paging.PageCount(count, PageSize);
         pageNumber = Paging.Clamp(PageQuery ?? 1, pageCount);
-        results = await Portraits.SearchAsync(search, PageSize, (pageNumber - 1) * PageSize);
+        results = await Portraits.SearchAsync(search, PageSize, (pageNumber - 1) * PageSize, excludeIcons: true);
     }
 
     // Sidlänkarna behåller sökningen (B51).

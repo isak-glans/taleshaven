@@ -18,8 +18,11 @@ public enum DiceMode
     Disadvantage = 2,
 }
 
-/// <summary>Ett slag som skribenten har lagt till i ett inlägg men som inte är slaget än (B42).</summary>
-public sealed record RollRequest(string? Notation, string? Label = null, DiceMode Mode = DiceMode.Normal);
+/// <summary>
+/// Ett slag som skribenten har lagt till i ett inlägg men som inte är slaget än (B42). <see cref="IconId"/> är ikonen ur
+/// biblioteket (B60), t.ex. från ett sparat slag; utan ikon föreslås en efter beskrivningen.
+/// </summary>
+public sealed record RollRequest(string? Notation, string? Label = null, DiceMode Mode = DiceMode.Normal, int? IconId = null);
 
 /// <summary>
 /// Ett genomfört tärningskast. Lagras tillsammans med inlägget det hör till och kan inte ändras (T-5).
@@ -40,6 +43,9 @@ public class DiceRoll
     public List<int> Results { get; private set; } = [];
     public int Total { get; private set; }
 
+    /// <summary>Ikonen som visas framför slaget (B60), eller null för 🎲. Sparas med slaget och ändras inte.</summary>
+    public int? IconId { get; private set; }
+
     /// <summary>Fördel och nackdel gäller bara en ensam d20, t.ex. 1d20+5.</summary>
     public static bool SupportsMode(DiceNotation notation) => notation is { Count: 1, Sides: 20 };
 
@@ -49,7 +55,9 @@ public class DiceRoll
         ArgumentNullException.ThrowIfNull(request);
         if (!DiceNotation.TryParse(request.Notation, out var notation, out var error))
             throw new CampaignRuleException(string.IsNullOrWhiteSpace(request.Notation) ? "Enter the dice to roll, e.g. 1d20+5." : error!);
-        return Roll(notation, request.Label, roller, request.Mode);
+        var roll = Roll(notation, request.Label, roller, request.Mode);
+        roll.IconId = request.IconId;
+        return roll;
     }
 
     public static DiceRoll Roll(DiceNotation notation, string? label, IDiceRoller roller, DiceMode mode = DiceMode.Normal)

@@ -80,6 +80,9 @@
     <div class="alert alert-danger" role="alert">@errorMessage</div>
 }
 
+@* Räknare, tillstånd och sparade slag (B56) ändras direkt, så den delen är interaktiv. *@
+<CharacterStatusPanel @rendermode="InteractiveServer" CampaignId="CampaignId" CharacterId="CharacterId" />
+
 @if (character.IsNpc)
 {
     @* NPC:er har inget dokument (B15). Anteckningen skickas bara till GM, så för spelare är den alltid null. *@

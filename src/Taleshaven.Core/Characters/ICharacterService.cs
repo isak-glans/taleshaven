@@ -1,3 +1,5 @@
+using Taleshaven.Core.Dice;
+
 namespace Taleshaven.Core.Characters;
 
 /// <summary>
@@ -22,6 +24,16 @@ public interface ICharacterService
 
     /// <summary>Arkiverar eller återställer en NPC (B17). Bara GM.</summary>
     Task SetArchivedAsync(int campaignId, int characterId, string userId, bool archived, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Ändrar karaktärens räknare, tillstånd eller sparade slag (B56). Ägaren och GM får ändra.
+    /// Returnerar karaktärens nya status, så att sidan kan visa den direkt.
+    /// </summary>
+    Task<CharacterStatus> EditStatusAsync(int campaignId, int characterId, string userId, CharacterStatusChange change,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Förslag på tillstånd: D&amp;D 5e:s, Bloodied och de som redan används i kampanjen (B56).</summary>
+    Task<IReadOnlyList<string>> GetConditionSuggestionsAsync(int campaignId, CancellationToken cancellationToken = default);
 
     /// <summary>Tar bort karaktären. Går inte om den har skrivit inlägg, så att gamla inlägg behåller sin karaktär.</summary>
     Task DeleteAsync(int campaignId, int characterId, string userId, CancellationToken cancellationToken = default);
@@ -61,7 +73,80 @@ public sealed record CharacterDetails(
     string? GmNote = null,
     bool IsArchived = false,
     bool IsHidden = false,
-    string? Alias = null);
+    string? Alias = null,
+    CharacterStatus? Status = null);
 
-/// <summary>Ett val i "Skriv som". <see cref="LastUsedAt"/> är när karaktären senast skrev ett inlägg (B17).</summary>
-public sealed record CharacterOption(int Id, string Name, bool IsNpc, string? AvatarUrl, DateTimeOffset? LastUsedAt = null, bool IsHidden = false);
+/// <summary>
+/// Karaktärens räknare, tillstånd och sparade slag (B56). För en NPC får bara GM räknarna och slagen; andra får tomma listor
+/// och <see cref="ShowsPrivate"/> = false. Tillstånden ser alla som får se karaktären.
+/// </summary>
+public sealed record CharacterStatus(
+    IReadOnlyList<CounterView> Counters,
+    IReadOnlyList<ConditionView> Conditions,
+    IReadOnlyList<SavedRollView> SavedRolls,
+    bool ShowsPrivate);
+
+/// <summary>En räknare att visa. <see cref="IconUrl"/> är ikonen ur biblioteket (B58), eller null.</summary>
+public sealed record CounterView(Guid Uid, string Label, int Current, int Max, int? IconId = null, string? IconUrl = null);
+
+public sealed record ConditionView(Guid Uid, string Name, int? IconId = null, string? IconUrl = null);
+
+public sealed record SavedRollView(Guid Uid, string Label, string Notation, DiceMode Mode, int? IconId = null, string? IconUrl = null)
+{
+    public static SavedRollView From(SavedRoll roll, string? iconUrl = null) =>
+        new(roll.Uid, roll.Label, roll.Notation, roll.Mode, roll.IconId, iconUrl);
+}
+
+/// <summary>En ändring av karaktärens räknare, tillstånd eller sparade slag (B56).</summary>
+public abstract record CharacterStatusChange
+{
+    public sealed record AddCounter(string? Label, int Current, int Max) : CharacterStatusChange;
+    public sealed record UpdateCounter(Guid Uid, string? Label, int Current, int Max) : CharacterStatusChange;
+    public sealed record AdjustCounter(Guid Uid, int Delta) : CharacterStatusChange;
+    public sealed record RemoveCounter(Guid Uid) : CharacterStatusChange;
+    public sealed record AddCondition(string? Name) : CharacterStatusChange;
+    public sealed record RemoveCondition(Guid Uid) : CharacterStatusChange;
+    public sealed record AddSavedRoll(string? Label, string? Notation, DiceMode Mode) : CharacterStatusChange;
+    public sealed record UpdateSavedRoll(Guid Uid, string? Label, string? Notation, DiceMode Mode) : CharacterStatusChange;
+    public sealed record RemoveSavedRoll(Guid Uid) : CharacterStatusChange;
+
+    /// <summary>Byter ikon (B58); null tar bort den.</summary>
+    public sealed record SetIcon(Guid Uid, int? IconId) : CharacterStatusChange;
+
+    /// <summary>Föreslår en ikon efter namnet igen (B58).</summary>
+    public sealed record SuggestIcon(Guid Uid) : CharacterStatusChange;
+
+    /// <summary>
+    /// Utför ändringen på karaktären. En ny räknare, ett nytt tillstånd eller ett nytt slag får en ikon som
+    /// <paramref name="suggestIcon"/> föreslår efter namnet (B58); förslaget sparas och byts inte av sig själv.
+    /// </summary>
+    public void ApplyTo(Character character, DateTimeOffset now, Func<string, int?>? suggestIcon = null)
+    {
+        Guid? added = null;
+        switch (this)
+        {
+            case AddCounter c: added = character.AddCounter(c.Label, c.Current, c.Max, now); break;
+            case UpdateCounter c: character.UpdateCounter(c.Uid, c.Label, c.Current, c.Max, now); break;
+            case AdjustCounter c: character.AdjustCounter(c.Uid, c.Delta, now); break;
+            case RemoveCounter c: character.RemoveCounter(c.Uid, now); break;
+            case AddCondition c: added = character.AddCondition(c.Name, now); break;
+            case RemoveCondition c: character.RemoveCondition(c.Uid, now); break;
+            case AddSavedRoll c: added = character.AddSavedRoll(c.Label, c.Notation, c.Mode, now); break;
+            case UpdateSavedRoll c: character.UpdateSavedRoll(c.Uid, c.Label, c.Notation, c.Mode, now); break;
+            case RemoveSavedRoll c: character.RemoveSavedRoll(c.Uid, now); break;
+            case SetIcon c: character.SetStatusIcon(c.Uid, c.IconId, now); break;
+            case SuggestIcon c: character.SetStatusIcon(c.Uid, suggestIcon?.Invoke(character.StatusItemName(c.Uid)), now); break;
+            default: throw new ArgumentOutOfRangeException(nameof(CharacterStatusChange));
+        }
+
+        if (added is { } uid && suggestIcon is not null)
+            character.SetStatusIcon(uid, suggestIcon(character.StatusItemName(uid)), now);
+    }
+}
+
+/// <summary>
+/// Ett val i "Skriv som". <see cref="LastUsedAt"/> är när karaktären senast skrev ett inlägg (B17), och
+/// <see cref="SavedRolls"/> karaktärens sparade slag, som kan läggas till i inlägget (B57).
+/// </summary>
+public sealed record CharacterOption(int Id, string Name, bool IsNpc, string? AvatarUrl, DateTimeOffset? LastUsedAt = null, bool IsHidden = false,
+    IReadOnlyList<SavedRollView>? SavedRolls = null);

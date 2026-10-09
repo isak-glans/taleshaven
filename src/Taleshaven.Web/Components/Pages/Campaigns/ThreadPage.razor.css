@@ -209,3 +209,20 @@ a.post-player {
 a.post-player:hover {
     text-decoration: underline;
 }
+
+/* Den valda karaktärens sparade slag i skrivfältet (B57). */
+.saved-roll-picker {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.saved-roll-search {
+    max-width: 12rem;
+}
+
+.saved-roll-icon {
+    border-radius: 50%;
+    vertical-align: -0.25em;
+}

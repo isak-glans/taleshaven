@@ -196,6 +196,33 @@
                             <small class="text-secondary">The dice are rolled when you post.</small>
                         }
                     </div>
+                    @* Den valda karaktärens sparade slag (B57): högst fem syns, fler hittas med sökrutan. *@
+                    @if (SelectedSavedRolls is { Count: > 0 } savedRolls && rollRows.Count < ThreadLimits.MaxRollsPerPost)
+                    {
+                        <div class="saved-roll-picker">
+                            <small class="text-secondary">@SelectedCharacterName's rolls:</small>
+                            @if (savedRolls.Count > SavedRollsShown)
+                            {
+                                <input type="search" class="form-control form-control-sm saved-roll-search" placeholder="Search rolls"
+                                       aria-label="Search saved dice rolls" @bind="savedRollQuery" @bind:event="oninput" />
+                            }
+                            @foreach (var saved in FilteredSavedRolls(savedRolls))
+                            {
+                                <button type="button" class="btn btn-sm btn-light border saved-roll-choice" title="Add @saved.Label (@saved.Notation)"
+                                        @onclick="() => AddSavedRollAsync(saved)">
+                                    @if (saved.IconUrl is not null)
+                                    {
+                                        <img class="saved-roll-icon" src="@saved.IconUrl" alt="" width="18" height="18" />
+                                    }
+                                    else
+                                    {
+                                        <text>🎲</text>
+                                    }
+                                    @saved.Label <span class="text-secondary">@saved.Notation@(saved.Mode == DiceMode.Normal ? "" : $" {PostHtml.ModeText(saved.Mode).ToLowerInvariant()}")</span>
+                                </button>
+                            }
+                        </div>
+                    }
                 </div>
             </BelowText>
         </MarkdownEditor>
@@ -493,7 +520,7 @@
 
     // Tomma rader räknas inte; en rad med bara beskrivning ger ett fel när inlägget postas.
     private List<RollRequest> PendingRolls() =>
-        [.. rollRows.Where(r => !r.IsBlank).Select(r => new RollRequest(r.Notation, r.Label, r.Mode))];
+        [.. rollRows.Where(r => !r.IsBlank).Select(r => new RollRequest(r.Notation, r.Label, r.Mode, r.IconId))];
 
     private async Task AddRollAsync()
     {
@@ -505,6 +532,34 @@
         rollRows.Add(row);
         await SaveRollsAsync();
         focusNewRoll = true;
+    }
+
+    private const int SavedRollsShown = 5;
+    private string savedRollQuery = "";
+
+    private CharacterOption? SelectedOption => postingOptions.FirstOrDefault(o => o.Id == selectedCharacterId);
+
+    private IReadOnlyList<SavedRollView>? SelectedSavedRolls => SelectedOption?.SavedRolls;
+
+    private string SelectedCharacterName => SelectedOption?.Name ?? "";
+
+    private IEnumerable<SavedRollView> FilteredSavedRolls(IReadOnlyList<SavedRollView> rolls)
+    {
+        var query = savedRollQuery.Trim();
+        return (query.Length == 0 ? rolls : rolls.Where(r => r.Label.Contains(query, StringComparison.OrdinalIgnoreCase)))
+            .Take(SavedRollsShown);
+    }
+
+    // Ett sparat slag blir en vanlig rad, så att man kan ändra den innan inlägget postas (B57).
+    private async Task AddSavedRollAsync(SavedRollView saved)
+    {
+        if (rollRows.Count >= ThreadLimits.MaxRollsPerPost)
+            return;
+        var row = new RollRow { Notation = saved.Notation, Label = saved.Label, Mode = saved.Mode, IconId = saved.IconId };
+        row.Validate();
+        rollRows.Add(row);
+        savedRollQuery = "";
+        await SaveRollsAsync();
     }
 
     private async Task RemoveRollAsync(RollRow row)
@@ -554,6 +609,9 @@
         public string Notation { get; set; } = "";
         public string Label { get; set; } = "";
         public DiceMode Mode { get; set; }
+
+        /// <summary>Ikonen från ett sparat slag (B60). Utan ikon föreslår servern en efter beskrivningen.</summary>
+        public int? IconId { get; set; }
 
         [JsonIgnore]
         public string? Error { get; private set; }

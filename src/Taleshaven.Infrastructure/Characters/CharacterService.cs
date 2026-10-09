@@ -3,6 +3,7 @@ using Taleshaven.Core;
 using Taleshaven.Core.Campaigns;
 using Taleshaven.Core.Characters;
 using Taleshaven.Core.Media;
+using Taleshaven.Core.Portraits;
 using Taleshaven.Infrastructure.Campaigns;
 using Taleshaven.Infrastructure.Data;
 
@@ -65,7 +66,80 @@ internal sealed class CharacterService(
             GmNote: isGameMaster ? character.GmNote : null,
             IsArchived: character.IsArchived,
             IsHidden: character.IsHidden,
-            Alias: isGameMaster ? character.Alias : null);
+            Alias: isGameMaster ? character.Alias : null,
+            Status: StatusFor(character, isGameMaster, await IconUrlsAsync(db, IconIds(character), cancellationToken)));
+    }
+
+    public async Task<CharacterStatus> EditStatusAsync(int campaignId, int characterId, string userId, CharacterStatusChange change,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var access = await CampaignAccess.GetAsync(db, campaignId, userId, cancellationToken);
+
+        var character = await db.Characters.SingleOrDefaultAsync(c => c.Id == characterId && c.CampaignId == campaignId, cancellationToken)
+            ?? throw new CampaignRuleException("The character doesn't exist.");
+        if (!CampaignPermissions.CanEditCharacter(access.Role, userId, character.OwnerId))
+            throw new CampaignRuleException("You can't change this character.");
+
+        // En ikon som väljs för hand måste finnas i biblioteket och vara taggad som ikon (B58).
+        if (change is CharacterStatusChange.SetIcon { IconId: { } iconId }
+            && !await db.Portraits.AnyAsync(p => p.Id == iconId && p.Tags.Contains(IconMatcher.IconTag), cancellationToken))
+            throw new CampaignRuleException("The icon doesn't exist any more. Choose another one.");
+
+        var icons = await db.Portraits.AsNoTracking()
+            .Where(p => p.Tags.Contains(IconMatcher.IconTag))
+            .Select(p => new { p.Id, p.Tags })
+            .ToListAsync(cancellationToken);
+        var candidates = icons.Select(i => (i.Id, (IReadOnlyList<string>)i.Tags)).ToList();
+
+        change.ApplyTo(character, timeProvider.GetUtcNow(), name => IconMatcher.Suggest(name, candidates));
+        await db.SaveChangesAsync(cancellationToken);
+        return StatusFor(character, access.Role == CampaignRole.GameMaster, await IconUrlsAsync(db, IconIds(character), cancellationToken));
+    }
+
+    public async Task<IReadOnlyList<string>> GetConditionSuggestionsAsync(int campaignId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var used = await db.Characters.AsNoTracking()
+            .Where(c => c.CampaignId == campaignId)
+            .Select(c => c.Conditions)
+            .ToListAsync(cancellationToken);
+
+        return CharacterTrackers.StandardConditions
+            .Concat(used.SelectMany(list => list).Select(c => c.Name))
+            .DistinctBy(name => name.ToLowerInvariant())
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    // Räknare och sparade slag på en NPC är GM:s anteckningar; tillstånden ser alla (B56).
+    private static CharacterStatus StatusFor(Character character, bool viewerIsGameMaster, IReadOnlyDictionary<int, string> iconUrls)
+    {
+        string? Url(int? id) => id is { } value && iconUrls.TryGetValue(value, out var url) ? url : null;
+        var showsPrivate = !character.IsNpc || viewerIsGameMaster;
+        return new CharacterStatus(
+            showsPrivate ? (character.Counters ?? []).Select(c => new CounterView(c.Uid, c.Label, c.Current, c.Max, c.IconId, Url(c.IconId))).ToList() : [],
+            (character.Conditions ?? []).Select(c => new ConditionView(c.Uid, c.Name, c.IconId, Url(c.IconId))).ToList(),
+            showsPrivate ? (character.SavedRolls ?? []).Select(r => SavedRollView.From(r, Url(r.IconId))).ToList() : [],
+            showsPrivate);
+    }
+
+    private static IEnumerable<int?> IconIds(Character character) =>
+        (character.Counters ?? []).Select(c => c.IconId)
+            .Concat((character.Conditions ?? []).Select(c => c.IconId))
+            .Concat((character.SavedRolls ?? []).Select(r => r.IconId));
+
+    // Adresserna till ikonerna (B58). En ikon som tagits bort ur biblioteket saknas här och visas inte.
+    private static async Task<IReadOnlyDictionary<int, string>> IconUrlsAsync(
+        TaleshavenDbContext db, IEnumerable<int?> iconIds, CancellationToken cancellationToken)
+    {
+        var ids = iconIds.Where(id => id is not null).Select(id => id!.Value).Distinct().ToList();
+        if (ids.Count == 0)
+            return new Dictionary<int, string>();
+        return await db.Portraits.AsNoTracking()
+            .Where(p => ids.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => IImageStore.PortraitUrl(p.ImageKey), cancellationToken);
     }
 
     public async Task<IReadOnlyList<CharacterOption>> GetPostingOptionsAsync(int campaignId, string userId, CancellationToken cancellationToken = default)
@@ -93,10 +167,14 @@ internal sealed class CharacterService(
                 ImageKey = db.Portraits.Where(p => p.Id == c.PortraitId).Select(p => p.ImageKey).FirstOrDefault(),
                 c.IsHidden,
                 LastUsedAt = db.Posts.Where(p => p.CharacterId == c.Id).Max(p => (DateTimeOffset?)p.CreatedAt),
+                c.SavedRolls,
             })
             .ToListAsync(cancellationToken);
 
-        return rows.Select(r => new CharacterOption(r.Id, r.Name, r.IsNpc, PortraitUrl(r.ImageKey), r.LastUsedAt, r.IsHidden)).ToList();
+        // Bara egna karaktärer och GM:s NPC:er väljs här, så de sparade slagen får följa med (B57), med ikoner (B58).
+        var iconUrls = await IconUrlsAsync(db, rows.SelectMany(r => (r.SavedRolls ?? []).Select(s => s.IconId)), cancellationToken);
+        return rows.Select(r => new CharacterOption(r.Id, r.Name, r.IsNpc, PortraitUrl(r.ImageKey), r.LastUsedAt, r.IsHidden,
+            (r.SavedRolls ?? []).Select(s => SavedRollView.From(s, s.IconId is { } id ? iconUrls.GetValueOrDefault(id) : null)).ToList())).ToList();
     }
 
     public async Task<int> CreateAsync(int campaignId, string userId, CharacterInput input, int? portraitId, CancellationToken cancellationToken = default)

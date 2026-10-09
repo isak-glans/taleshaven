@@ -1,0 +1,363 @@
+@using Taleshaven.Core.Characters
+@using Taleshaven.Core.Dice
+
+@* Karaktärens räknare, tillstånd och sparade tärningsslag (B56). Ägaren och GM ändrar direkt här; andra ser dem.
+   För en NPC skickas räknare och slag bara till GM – tillstånden ser alla. Används interaktivt i den statiska karaktärssidan. *@
+
+@using Taleshaven.Core.Portraits
+
+@inject ICharacterService CharacterService
+@inject IPortraitService Portraits
+
+@if (status is null)
+{
+    return;
+}
+
+@if (!canEdit && status.Counters.Count == 0 && status.Conditions.Count == 0 && status.SavedRolls.Count == 0)
+{
+    return;
+}
+
+<section class="character-status card mb-3">
+    <div class="card-body d-flex flex-column gap-3">
+        @if (error is not null)
+        {
+            <div class="alert alert-danger py-2 mb-0" role="alert">@error</div>
+        }
+
+        @* Ikonväljaren (B58): ikoner ur biblioteket med taggen icon. *@
+        @if (canEdit && iconPickerFor is { } pickerUid)
+        {
+            <div class="icon-picker border rounded p-2">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <strong class="small">Icon for @iconPickerName</strong>
+                    <input type="search" class="form-control form-control-sm icon-search" placeholder="Search icons, e.g. sword"
+                           aria-label="Search icons" @bind="iconQuery" @bind:event="oninput" @bind:after="SearchIconsAsync" />
+                    <button type="button" class="btn btn-sm btn-outline-secondary icon-suggest"
+                            @onclick="() => ChooseIconAsync(new CharacterStatusChange.SuggestIcon(pickerUid))">Suggest</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary icon-none"
+                            @onclick="() => ChooseIconAsync(new CharacterStatusChange.SetIcon(pickerUid, null))">No icon</button>
+                    <button type="button" class="btn btn-sm btn-link ms-auto" @onclick="() => iconPickerFor = null">Close</button>
+                </div>
+                @if (iconResults.Count == 0)
+                {
+                    <p class="small text-secondary mb-0">No icons found. Administrators add icons to the library with the tag #icon.</p>
+                }
+                else
+                {
+                    <div class="icon-grid">
+                        @foreach (var icon in iconResults)
+                        {
+                            <button type="button" class="icon-choice" title="@PortraitTags.Format(icon.Tags)"
+                                    @onclick="() => ChooseIconAsync(new CharacterStatusChange.SetIcon(pickerUid, icon.Id))">
+                                <img src="@icon.Url" alt="@PortraitTags.Format(icon.Tags)" width="40" height="40" loading="lazy" />
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        @if (status.ShowsPrivate)
+        {
+            <div class="status-group status-counters">
+                <h3 class="h6 mb-2">Counters</h3>
+                @if (status.Counters.Count == 0 && !canEdit)
+                {
+                    <p class="small text-secondary mb-0">No counters.</p>
+                }
+                @foreach (var counter in status.Counters)
+                {
+                    <div class="counter-row" @key="counter.Uid">
+                        @IconCell(counter.Uid, counter.IconUrl, counter.Label)
+                        <span class="counter-label">@counter.Label</span>
+                        @if (canEdit)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary counter-minus" aria-label="Decrease @counter.Label"
+                                    @onclick="() => EditAsync(new CharacterStatusChange.AdjustCounter(counter.Uid, -1))">−</button>
+                            <input type="number" class="form-control form-control-sm counter-current" aria-label="@counter.Label value"
+                                   value="@counter.Current" @onchange="e => SetCurrentAsync(counter, e.Value as string)" />
+                            <span class="counter-max">/ @counter.Max</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary counter-plus" aria-label="Increase @counter.Label"
+                                    @onclick="() => EditAsync(new CharacterStatusChange.AdjustCounter(counter.Uid, 1))">+</button>
+                            <button type="button" class="btn btn-sm btn-link text-secondary counter-remove" title="Remove counter" aria-label="Remove @counter.Label"
+                                    @onclick="() => EditAsync(new CharacterStatusChange.RemoveCounter(counter.Uid))">✕</button>
+                        }
+                        else
+                        {
+                            <span class="counter-value"><strong>@counter.Current</strong> / @counter.Max</span>
+                        }
+                        <div class="counter-bar" aria-hidden="true">
+                            <div class="counter-fill @(counter.Current * 4 <= counter.Max ? "counter-low" : "")"
+                                 style="width: @Percent(counter)%"></div>
+                        </div>
+                    </div>
+                }
+                @if (canEdit)
+                {
+                    <div class="status-add counter-add">
+                        <input class="form-control form-control-sm" placeholder="e.g. HP, Arrows, Action Surge" maxlength="@CharacterTrackers.LabelMaxLength"
+                               aria-label="New counter name" @bind="newCounterLabel" />
+                        <input type="number" class="form-control form-control-sm" aria-label="Current value" @bind="newCounterCurrent" />
+                        <span class="text-secondary">of</span>
+                        <input type="number" class="form-control form-control-sm" aria-label="Maximum" @bind="newCounterMax" />
+                        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddCounterAsync">Add counter</button>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="status-group status-conditions">
+            <h3 class="h6 mb-2">Conditions</h3>
+            @if (status.Conditions.Count == 0)
+            {
+                <p class="small text-secondary mb-1">No conditions.</p>
+            }
+            else
+            {
+                <div class="d-flex flex-wrap gap-1 mb-1">
+                    @foreach (var condition in status.Conditions)
+                    {
+                        <span class="badge rounded-pill condition-badge @(IsSevere(condition.Name) ? "condition-severe" : "")" @key="condition.Uid">
+                            @IconCell(condition.Uid, condition.IconUrl, condition.Name, small: true)
+                            @condition.Name
+                            @if (canEdit)
+                            {
+                                <button type="button" class="condition-remove" title="Remove condition" aria-label="Remove @condition.Name"
+                                        @onclick="() => EditAsync(new CharacterStatusChange.RemoveCondition(condition.Uid))">✕</button>
+                            }
+                        </span>
+                    }
+                </div>
+            }
+            @if (canEdit)
+            {
+                <div class="status-add condition-add">
+                    @* Förslagen är D&D 5e:s tillstånd, Bloodied och de som redan används i kampanjen. *@
+                    <input class="form-control form-control-sm" list="condition-suggestions-@CharacterId" placeholder="e.g. Poisoned"
+                           maxlength="@CharacterTrackers.LabelMaxLength" aria-label="New condition" @bind="newCondition" @bind:event="oninput"
+                           @onkeydown="ConditionKeyAsync" />
+                    <datalist id="condition-suggestions-@CharacterId">
+                        @foreach (var suggestion in suggestions)
+                        {
+                            <option value="@suggestion"></option>
+                        }
+                    </datalist>
+                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddConditionAsync">Add condition</button>
+                </div>
+            }
+        </div>
+
+        @if (status.ShowsPrivate)
+        {
+            <div class="status-group status-rolls">
+                <h3 class="h6 mb-2">Dice rolls</h3>
+                @if (status.SavedRolls.Count == 0)
+                {
+                    <p class="small text-secondary mb-1">
+                        No dice rolls.@(canEdit ? " Saved rolls can be added to a post with one click when you post as this character." : "")
+                    </p>
+                }
+                @foreach (var roll in status.SavedRolls)
+                {
+                    <div class="saved-roll" @key="roll.Uid">
+                        @if (roll.IconUrl is null && !canEdit)
+                        {
+                            <span aria-hidden="true">🎲</span>
+                        }
+                        else
+                        {
+                            @IconCell(roll.Uid, roll.IconUrl, roll.Label)
+                        }
+                        <span class="saved-roll-label">@roll.Label</span>
+                        <span class="saved-roll-notation">@roll.Notation</span>
+                        @if (roll.Mode != DiceMode.Normal)
+                        {
+                            <span class="saved-roll-mode">@PostHtml.ModeText(roll.Mode)</span>
+                        }
+                        @if (canEdit)
+                        {
+                            <button type="button" class="btn btn-sm btn-link text-secondary ms-auto saved-roll-remove" title="Remove dice roll"
+                                    aria-label="Remove @roll.Label" @onclick="() => EditAsync(new CharacterStatusChange.RemoveSavedRoll(roll.Uid))">✕</button>
+                        }
+                    </div>
+                }
+                @if (canEdit)
+                {
+                    <div class="status-add roll-add-row">
+                        <input class="form-control form-control-sm" placeholder="e.g. Shortsword" maxlength="@CharacterTrackers.LabelMaxLength"
+                               aria-label="New dice roll name" @bind="newRollLabel" />
+                        <input class="form-control form-control-sm saved-roll-notation-input" placeholder="1d20+5" maxlength="12"
+                               aria-label="Dice" @bind="newRollNotation" @bind:event="oninput" />
+                        <select class="form-select form-select-sm" aria-label="Advantage or disadvantage" disabled="@(!NewRollSupportsMode)" @bind="newRollMode">
+                            <option value="@DiceMode.Normal">Normal</option>
+                            <option value="@DiceMode.Advantage">Advantage</option>
+                            <option value="@DiceMode.Disadvantage">Disadvantage</option>
+                        </select>
+                        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AddRollAsync">Add dice roll</button>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public int CampaignId { get; set; }
+
+    [Parameter, EditorRequired]
+    public int CharacterId { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private string userId = "";
+    private CharacterStatus? status;
+    private bool canEdit;
+    private IReadOnlyList<string> suggestions = [];
+    private string? error;
+
+    private string newCounterLabel = "";
+    private int newCounterCurrent = 10;
+    private int newCounterMax = 10;
+    private string newCondition = "";
+    private string newRollLabel = "";
+    private string newRollNotation = "";
+    private DiceMode newRollMode;
+
+    private bool NewRollSupportsMode => DiceNotation.TryParse(newRollNotation, out var notation, out _) && DiceRoll.SupportsMode(notation);
+
+    protected override async Task OnInitializedAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+        var character = await CharacterService.GetCharacterAsync(CampaignId, CharacterId, userId);
+        if (character is null)
+            return;
+
+        status = character.Status;
+        canEdit = character.CanEdit;
+        if (canEdit)
+            suggestions = await CharacterService.GetConditionSuggestionsAsync(CampaignId);
+    }
+
+    private async Task<bool> EditAsync(CharacterStatusChange change)
+    {
+        error = null;
+        try
+        {
+            status = await CharacterService.EditStatusAsync(CampaignId, CharacterId, userId, change);
+            return true;
+        }
+        catch (CampaignRuleException ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private Task SetCurrentAsync(CounterView counter, string? value) =>
+        int.TryParse(value, out var current)
+            ? EditAsync(new CharacterStatusChange.UpdateCounter(counter.Uid, counter.Label, current, counter.Max))
+            : Task.CompletedTask;
+
+    private async Task AddCounterAsync()
+    {
+        if (await EditAsync(new CharacterStatusChange.AddCounter(newCounterLabel, newCounterCurrent, newCounterMax)))
+        {
+            newCounterLabel = "";
+            newCounterCurrent = 10;
+            newCounterMax = 10;
+        }
+    }
+
+    private async Task AddConditionAsync()
+    {
+        if (await EditAsync(new CharacterStatusChange.AddCondition(newCondition)))
+        {
+            newCondition = "";
+            suggestions = await CharacterService.GetConditionSuggestionsAsync(CampaignId);
+        }
+    }
+
+    private async Task ConditionKeyAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await AddConditionAsync();
+    }
+
+    private async Task AddRollAsync()
+    {
+        var mode = NewRollSupportsMode ? newRollMode : DiceMode.Normal;
+        if (await EditAsync(new CharacterStatusChange.AddSavedRoll(newRollLabel, newRollNotation, mode)))
+        {
+            newRollLabel = "";
+            newRollNotation = "";
+            newRollMode = DiceMode.Normal;
+        }
+    }
+
+    private Guid? iconPickerFor;
+    private string iconPickerName = "";
+    private string iconQuery = "";
+    private IReadOnlyList<PortraitView> iconResults = [];
+
+    // Ikonen framför en rad (B58). Den som får ändra klickar på den för att välja en annan.
+    private RenderFragment IconCell(Guid uid, string? url, string name, bool small = false) =>
+        @<text>
+            @if (canEdit)
+            {
+                <button type="button" class="status-icon-button @(small ? "status-icon-small" : "")" title="Change the icon for @name"
+                        aria-label="Change the icon for @name" @onclick="() => OpenIconPickerAsync(uid, name)">
+                    @if (url is not null)
+                    {
+                        <img class="status-icon" src="@url" alt="" />
+                    }
+                    else
+                    {
+                        <span class="status-icon status-icon-empty" aria-hidden="true">+</span>
+                    }
+                </button>
+            }
+            else if (url is not null)
+            {
+                <img class="status-icon @(small ? "status-icon-small" : "")" src="@url" alt="" />
+            }
+            else if (!small)
+            {
+                <span class="status-icon status-icon-blank" aria-hidden="true"></span>
+            }
+        </text>;
+
+    private async Task OpenIconPickerAsync(Guid uid, string name)
+    {
+        if (iconPickerFor == uid)
+        {
+            iconPickerFor = null;
+            return;
+        }
+        iconPickerFor = uid;
+        iconPickerName = name;
+        iconQuery = "";
+        await SearchIconsAsync();
+    }
+
+    private async Task SearchIconsAsync()
+    {
+        var query = $"{IconMatcher.IconTag} {iconQuery}";
+        iconResults = (await Portraits.SearchAsync(query, 40)).Portraits;
+    }
+
+    private async Task ChooseIconAsync(CharacterStatusChange change)
+    {
+        if (await EditAsync(change))
+            iconPickerFor = null;
+    }
+
+    private static int Percent(CounterView counter) => Math.Clamp(counter.Current * 100 / counter.Max, 0, 100);
+
+    // Tillstånd som betyder att varelsen är illa ute markeras tydligare.
+    private static bool IsSevere(string name) =>
+        name.Equals("Bloodied", StringComparison.OrdinalIgnoreCase) || name.Equals("Unconscious", StringComparison.OrdinalIgnoreCase);
+}

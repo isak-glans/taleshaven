@@ -126,12 +126,15 @@ public sealed record PostCharacter(int Id, string Name, bool IsNpc, string? Avat
     }
 }
 
-/// <summary>Ett gjort slag (B42). Med fördel eller nackdel är <see cref="Results"/> båda tärningarna och <see cref="KeptIndex"/> den som räknas.</summary>
+/// <summary>
+/// Ett gjort slag (B42). Med fördel eller nackdel är <see cref="Results"/> båda tärningarna och <see cref="KeptIndex"/> den
+/// som räknas. <see cref="IconUrl"/> är slagets ikon (B60), eller null för 🎲.
+/// </summary>
 public sealed record DiceRollView(string Notation, string? Label, IReadOnlyList<int> Results, int Sides, int Modifier, int Total,
-    DiceMode Mode = DiceMode.Normal)
+    DiceMode Mode = DiceMode.Normal, string? IconUrl = null)
 {
-    public static DiceRollView From(DiceRoll roll) =>
-        new(roll.Notation, roll.Label, roll.Results.ToList(), roll.Sides, roll.Modifier, roll.Total, roll.Mode);
+    public static DiceRollView From(DiceRoll roll, string? iconUrl = null) =>
+        new(roll.Notation, roll.Label, roll.Results.ToList(), roll.Sides, roll.Modifier, roll.Total, roll.Mode, iconUrl);
 
     /// <summary>Tärningen som räknas vid fördel eller nackdel, annars null (alla räknas).</summary>
     public int? KeptIndex => Mode switch

@@ -158,6 +158,16 @@ public class DiceRollTests
     }
 
     [Fact]
+    public void IconFollowsTheRoll()
+    {
+        var roll = DiceRoll.Roll(new RollRequest("1d20+5", "Shortsword", DiceMode.Normal, IconId: 42), new FixedRoller(11));
+
+        Assert.Equal(42, roll.IconId);
+        Assert.Equal("media/x.webp", DiceRollView.From(roll, "media/x.webp").IconUrl);
+        Assert.Null(DiceRoll.Roll(new RollRequest("1d6"), new FixedRoller(3)).IconId);
+    }
+
+    [Fact]
     public void NormalRollHasNoKeptDie()
     {
         Assert.Null(DiceRollView.From(DiceRoll.Roll(new DiceNotation(2, 6), null, new FixedRoller(1, 2))).KeptIndex);

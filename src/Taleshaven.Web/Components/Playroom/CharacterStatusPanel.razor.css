@@ -1,0 +1,209 @@
+/* Räknare, tillstånd och sparade slag på karaktärssidan (B56). */
+.character-status {
+    max-width: 44rem;
+}
+
+.counter-row {
+    align-items: center;
+    display: grid;
+    gap: 0.35rem;
+    grid-template-columns: auto minmax(6rem, 1fr) auto 4.5rem auto auto auto;
+    margin-bottom: 0.4rem;
+}
+
+.counter-label {
+    font-weight: 600;
+}
+
+.counter-current {
+    text-align: right;
+}
+
+.counter-max,
+.counter-value {
+    color: var(--bs-secondary-color);
+    white-space: nowrap;
+}
+
+.counter-value strong {
+    color: var(--bs-body-color);
+}
+
+.counter-bar {
+    background: var(--bs-tertiary-bg);
+    border-radius: 1rem;
+    grid-column: 1 / -1;
+    height: 0.3rem;
+    overflow: hidden;
+}
+
+.counter-fill {
+    background: var(--bs-success);
+    height: 100%;
+}
+
+.counter-fill.counter-low {
+    background: var(--bs-danger);
+}
+
+.status-add {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.status-add .form-control,
+.status-add .form-select {
+    width: auto;
+}
+
+.counter-add input[type=number] {
+    width: 5rem;
+}
+
+.condition-badge {
+    align-items: center;
+    background: var(--bs-secondary-bg);
+    border: 1px solid var(--bs-border-color);
+    color: var(--bs-body-color);
+    display: inline-flex;
+    font-weight: 500;
+    gap: 0.25rem;
+}
+
+.condition-badge.condition-severe {
+    background: var(--bs-danger-bg-subtle);
+    border-color: var(--bs-danger-border-subtle);
+    color: var(--bs-danger-text-emphasis);
+}
+
+.condition-remove {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 0.8em;
+    line-height: 1;
+    opacity: 0.6;
+    padding: 0;
+}
+
+.condition-remove:hover {
+    opacity: 1;
+}
+
+.saved-roll {
+    align-items: center;
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 0.3rem;
+    padding: 0.15rem 0.5rem;
+}
+
+.saved-roll-label {
+    font-weight: 600;
+}
+
+.saved-roll-notation {
+    color: var(--bs-secondary-color);
+    font-family: var(--bs-font-monospace);
+    font-size: 0.9em;
+}
+
+.saved-roll-mode {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 1rem;
+    color: var(--bs-secondary-color);
+    font-size: 0.75em;
+    padding: 0 0.4rem;
+}
+
+.saved-roll-notation-input {
+    max-width: 7rem;
+}
+
+@media (max-width: 575.98px) {
+    .counter-row {
+        grid-template-columns: auto 1fr auto 4rem auto auto auto;
+    }
+}
+
+/* Ikoner framför räknare, tillstånd och slag (B58). */
+.status-icon {
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+    height: 28px;
+    object-fit: cover;
+    width: 28px;
+}
+
+.status-icon-small,
+.status-icon-small .status-icon {
+    height: 18px;
+    width: 18px;
+}
+
+.status-icon-empty {
+    border: 1px dashed var(--bs-border-color);
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+    line-height: 26px;
+    text-align: center;
+}
+
+.status-icon-small .status-icon-empty {
+    font-size: 0.7rem;
+    line-height: 16px;
+}
+
+.status-icon-blank {
+    visibility: hidden;
+}
+
+.status-icon-button {
+    background: none;
+    border: none;
+    border-radius: 50%;
+    display: inline-flex;
+    padding: 0;
+}
+
+.status-icon-button:hover .status-icon,
+.status-icon-button:focus-visible .status-icon {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 1px;
+}
+
+.icon-picker {
+    background: var(--bs-tertiary-bg);
+}
+
+.icon-search {
+    max-width: 14rem;
+}
+
+.icon-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.icon-choice {
+    background: none;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    padding: 1px;
+}
+
+.icon-choice:hover,
+.icon-choice:focus-visible {
+    border-color: var(--bs-primary);
+}
+
+.icon-choice img {
+    border-radius: 50%;
+}

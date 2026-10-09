@@ -2,7 +2,8 @@ namespace Taleshaven.Core.Characters;
 
 /// <summary>
 /// En karaktär i en kampanj (krav H-1–H-6). Spelare äger sina egna karaktärer; GM:s karaktärer är NPC:er (F3).
-/// Spelarkaraktärer har ett formaterat dokument och kan länka till ett externt rollformulär.
+/// Spelarkaraktärer har ett formaterat dokument och kan länka till ett externt rollformulär. Alla karaktärer kan ha
+/// räknare, tillstånd och sparade tärningsslag (B56).
 /// NPC:er har bara namn, porträtt och en anteckning som bara GM ser (B15).
 /// </summary>
 public class Character
@@ -45,6 +46,15 @@ public class Character
 
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
+
+    /// <summary>Räknare som HP och pilar (B56). För NPC:er ser bara GM dem.</summary>
+    public List<CharacterCounter> Counters { get; private set; } = [];
+
+    /// <summary>Tillstånd som Poisoned (B56). Synliga för alla som får se karaktären.</summary>
+    public List<CharacterCondition> Conditions { get; private set; } = [];
+
+    /// <summary>Sparade tärningsslag (B56) som kan läggas till i ett inlägg (B57). För NPC:er ser bara GM dem.</summary>
+    public List<SavedRoll> SavedRolls { get; private set; } = [];
 
     public static Character Create(int campaignId, string ownerId, bool isNpc, CharacterInput input, DateTimeOffset now)
     {
@@ -120,6 +130,106 @@ public class Character
         PortraitId = portraitId;
         UpdatedAt = now;
     }
+
+    public Guid AddCounter(string? label, int current, int max, DateTimeOffset now)
+    {
+        if (Counters.Count >= CharacterTrackers.MaxCounters)
+            throw new CampaignRuleException($"A character can have at most {CharacterTrackers.MaxCounters} counters.");
+        var counter = new CharacterCounter(label!, current, max);
+        Counters.Add(counter);
+        UpdatedAt = now;
+        return counter.Uid;
+    }
+
+    public void UpdateCounter(Guid uid, string? label, int current, int max, DateTimeOffset now)
+    {
+        FindCounter(uid).Set(label, current, max);
+        UpdatedAt = now;
+    }
+
+    /// <summary>Ökar eller minskar räknarens värde, t.ex. −5 HP. Värdet kan gå över max (t.ex. tillfälliga HP).</summary>
+    public void AdjustCounter(Guid uid, int delta, DateTimeOffset now)
+    {
+        FindCounter(uid).Adjust(delta);
+        UpdatedAt = now;
+    }
+
+    public void RemoveCounter(Guid uid, DateTimeOffset now)
+    {
+        Counters.Remove(FindCounter(uid));
+        UpdatedAt = now;
+    }
+
+    /// <summary>Lägger till ett tillstånd. Samma tillstånd två gånger (oavsett stora och små bokstäver) blir ett.</summary>
+    public Guid AddCondition(string? name, DateTimeOffset now)
+    {
+        var text = CharacterTrackers.ValidateLabel(name, "condition");
+        if (Conditions.FirstOrDefault(c => string.Equals(c.Name, text, StringComparison.OrdinalIgnoreCase)) is { } existing)
+            return existing.Uid;
+        if (Conditions.Count >= CharacterTrackers.MaxConditions)
+            throw new CampaignRuleException($"A character can have at most {CharacterTrackers.MaxConditions} conditions.");
+        var condition = new CharacterCondition(text);
+        Conditions.Add(condition);
+        UpdatedAt = now;
+        return condition.Uid;
+    }
+
+    public void RemoveCondition(Guid uid, DateTimeOffset now)
+    {
+        var condition = Conditions.SingleOrDefault(c => c.Uid == uid)
+            ?? throw new CampaignRuleException("The condition doesn't exist any more.");
+        Conditions.Remove(condition);
+        UpdatedAt = now;
+    }
+
+    public Guid AddSavedRoll(string? label, string? notation, Dice.DiceMode mode, DateTimeOffset now)
+    {
+        if (SavedRolls.Count >= CharacterTrackers.MaxSavedRolls)
+            throw new CampaignRuleException($"A character can have at most {CharacterTrackers.MaxSavedRolls} dice rolls.");
+        var roll = new SavedRoll(label, notation, mode);
+        SavedRolls.Add(roll);
+        UpdatedAt = now;
+        return roll.Uid;
+    }
+
+    public void UpdateSavedRoll(Guid uid, string? label, string? notation, Dice.DiceMode mode, DateTimeOffset now)
+    {
+        FindSavedRoll(uid).Set(label, notation, mode);
+        UpdatedAt = now;
+    }
+
+    public void RemoveSavedRoll(Guid uid, DateTimeOffset now)
+    {
+        SavedRolls.Remove(FindSavedRoll(uid));
+        UpdatedAt = now;
+    }
+
+    /// <summary>Sätter ikonen (B58) på en räknare, ett tillstånd eller ett sparat slag; null tar bort den.</summary>
+    public void SetStatusIcon(Guid uid, int? iconId, DateTimeOffset now)
+    {
+        if (Counters.SingleOrDefault(c => c.Uid == uid) is { } counter)
+            counter.SetIcon(iconId);
+        else if (Conditions.SingleOrDefault(c => c.Uid == uid) is { } condition)
+            condition.SetIcon(iconId);
+        else if (SavedRolls.SingleOrDefault(r => r.Uid == uid) is { } roll)
+            roll.SetIcon(iconId);
+        else
+            throw new CampaignRuleException("The item doesn't exist any more.");
+        UpdatedAt = now;
+    }
+
+    /// <summary>Namnet på en räknare, ett tillstånd eller ett sparat slag, t.ex. för att föreslå en ikon.</summary>
+    public string StatusItemName(Guid uid) =>
+        Counters.SingleOrDefault(c => c.Uid == uid)?.Label
+        ?? Conditions.SingleOrDefault(c => c.Uid == uid)?.Name
+        ?? SavedRolls.SingleOrDefault(r => r.Uid == uid)?.Label
+        ?? throw new CampaignRuleException("The item doesn't exist any more.");
+
+    private CharacterCounter FindCounter(Guid uid) =>
+        Counters.SingleOrDefault(c => c.Uid == uid) ?? throw new CampaignRuleException("The counter doesn't exist any more.");
+
+    private SavedRoll FindSavedRoll(Guid uid) =>
+        SavedRolls.SingleOrDefault(r => r.Uid == uid) ?? throw new CampaignRuleException("The dice roll doesn't exist any more.");
 
     // Bara absoluta http(s)-adresser, så att länken aldrig kan bli t.ex. javascript:.
     private static string? ValidateUrl(string? url)

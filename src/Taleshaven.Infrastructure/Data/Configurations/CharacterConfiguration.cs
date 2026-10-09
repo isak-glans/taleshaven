@@ -18,6 +18,11 @@ internal sealed class CharacterConfiguration : IEntityTypeConfiguration<Characte
         builder.Property(c => c.GmNote).HasMaxLength(CharacterLimits.GmNoteMaxLength);
         builder.Property(c => c.Alias).HasMaxLength(CharacterLimits.NameMaxLength);
 
+        // Räknare, tillstånd och sparade slag (B56) lagras som jsonb på karaktären, som tärningsslagen på inlägg.
+        builder.OwnsMany(c => c.Counters, counter => counter.ToJson());
+        builder.OwnsMany(c => c.Conditions, condition => condition.ToJson());
+        builder.OwnsMany(c => c.SavedRolls, roll => roll.ToJson());
+
         // Tas porträttet bort ur biblioteket får karaktären initialer (B20).
         builder.HasOne<Portrait>()
             .WithMany()

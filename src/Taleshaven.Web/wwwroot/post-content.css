@@ -199,3 +199,25 @@
     font-size: 1.05em;
     font-variant-numeric: tabular-nums;
 }
+
+/* Förhandsvisning av länkade bilder (B59): begränsad storlek, ett klick öppnar originalet. */
+.post-content .post-image {
+    display: block;
+    margin: 0.35rem 0 0.5rem;
+}
+
+.post-content .post-image img {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    display: block;
+    height: auto;
+    max-height: 300px;
+    max-width: min(100%, 480px);
+    object-fit: contain;
+}
+
+/* Slagets ikon i stället för 🎲 (B60). */
+.post-roll .roll-icon {
+    border-radius: 50%;
+    flex-shrink: 0;
+}

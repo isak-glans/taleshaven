@@ -3,6 +3,7 @@ using Taleshaven.Core;
 using Taleshaven.Core.Campaigns;
 using Taleshaven.Core.Dice;
 using Taleshaven.Core.Media;
+using Taleshaven.Core.Portraits;
 using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Campaigns;
 using Taleshaven.Infrastructure.Data;
@@ -154,12 +155,36 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         if (replyToPostId is not null && !await db.Posts.AnyAsync(p => p.Id == replyToPostId && p.ThreadId == threadId, cancellationToken))
             throw new CampaignRuleException("The post you're replying to doesn't exist.");
 
-        var post = Post.Create(threadId, userId, content, timeProvider.GetUtcNow(), characterId, replyToPostId, rolls, diceRoller);
+        var post = Post.Create(threadId, userId, content, timeProvider.GetUtcNow(), characterId, replyToPostId,
+            await WithIconsAsync(db, rolls, cancellationToken), diceRoller);
         db.Posts.Add(post);
         await db.SaveChangesAsync(cancellationToken);
 
         var viewer = new Viewer(userId, access.Role, access.CampaignStatus, thread.Status);
         return (await ToPostItemsAsync(db, db.Posts.Where(p => p.Id == post.Id), viewer, cancellationToken)).Single();
+    }
+
+    // Slagens ikoner (B60): en ikon från ett sparat slag måste finnas och vara taggad som ikon, annars tas den bort;
+    // ett slag utan ikon men med beskrivning får ett förslag efter beskrivningen, som på karaktären (B58).
+    private static async Task<IReadOnlyList<RollRequest>?> WithIconsAsync(
+        TaleshavenDbContext db, IReadOnlyList<RollRequest>? rolls, CancellationToken cancellationToken)
+    {
+        if (rolls is not { Count: > 0 })
+            return rolls;
+
+        var icons = await db.Portraits.AsNoTracking()
+            .Where(p => p.Tags.Contains(IconMatcher.IconTag))
+            .Select(p => new { p.Id, p.Tags })
+            .ToListAsync(cancellationToken);
+        var candidates = icons.Select(i => (i.Id, (IReadOnlyList<string>)i.Tags)).ToList();
+        var iconIds = icons.Select(i => i.Id).ToHashSet();
+
+        return rolls.Select(r => r with
+        {
+            IconId = r.IconId is { } id && iconIds.Contains(id) ? id
+                : string.IsNullOrWhiteSpace(r.Label) ? null
+                : IconMatcher.Suggest(r.Label, candidates),
+        }).ToList();
     }
 
     public async Task<PostItem> EditPostAsync(int campaignId, long postId, string userId, string? content, CancellationToken cancellationToken = default)
@@ -384,6 +409,16 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                     : r.ViewerIsGameMaster ? r.CharacterName
                     : Core.Characters.Character.NameForPlayers(r.CharacterName, r.CharacterIsHidden ?? false, r.CharacterAlias));
 
+        // Slagens ikoner (B60). En ikon som tagits bort ur biblioteket saknas här, och slaget visas med 🎲.
+        var iconIds = rows.SelectMany(r => r.Rolls).Select(roll => roll.IconId).OfType<int>().Distinct().ToList();
+        var iconUrls = iconIds.Count == 0
+            ? new Dictionary<int, string>()
+            : await db.Portraits.AsNoTracking()
+                .Where(p => iconIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => IImageStore.PortraitUrl(p.ImageKey), cancellationToken);
+        DiceRollView View(DiceRoll roll) =>
+            DiceRollView.From(roll, roll.IconId is { } id ? iconUrls.GetValueOrDefault(id) : null);
+
         return rows
             .OrderBy(r => r.Id)
             .Select(r =>
@@ -395,7 +430,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                     // Texten i ett borttaget inlägg lämnar aldrig servern (B30).
                     Content: deleted ? "" : r.Content,
                     r.CreatedAt, r.EditedAt,
-                    Rolls: deleted ? [] : r.Rolls.Select(DiceRollView.From).ToList(),
+                    Rolls: deleted ? [] : r.Rolls.Select(View).ToList(),
                     Character: r.CharacterId is not { } characterId ? null : PostCharacter.ForViewer(
                         characterId, r.CharacterName!, r.CharacterIsNpc ?? false,
                         r.CharacterAvatarKey is null ? null : IImageStore.PortraitUrl(r.CharacterAvatarKey),

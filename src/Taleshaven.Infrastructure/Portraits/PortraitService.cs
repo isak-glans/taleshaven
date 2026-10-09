@@ -13,14 +13,17 @@ internal sealed class PortraitService(
     IImageStore imageStore,
     TimeProvider timeProvider) : IPortraitService
 {
-    public async Task<PortraitPage> SearchAsync(string? query, int limit, int skip = 0, CancellationToken cancellationToken = default)
+    public async Task<PortraitPage> SearchAsync(string? query, int limit, int skip = 0, bool excludeIcons = false, CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
         // Varje sökord ska matcha början av någon tagg, så "dvä kri" hittar #dvärg #krigare.
         var portraits = db.Portraits.AsNoTracking();
-        foreach (var term in PortraitTags.ParseSearch(query))
+        var terms = PortraitTags.ParseSearch(query);
+        foreach (var term in terms)
             portraits = portraits.Where(p => p.Tags.Any(tag => tag.StartsWith(term)));
+        if (excludeIcons && !terms.Contains(IconMatcher.IconTag))
+            portraits = portraits.Where(p => !p.Tags.Contains(IconMatcher.IconTag));
 
         var total = await portraits.CountAsync(cancellationToken);
         var rows = await portraits

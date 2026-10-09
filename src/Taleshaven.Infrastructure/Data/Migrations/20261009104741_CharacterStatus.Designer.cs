@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Taleshaven.Infrastructure.Data;
@@ -12,9 +13,11 @@ using Taleshaven.Infrastructure.Data;
 namespace Taleshaven.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(TaleshavenDbContext))]
-    partial class TaleshavenDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261009104741_CharacterStatus")]
+    partial class CharacterStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -813,8 +816,6 @@ namespace Taleshaven.Infrastructure.Data.Migrations
                             b1.Property<int>("__synthesizedOrdinal")
                                 .ValueGeneratedOnAdd();
 
-                            b1.Property<int?>("IconId");
-
                             b1.Property<string>("Name")
                                 .IsRequired();
 
@@ -841,8 +842,6 @@ namespace Taleshaven.Infrastructure.Data.Migrations
 
                             b1.Property<int>("Current");
 
-                            b1.Property<int?>("IconId");
-
                             b1.Property<string>("Label")
                                 .IsRequired();
 
@@ -868,8 +867,6 @@ namespace Taleshaven.Infrastructure.Data.Migrations
 
                             b1.Property<int>("__synthesizedOrdinal")
                                 .ValueGeneratedOnAdd();
-
-                            b1.Property<int?>("IconId");
 
                             b1.Property<string>("Label")
                                 .IsRequired();
@@ -961,8 +958,6 @@ namespace Taleshaven.Infrastructure.Data.Migrations
                                 .ValueGeneratedOnAdd();
 
                             b1.Property<int>("Count");
-
-                            b1.Property<int?>("IconId");
 
                             b1.Property<string>("Label");
 
