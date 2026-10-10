@@ -68,3 +68,14 @@ h1:focus {
     flex-shrink: 0;
     vertical-align: -0.125em;
 }
+
+/* Mobil (B71): fält med mindre text än 16 px får iPhone att zooma in när man trycker i dem. */
+@media (max-width: 575.98px) {
+    input:not([type=checkbox]):not([type=radio]),
+    select,
+    textarea,
+    .form-control,
+    .form-select {
+        font-size: 16px !important;
+    }
+}

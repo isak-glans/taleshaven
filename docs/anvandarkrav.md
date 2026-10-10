@@ -768,7 +768,9 @@ inte skickar formuläret igen. Okända adresser och sådant man inte får se ger
 
 - **UT-1:** Sajten har en sidomeny (mörk, med *Campaigns*, *Create campaign*, *Portraits*/*Roles* för de som har
   rollen, användarens namn och *Log out*) och innehållet till höger. På mobil fälls menyn ihop.
-- **UT-2:** Alla sidor fungerar på mobil, utan horisontell scroll.
+- **UT-2:** Alla sidor fungerar på mobil, utan horisontell scroll. Under 576 px bredd: inläggens porträtt är 40 px och
+  står bredvid namnet medan texten tar hela bredden under; räknare bryts på två rader; fält har minst 16 px text
+  (annars zoomar iPhone in när man trycker i dem).
 - **UT-3:** Inläggen är ljusa kort med runda porträtt (56 px), tydliga namn och små ikonknappar med text för
   skärmläsare (`aria-label`) och `title`.
 - **UT-4:** Statusar och märken som små runda etiketter: *Active* grön, *Completed* grå, *GM* mörk, *NPC* grå,

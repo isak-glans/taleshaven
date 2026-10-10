@@ -9,14 +9,14 @@
 <p class="mb-2 small"><a href="">← Campaigns</a></p>
 
 <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-    <h1 class="h2 mb-0">@Campaign.Name</h1>
+    <h1 class="h2 mb-0 campaign-title">@Campaign.Name</h1>
     <CampaignStatusBadge Status="Campaign.Status" />
     @if (CampaignPermissions.CanManageCampaign(Campaign.ViewerRole) && Active != CampaignTab.Settings)
     {
         <a class="btn btn-sm btn-outline-secondary ms-auto" href="campaigns/@(Campaign.Id)/settings">Settings</a>
     }
 </div>
-<p class="text-secondary mb-2">
+<p class="text-secondary mb-2 campaign-meta">
     GM: <a class="campaign-gm" href="@UserLinks.Profile(Campaign.GameMasterId)">@Campaign.GameMasterName</a>
     · @Campaign.Players.Count@(Campaign.MaxPlayers is { } max ? $"/{max}" : "") players
     @foreach (var tag in Campaign.Tags)

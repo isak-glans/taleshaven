@@ -239,3 +239,37 @@ a.post-player:hover {
     background: var(--bs-tertiary-bg);
     max-width: 36rem;
 }
+
+/* Mobil (B71): mindre porträtt bredvid namnet, och texten använder hela bredden under. */
+@media (max-width: 575.98px) {
+    .thread-post {
+        gap: 0 0.6rem;
+        grid-template-columns: 40px minmax(0, 1fr);
+        padding: 0.6rem 0.75rem 0.4rem;
+    }
+
+    .post-avatar ::deep .avatar {
+        font-size: 0.8rem !important;
+        height: 40px !important;
+        width: 40px !important;
+    }
+
+    .thread-post ::deep .post-body {
+        display: contents;
+    }
+
+    .thread-post ::deep .post-body > * {
+        grid-column: 1 / -1;
+    }
+
+    .thread-post ::deep .post-body > .post-header {
+        align-self: center;
+        flex-wrap: wrap;
+        grid-column: 2;
+        row-gap: 0;
+    }
+
+    .thread-post ::deep .post-body > .post-content {
+        margin-top: 0.35rem;
+    }
+}

@@ -28,3 +28,15 @@
 .campaign-gm {
     color: inherit;
 }
+
+/* Mobil (B71): ett mindre kampanjhuvud, så att trådarna syns utan att man scrollar. */
+@media (max-width: 575.98px) {
+    .campaign-title {
+        font-size: 1.35rem;
+    }
+
+    .campaign-meta {
+        font-size: 0.875rem;
+        margin-bottom: 0.35rem !important;
+    }
+}
