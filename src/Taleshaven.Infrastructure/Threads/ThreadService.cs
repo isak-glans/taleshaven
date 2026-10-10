@@ -332,10 +332,18 @@ internal sealed class ThreadService(
     {
         var thread = await db.Threads.AsNoTracking()
             .Where(t => t.Id == threadId)
-            .Select(t => new { t.CampaignId, t.Status, t.IsLocked })
+            .Select(t => new { t.CampaignId, t.CategoryId, t.Status, t.IsLocked })
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new CampaignRuleException("The thread doesn't exist.");
 
+        // En privat konversation (B73) finns bara för sina två deltagare; för alla andra finns den inte.
+        if (thread.CampaignId is null && thread.CategoryId is null)
+        {
+            if (viewerId.Length == 0 || !await db.Conversations.AnyAsync(
+                    c => c.ThreadId == threadId && (c.UserAId == viewerId || c.UserBId == viewerId), cancellationToken))
+                throw new CampaignRuleException("The thread doesn't exist.");
+            return new Viewer(viewerId, CampaignRole.None, CampaignStatus.Ongoing, thread.Status, IsConversation: true);
+        }
         if (thread.CampaignId is not { } campaignId)
             return new Viewer(viewerId, CampaignRole.None, CampaignStatus.Ongoing, thread.Status, IsForum: true, IsLocked: thread.IsLocked);
         var access = await CampaignAccess.GetAsync(db, campaignId, viewerId, cancellationToken);
@@ -348,7 +356,7 @@ internal sealed class ThreadService(
 
     /// <summary>Den som läser, för att maskera dolda NPC:er och räkna ut vad hen får göra med varje inlägg.</summary>
     private sealed record Viewer(string UserId, CampaignRole Role, CampaignStatus CampaignStatus, ThreadStatus ThreadStatus,
-        bool IsForum = false, bool IsLocked = false)
+        bool IsForum = false, bool IsLocked = false, bool IsConversation = false)
     {
         /// <summary>För listor där inga knappar visas; bara maskeringen spelar roll.</summary>
         public static Viewer ReadOnly(string userId) => new(userId, CampaignRole.None, CampaignStatus.Archived, ThreadStatus.Completed);
@@ -447,7 +455,8 @@ internal sealed class ThreadService(
             {
                 var deleted = r.DeletedAt is not null;
                 var hidden = r.HiddenAt is not null;
-                var canModerate = !deleted && (viewerIsModerator || (r.ViewerIsGameMaster && !r.IsGameMaster));
+                // Privata meddelanden (B73) modereras bara från moderationssidan, även om en deltagare är moderator.
+                var canModerate = !deleted && !viewer.IsConversation && (viewerIsModerator || (r.ViewerIsGameMaster && !r.IsGameMaster));
                 var showContent = !deleted && (!hidden || canModerate);
                 var hasRolls = r.Rolls.Count > 0;
                 return new PostItem(
@@ -467,10 +476,15 @@ internal sealed class ThreadService(
                         : null,
                     IsDeleted: deleted,
                     // I forumet (B72) redigerar författaren sitt inlägg om tråden inte är låst; författaren och moderatorerna tar bort.
-                    CanEdit: !deleted && !hidden && (viewer.IsForum
+                    // I privata meddelanden (B73) redigerar och tar avsändaren bort sina egna.
+                    CanEdit: !deleted && !hidden && (viewer.IsConversation
+                        ? r.AuthorId == viewer.UserId
+                        : viewer.IsForum
                         ? r.AuthorId == viewer.UserId && !viewer.IsLocked
                         : CampaignPermissions.CanEditPost(viewer.Role, viewer.CampaignStatus, viewer.ThreadStatus, viewer.UserId, r.AuthorId)),
-                    CanDelete: !deleted && (viewer.IsForum
+                    CanDelete: !deleted && (viewer.IsConversation
+                        ? r.AuthorId == viewer.UserId
+                        : viewer.IsForum
                         ? r.AuthorId == viewer.UserId || viewerIsModerator
                         : CampaignPermissions.CanDeletePost(viewer.Role, viewer.CampaignStatus, viewer.ThreadStatus, viewer.UserId, r.AuthorId, hasRolls)),
                     // Profilbilden visas när inlägget är skrivet utan karaktär, t.ex. GM som berättare (B50).

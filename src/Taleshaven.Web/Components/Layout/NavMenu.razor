@@ -6,6 +6,7 @@
 @inject NavigationManager NavigationManager
 @inject ISiteRoleService RoleService
 @inject IModerationService Moderation
+@inject Taleshaven.Core.Messages.IMessageService Messages
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -36,6 +37,16 @@
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="campaigns/new" title="Create campaign">
                         <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> <span class="nav-label">Create campaign</span>
+                    </NavLink>
+                </div>
+                @* Privata meddelanden (B73); märket visar konversationer med olästa meddelanden. *@
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="messages" title="Messages">
+                        <span class="bi bi-envelope-nav-menu" aria-hidden="true"></span> <span class="nav-label">Messages</span>
+                        @if (unreadConversations > 0)
+                        {
+                            <span class="badge rounded-pill text-bg-danger ms-2 messages-badge" title="Conversations with new messages">@unreadConversations</span>
+                        }
                     </NavLink>
                 </div>
                 @if (SitePermissions.CanManagePortraits(siteRoles))
@@ -112,6 +123,7 @@
     private IReadOnlySet<SiteRole> siteRoles = new HashSet<SiteRole>();
     private bool canModerate;
     private int openReports;
+    private int unreadConversations;
 
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
@@ -128,6 +140,7 @@
             canModerate = await Moderation.CanSeeModerationAsync(userId);
             if (canModerate)
                 openReports = await Moderation.CountOpenAsync(userId);
+            unreadConversations = await Messages.CountUnreadConversationsAsync(userId);
         }
     }
 

@@ -1,0 +1,29 @@
+/* Konversationslistan (B73): hela raden är en länk; olästa konversationer har fetstilt namn. */
+.conversation-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.conversation-link:hover .conversation-name {
+    text-decoration: underline;
+}
+
+.conversation-text {
+    min-width: 0;
+}
+
+.conversation-name {
+    font-weight: 600;
+}
+
+.conversation-unread .conversation-name,
+.conversation-unread .conversation-snippet {
+    color: var(--bs-body-color) !important;
+    font-weight: 700;
+}
+
+.conversation-snippet {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

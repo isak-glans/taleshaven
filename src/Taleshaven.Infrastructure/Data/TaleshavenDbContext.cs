@@ -24,6 +24,8 @@ public class TaleshavenDbContext(DbContextOptions<TaleshavenDbContext> options) 
     public DbSet<ModerationAction> ModerationActions => Set<ModerationAction>();
     public DbSet<UserNotice> UserNotices => Set<UserNotice>();
     public DbSet<Taleshaven.Core.Forum.ForumCategory> ForumCategories => Set<Taleshaven.Core.Forum.ForumCategory>();
+    public DbSet<Taleshaven.Core.Messages.Conversation> Conversations => Set<Taleshaven.Core.Messages.Conversation>();
+    public DbSet<Taleshaven.Core.Messages.UserBlock> UserBlocks => Set<Taleshaven.Core.Messages.UserBlock>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -132,6 +132,11 @@
                             <span class="d-flex align-items-center gap-2">
                                 <Avatar Name="@player.DisplayName" ImageUrl="@player.AvatarUrl" ColorKey="@player.UserId" Size="32" />
                                 <a href="@UserLinks.Profile(player.UserId)" class="player-name">@player.DisplayName</a>
+                                @if (userId.Length > 0 && player.UserId != userId)
+                                {
+                                    <a class="btn btn-sm btn-link p-0 text-secondary player-message" href="@Taleshaven.Core.Messages.MessageLinks.To(player.UserId)"
+                                       title="Send message to @player.DisplayName" aria-label="Send message to @player.DisplayName"><Icon Name="envelope" /></a>
+                                }
                             </span>
                             <span class="text-secondary small">since @Dates.Date(player.JoinedAt)</span>
                         </div>

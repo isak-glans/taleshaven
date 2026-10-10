@@ -20,4 +20,7 @@ public class ApplicationUser : IdentityUser
 
     /// <summary>När användaren godkände ordningsreglerna vid registreringen (B70). Null för äldre konton.</summary>
     public DateTimeOffset? AcceptedRulesAt { get; set; }
+
+    /// <summary>Ett mejl när någon skickar ett privat meddelande (B73). Kan stängas av under kontot.</summary>
+    public bool EmailOnMessage { get; set; } = true;
 }

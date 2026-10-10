@@ -19,6 +19,8 @@ internal sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Ap
             .HasMaxLength(UserLimits.AboutMaxLength)
             .HasDefaultValue("");
 
+        builder.Property(u => u.EmailOnMessage).HasDefaultValue(true);
+
         // Tas porträttet bort ur biblioteket får användaren initialer igen (B50, som B20 för karaktärer).
         builder.HasOne<Portrait>()
             .WithMany()

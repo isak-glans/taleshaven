@@ -26,6 +26,11 @@ internal sealed class ModerationService(
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new CampaignRuleException("The post doesn't exist.");
 
+        // Ett privat meddelande (B73) kan bara rapporteras av den som har fått det.
+        var conversation = await db.Conversations.AsNoTracking().SingleOrDefaultAsync(c => c.ThreadId == post.ThreadId, cancellationToken);
+        if (conversation is not null && !conversation.Includes(userId))
+            throw new CampaignRuleException("The post doesn't exist.");
+
         if (post.AuthorId == userId)
             throw new CampaignRuleException("You can't report your own post.");
         if (post.IsDeleted || post.IsHidden)
@@ -78,7 +83,8 @@ internal sealed class ModerationService(
                 from ch in characters.DefaultIfEmpty()
                 select new
                 {
-                    p.Id, CampaignId = (int?)c.Id, CampaignName = c.Name ?? "Forum", ThreadId = t.Id, ThreadTitle = t.Title, p.AuthorId,
+                    p.Id, CampaignId = (int?)c.Id, IsPrivateMessage = t.CampaignId == null && t.CategoryId == null,
+                    CampaignName = c.Name ?? (t.CategoryId != null ? "Forum" : "Private message"), ThreadId = t.Id, ThreadTitle = t.Title, p.AuthorId,
                     AuthorName = u.DisplayName, AuthorUserName = u.UserName, CharacterName = ch.Name ?? p.DeletedCharacterName,
                     p.Content, p.CreatedAt, p.HiddenAt, p.HiddenReason,
                 })
@@ -92,7 +98,8 @@ internal sealed class ModerationService(
                 p.CharacterName, p.Content, p.CreatedAt, p.HiddenAt is not null, p.HiddenReason,
                 reports.Where(r => r.PostId == p.Id).OrderBy(r => r.CreatedAt)
                     .Select(r => new ReportView(r.Reporter, r.Reason, r.Comment, r.CreatedAt)).ToList(),
-                CanSanctionAuthor: isModerator && p.AuthorId != userId && !DeletedAccount.IsTombstone(p.AuthorId, p.AuthorUserName)))
+                CanSanctionAuthor: isModerator && p.AuthorId != userId && !DeletedAccount.IsTombstone(p.AuthorId, p.AuthorUserName),
+                IsPrivateMessage: p.IsPrivateMessage))
             .OrderBy(p => p.Reports.Min(r => r.CreatedAt))
             .ToList();
 

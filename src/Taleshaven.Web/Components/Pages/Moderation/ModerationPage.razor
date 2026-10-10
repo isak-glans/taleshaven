@@ -67,7 +67,15 @@
     {
         <article class="card mb-3 reported-post" data-post-id="@post.PostId" @key="post.PostId">
             <div class="card-header small d-flex flex-wrap gap-2 align-items-center">
-                <a href="@(post.CampaignId is { } campaignId ? ThreadLinks.Post(campaignId, post.ThreadId, post.PostId) : ForumLinks.Post(post.ThreadId, post.PostId))">@post.CampaignName › @post.ThreadTitle</a>
+                @if (post.IsPrivateMessage)
+                {
+                    @* Moderatorerna kan inte öppna konversationen, bara läsa det rapporterade meddelandet (B73). *@
+                    <span class="fw-semibold reported-private"><Icon Name="envelope" /> Private message</span>
+                }
+                else
+                {
+                    <a href="@(post.CampaignId is { } campaignId ? ThreadLinks.Post(campaignId, post.ThreadId, post.PostId) : ForumLinks.Post(post.ThreadId, post.PostId))">@post.CampaignName › @post.ThreadTitle</a>
+                }
                 <span class="text-secondary">
                     by <strong>@(post.CharacterName ?? post.AuthorName)</strong>@(post.CharacterName is null ? "" : $" ({post.AuthorName})")
                     · @Dates.DateTime(post.CreatedAt)

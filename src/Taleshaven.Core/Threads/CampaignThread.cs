@@ -13,7 +13,7 @@ public enum ThreadStatus
 /// En tråd i en kampanj (B25, B37) eller i forumet (B72). Trådar har bara en titel och en status; vill gruppen ha en
 /// krönika skapar GM en egen tråd för den. GM skapar kampanjens trådar och styr deras ordning. En forumtråd har ingen
 /// kampanj (<see cref="CampaignId"/> är null) utan en kategori, och kan vara fäst och låst; den skapas av sajtens
-/// administratörer och managers.
+/// administratörer och managers. En tråd utan både kampanj och kategori är en privat konversation (B73).
 /// </summary>
 public class CampaignThread
 {
@@ -71,6 +71,24 @@ public class CampaignThread
             CreatedAt = now,
         };
         thread.Rename(title, now);
+        return thread;
+    }
+
+    /// <summary>
+    /// Tråden för en privat konversation (B73): varken kampanj eller kategori. Vem som får läsa den står i
+    /// <c>Conversation</c>.
+    /// </summary>
+    public static CampaignThread CreateConversationThread(string createdById, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(createdById);
+
+        var thread = new CampaignThread
+        {
+            Status = ThreadStatus.Active,
+            CreatedById = createdById,
+            CreatedAt = now,
+        };
+        thread.Rename("Private conversation", now);
         return thread;
     }
 

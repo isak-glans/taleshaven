@@ -34,6 +34,11 @@
             {
                 <a class="btn btn-sm btn-outline-secondary mt-2" href="Account/Manage">Edit your profile</a>
             }
+            else
+            {
+                @* Privata meddelanden (B73): alla får skriva till alla. *@
+                <a class="btn btn-sm btn-primary mt-2 profile-send-message" href="@Taleshaven.Core.Messages.MessageLinks.To(profile.Id)"><Icon Name="envelope" /> Send message</a>
+            }
         </div>
     </div>
 

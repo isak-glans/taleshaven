@@ -1,0 +1,89 @@
+@page "/messages/to/{UserId}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Taleshaven.Core.Messages
+@using Taleshaven.Web.Components.Account
+
+@* Skriv till någon (B73). Finns konversationen redan öppnas den; annars skapas den med första meddelandet. *@
+
+@inject IMessageService Messages
+@inject IMarkdownRenderer Markdown
+@inject IMessageEmailSender MessageEmail
+@inject NavigationManager NavigationManager
+@inject ILogger<NewMessagePage> Logger
+
+@if (recipient is null)
+{
+    return;
+}
+
+<PageTitle>Message to @recipient.Name</PageTitle>
+
+<p class="small mb-2"><a href="messages">← Messages</a></p>
+<div class="d-flex align-items-center gap-2 mb-3">
+    <Avatar Name="@recipient.Name" ImageUrl="@recipient.AvatarUrl" ColorKey="@recipient.Id" Size="40" />
+    <h1 class="h4 mb-0">Message to <a href="@UserLinks.Profile(recipient.Id)">@recipient.Name</a></h1>
+</div>
+
+<div style="max-width: 44rem">
+    @if (recipient.YouBlocked)
+    {
+        <p class="text-secondary new-message-blocked">You have blocked @recipient.Name. Unblock them under <a href="messages">Messages</a> to write to them.</p>
+    }
+    else if (recipient.BlockedYou)
+    {
+        <p class="text-secondary new-message-blocked">You can't send messages to @recipient.Name.</p>
+    }
+    else
+    {
+        <p class="small text-secondary">Only you and @recipient.Name can read the conversation. If they have turned it on, they get an email saying you have written.</p>
+        <MarkdownEditor MaxLength="ThreadLimits.PostMaxLength" DraftKey="@($"message-to-{recipient.Id}")" Label="Message" Rows="6"
+                        OnSubmit="SendAsync" SubmitText="Send" ShortcutHint="Ctrl+Enter sends" ShowSpoilerButton="true"
+                        RenderPreview="@(text => PostHtml.Render(Markdown, text))" />
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string UserId { get; set; } = "";
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private string userId = "";
+    private MessageRecipient? recipient;
+
+    protected override async Task OnInitializedAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+        var found = await Messages.GetRecipientAsync(userId, UserId);
+        if (found is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+        if (found.ConversationId is { } conversationId)
+        {
+            NavigationManager.NavigateTo(MessageLinks.Conversation(conversationId), replace: true);
+            return;
+        }
+        recipient = found;
+    }
+
+    private async Task<string?> SendAsync(string content)
+    {
+        SentMessage sent;
+        try
+        {
+            sent = await Messages.SendAsync(userId, UserId, content);
+        }
+        catch (CampaignRuleException ex)
+        {
+            return ex.Message;
+        }
+        MessageNotification.Send(MessageEmail, NavigationManager, sent, Logger);
+        NavigationManager.NavigateTo(MessageLinks.Conversation(sent.ConversationId));
+        return null;
+    }
+}

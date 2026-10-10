@@ -30,6 +30,7 @@ internal sealed class AccountService(IDbContextFactory<TaleshavenDbContext> dbFa
         await db.UserRoles.Where(r => r.UserId == userId).ExecuteDeleteAsync(cancellationToken);
         await db.UserClaims.Where(c => c.UserId == userId).ExecuteDeleteAsync(cancellationToken);
         await db.UserNotices.Where(n => n.UserId == userId).ExecuteDeleteAsync(cancellationToken);
+        await db.UserBlocks.Where(b => b.BlockerId == userId || b.BlockedId == userId).ExecuteDeleteAsync(cancellationToken);
         await db.UserLogins.Where(l => l.UserId == userId).ExecuteDeleteAsync(cancellationToken);
         await db.UserTokens.Where(t => t.UserId == userId).ExecuteDeleteAsync(cancellationToken);
         await db.UserPasskeys.Where(p => p.UserId == userId).ExecuteDeleteAsync(cancellationToken);
@@ -85,7 +86,9 @@ internal sealed class AccountService(IDbContextFactory<TaleshavenDbContext> dbFa
                 u.About,
                 u.CreatedAt,
                 AvatarKey = db.Portraits.Where(p => p.Id == u.PortraitId).Select(p => p.ImageKey).FirstOrDefault(),
-                PostCount = db.Posts.Count(p => p.AuthorId == u.Id && p.DeletedAt == null),
+                // Privata meddelanden (B73) räknas inte; de är inte offentliga.
+                PostCount = db.Posts.Count(p => p.AuthorId == u.Id && p.DeletedAt == null
+                    && db.Threads.Any(t => t.Id == p.ThreadId && (t.CampaignId != null || t.CategoryId != null))),
             })
             .SingleOrDefaultAsync(cancellationToken);
 
@@ -146,7 +149,7 @@ internal sealed class AccountService(IDbContextFactory<TaleshavenDbContext> dbFa
             .ToListAsync(cancellationToken);
         var threads = await db.Threads.AsNoTracking()
             .Where(t => db.Posts.Any(p => p.ThreadId == t.Id && p.AuthorId == userId) || t.CreatedById == userId)
-            .Select(t => new { t.Id, t.CampaignId, t.Title, t.CreatedById, t.CreatedAt })
+            .Select(t => new { t.Id, t.CampaignId, t.CategoryId, t.Title, t.CreatedById, t.CreatedAt })
             .ToDictionaryAsync(t => t.Id, cancellationToken);
         var posts = await db.Posts.AsNoTracking()
             .Where(p => p.AuthorId == userId)
@@ -162,8 +165,10 @@ internal sealed class AccountService(IDbContextFactory<TaleshavenDbContext> dbFa
             .Where(c => db.Posts.Any(p => p.AuthorId == userId && p.CharacterId == c.Id))
             .ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
 
-        // Forumtrådar (B72) har ingen kampanj.
+        // Forumtrådar (B72) har ingen kampanj men en kategori; privata konversationer (B73) har ingetdera.
         string? CampaignName(int? id) => id is { } campaignId ? campaignNames.GetValueOrDefault(campaignId) : "Forum";
+        string? Place(int? campaignId, int? categoryId) =>
+            campaignId is not null || categoryId is not null ? CampaignName(campaignId) : "Private message";
 
         // Allt som användaren själv har skrivit eller som beskriver hen (GDPR art. 15, B70). Andras inlägg ingår inte,
         // och inga hemligheter (lösenordshash, säkerhetsstämplar) följer med.
@@ -185,7 +190,7 @@ internal sealed class AccountService(IDbContextFactory<TaleshavenDbContext> dbFa
             Memberships = memberships.Select(m => new { m.CampaignId, Campaign = CampaignName(m.CampaignId), m.JoinedAt }),
             Applications = applications.Select(a => new { a.CampaignId, Campaign = CampaignName(a.CampaignId), a.Message, a.Status, a.SubmittedAt, a.DecidedAt }),
             ThreadsCreated = threads.Values.Where(t => t.CreatedById == userId)
-                .Select(t => new { t.Id, t.CampaignId, Campaign = CampaignName(t.CampaignId), t.Title, t.CreatedAt }),
+                .Select(t => new { t.Id, t.CampaignId, Campaign = Place(t.CampaignId, t.CategoryId), t.Title, t.CreatedAt }),
             Characters = characters.Select(c => new
             {
                 c.Id,
@@ -210,7 +215,7 @@ internal sealed class AccountService(IDbContextFactory<TaleshavenDbContext> dbFa
             {
                 p.Id,
                 CampaignId = threads.GetValueOrDefault(p.ThreadId)?.CampaignId,
-                Campaign = threads.GetValueOrDefault(p.ThreadId) is { } thread ? CampaignName(thread.CampaignId) : null,
+                Campaign = threads.GetValueOrDefault(p.ThreadId) is { } thread ? Place(thread.CampaignId, thread.CategoryId) : null,
                 p.ThreadId,
                 Thread = threads.GetValueOrDefault(p.ThreadId)?.Title,
                 Character = p.CharacterId is { } characterId ? characterNames.GetValueOrDefault(characterId) : p.DeletedCharacterName,

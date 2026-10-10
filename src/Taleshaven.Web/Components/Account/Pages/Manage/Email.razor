@@ -50,6 +50,18 @@
             </div>
             <button type="submit" class="w-100 btn btn-lg btn-primary">Change email</button>
         </EditForm>
+
+        @* Mejl om privata meddelanden (B73): ett per omgång, med en länk men utan meddelandets text. *@
+        <h4 class="mt-5">Notifications</h4>
+        <form method="post" @formname="notifications" @onsubmit="SaveNotificationsAsync" class="email-notifications">
+            <AntiforgeryToken />
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="Notify.EmailOnMessage" name="Notify.EmailOnMessage" value="true" checked="@(user?.EmailOnMessage ?? true)" />
+                <label class="form-check-label" for="Notify.EmailOnMessage">Email me when someone sends me a private message</label>
+            </div>
+            <p class="small text-secondary">At most one email until you have read the conversation. The email doesn't contain the message.</p>
+            <button type="submit" class="btn btn-outline-primary">Save notifications</button>
+        </form>
     </div>
 </div>
 
@@ -64,6 +76,9 @@
 
     [SupplyParameterFromForm(FormName = "change-email")]
     private InputModel Input { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "notifications")]
+    private NotifyModel? Notify { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -80,6 +95,24 @@
         isEmailConfirmed = await UserManager.IsEmailConfirmedAsync(user);
 
         Input.NewEmail ??= email;
+    }
+
+    private async Task SaveNotificationsAsync()
+    {
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+        // En okryssad ruta skickas inte med formuläret.
+        user.EmailOnMessage = Notify?.EmailOnMessage ?? false;
+        await UserManager.UpdateAsync(user);
+        RedirectManager.RedirectToCurrentPageWithStatus("Your notifications have been saved.", HttpContext);
+    }
+
+    private sealed class NotifyModel
+    {
+        public bool EmailOnMessage { get; set; }
     }
 
     private async Task OnValidSubmitAsync()

@@ -24,13 +24,14 @@ internal sealed class CampaignThreadConfiguration : IEntityTypeConfiguration<Cam
             .HasForeignKey(t => t.CampaignId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Forumtrådar (B72) hör till en kategori i stället för en kampanj; en tråd har det ena eller det andra.
+        // Forumtrådar (B72) hör till en kategori i stället för en kampanj; en tråd har högst det ena. En tråd utan
+        // någon av dem är en privat konversation (B73).
         builder.HasOne<Taleshaven.Core.Forum.ForumCategory>()
             .WithMany()
             .HasForeignKey(t => t.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(t => new { t.CategoryId, t.IsPinned });
-        builder.ToTable(t => t.HasCheckConstraint("CK_Threads_CampaignOrCategory", "(\"CampaignId\" IS NULL) <> (\"CategoryId\" IS NULL)"));
+        builder.ToTable(t => t.HasCheckConstraint("CK_Threads_CampaignOrCategory", "\"CampaignId\" IS NULL OR \"CategoryId\" IS NULL"));
 
         builder.HasOne<ApplicationUser>()
             .WithMany()

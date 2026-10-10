@@ -1,0 +1,108 @@
+@page "/messages"
+@attribute [Authorize]
+
+@using Taleshaven.Core.Messages
+
+@* Privata meddelanden (B73): konversationerna, senast aktiva först, och de man har blockerat. En ny konversation börjar
+   med "Send message" på någons profil eller i spelarlistan. *@
+
+@inject IMessageService Messages
+
+<PageTitle>Messages</PageTitle>
+
+<h1 class="h3 mb-3">Messages</h1>
+
+@if (conversations is null)
+{
+    return;
+}
+
+@if (conversations.Count == 0)
+{
+    <p class="text-secondary messages-empty">
+        No messages yet. To write to someone, open their profile (click their name in a thread or the player list) and choose
+        <em>Send message</em>.
+    </p>
+}
+else
+{
+    <ul class="list-group conversation-list mb-4" style="max-width: 48rem">
+        @foreach (var conversation in conversations)
+        {
+            <li class="list-group-item conversation-item @(conversation.UnreadCount > 0 ? "conversation-unread" : "")" data-conversation-id="@conversation.Id">
+                <a class="d-flex align-items-center gap-3 conversation-link" href="@MessageLinks.Conversation(conversation.Id)">
+                    <Avatar Name="@conversation.OtherName" ImageUrl="@conversation.OtherAvatarUrl" ColorKey="@conversation.OtherUserId" Size="40" />
+                    <span class="flex-grow-1 conversation-text">
+                        <span class="d-flex flex-wrap align-items-baseline gap-2">
+                            <span class="conversation-name">@conversation.OtherName</span>
+                            <span class="small text-secondary" title="@Dates.DateTime(conversation.LastAt)">@Dates.Relative(conversation.LastAt, now)</span>
+                            @if (conversation.UnreadCount > 0)
+                            {
+                                <span class="badge rounded-pill text-bg-danger conversation-unread-badge">@UnreadDisplay.Format(conversation.UnreadCount) new</span>
+                            }
+                        </span>
+                        <span class="d-block small text-secondary conversation-snippet">
+                            @(conversation.LastIsMine ? "You: " : "")@(conversation.LastSnippet ?? "(deleted)")
+                        </span>
+                    </span>
+                </a>
+            </li>
+        }
+    </ul>
+}
+
+@if (blocked is { Count: > 0 })
+{
+    <section class="blocked-users" style="max-width: 48rem">
+        <h2 class="h6 text-secondary">Blocked</h2>
+        <p class="small text-secondary">You and the people you have blocked can't send messages to each other.</p>
+        <ul class="list-group">
+            @foreach (var person in blocked)
+            {
+                <li class="list-group-item d-flex align-items-center gap-2 blocked-user">
+                    <Avatar Name="@person.Name" ImageUrl="@person.AvatarUrl" ColorKey="@person.Id" Size="24" />
+                    <span class="me-auto">@person.Name</span>
+                    <form method="post" @formname="@($"unblock-{person.Id}")" @onsubmit="UnblockAsync">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="Unblock.UserId" value="@person.Id" />
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Unblock</button>
+                    </form>
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private string userId = "";
+    private IReadOnlyList<ConversationSummary>? conversations;
+    private IReadOnlyList<BlockedUser>? blocked;
+    private DateTimeOffset now = DateTimeOffset.UtcNow;
+
+    protected override async Task OnInitializedAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+        conversations = await Messages.GetConversationsAsync(userId);
+        blocked = await Messages.GetBlockedAsync(userId);
+    }
+
+    // Binds från Unblock-formulären (ett per blockerad person). Sidan är statisk, så listan flimrar inte när den laddas.
+    [SupplyParameterFromForm]
+    private UnblockModel? Unblock { get; set; }
+
+    private async Task UnblockAsync()
+    {
+        if (Unblock?.UserId is not { Length: > 0 } otherUserId)
+            return;
+        await Messages.UnblockAsync(userId, otherUserId);
+        blocked = await Messages.GetBlockedAsync(userId);
+    }
+
+    private sealed class UnblockModel
+    {
+        public string? UserId { get; set; }
+    }
+}

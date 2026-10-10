@@ -1,0 +1,544 @@
+@page "/messages/{ConversationId:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+
+@using Taleshaven.Core.Messages
+@using Taleshaven.Core.Moderation
+@using Taleshaven.Web.Components.Account
+
+@* En privat konversation (B73). Meddelandena är vanliga inlägg (IThreadService släpper bara in de två deltagarna).
+   Avsändaren redigerar och tar bort sina meddelanden; mottagaren kan rapportera dem och blockera avsändaren. *@
+
+@inject IMessageService Messages
+@inject IThreadService ThreadService
+@inject IUnreadService Unread
+@inject IModerationService Moderation
+@inject IMarkdownRenderer Markdown
+@inject IMessageEmailSender MessageEmail
+@inject PostNotifier Notifier
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject ILogger<ConversationPage> Logger
+
+@if (conversation is null || page is null)
+{
+    return;
+}
+
+<PageTitle>@conversation.OtherName · Messages</PageTitle>
+
+<p class="small mb-2"><a href="messages">← Messages</a></p>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3 conversation-head">
+    @if (conversation.OtherIsDeleted)
+    {
+        <Avatar Name="@conversation.OtherName" ColorKey="@conversation.OtherUserId" Size="40" />
+        <h1 class="h4 mb-0">@conversation.OtherName</h1>
+    }
+    else
+    {
+        <a href="@UserLinks.Profile(conversation.OtherUserId)" class="conversation-avatar" tabindex="-1" aria-hidden="true">
+            <Avatar Name="@conversation.OtherName" ImageUrl="@conversation.OtherAvatarUrl" ColorKey="@conversation.OtherUserId" Size="40" />
+        </a>
+        <h1 class="h4 mb-0"><a class="conversation-name" href="@UserLinks.Profile(conversation.OtherUserId)">@conversation.OtherName</a></h1>
+        <div class="menu-anchor ms-auto">
+            <button type="button" class="btn btn-sm btn-outline-secondary conversation-menu" aria-label="Conversation actions"
+                    aria-expanded="@(openMenu == "conversation" ? "true" : "false")" @onclick="@(() => ToggleMenu("conversation"))"><Icon Name="three-dots" /></button>
+            @if (openMenu == "conversation")
+            {
+                <div class="menu-backdrop" @onclick="CloseMenu"></div>
+                <div class="action-menu border rounded shadow-sm" role="menu">
+                    @if (conversation.YouBlocked)
+                    {
+                        <button type="button" class="action-menu-item conversation-unblock" role="menuitem" @onclick="UnblockAsync"><Icon Name="person-check" /> Unblock</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="action-menu-item text-danger conversation-block" role="menuitem"
+                                @onclick="() => { confirmBlock = true; openMenu = null; }"><Icon Name="person-slash" /> Block @conversation.OtherName</button>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (confirmBlock)
+{
+    <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2" role="alert">
+        <span class="me-auto">Block @conversation.OtherName? Neither of you can send messages to the other until you unblock them. They aren't told.</span>
+        <button type="button" class="btn btn-sm btn-danger conversation-block-confirm" @onclick="BlockAsync">Block</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => confirmBlock = false">Cancel</button>
+    </div>
+}
+@if (actionError is not null)
+{
+    <div class="alert alert-danger py-2" role="alert">@actionError</div>
+}
+
+@foreach (var post in posts)
+{
+    @MessageView(post)
+}
+
+<Pager Page="page.Page" PageCount="page.PageCount" ShowLatest="true" Href="@(p => $"{MessageLinks.Conversation(ConversationId)}?page={p}")" />
+
+<div id="composer" class="mt-3">
+    @if (conversation.CanWrite)
+    {
+        <MarkdownEditor MaxLength="ThreadLimits.PostMaxLength" DraftKey="@($"message-{ConversationId}")" Label="@($"Write to {conversation.OtherName}")"
+                        OnSubmit="SubmitAsync" SubmitText="Send" ShortcutHint="Ctrl+Enter sends" ShowSpoilerButton="true"
+                        RenderPreview="@(text => PostHtml.Render(Markdown, text))" />
+    }
+    else
+    {
+        <p class="text-secondary conversation-closed">
+            @if (conversation.OtherIsDeleted)
+            {
+                <text>This account has been deleted. You can't reply.</text>
+            }
+            else if (conversation.YouBlocked)
+            {
+                <text>You have blocked @conversation.OtherName. Unblock them in the "…" menu to send messages.</text>
+            }
+            else
+            {
+                <text>You can't send messages to @conversation.OtherName.</text>
+            }
+        </p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int ConversationId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "page")]
+    private int? PageQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "post")]
+    private long? PostQuery { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private string userId = "";
+    private ConversationDetails? conversation;
+    private PostPage? page;
+    private readonly List<PostItem> posts = [];
+    private string? loadedKey;
+    private IJSObjectReference? module;
+    private bool subscribed;
+    private string? scrollTarget;
+    private long markedReadUpTo;
+    private string? openMenu;
+    private string? actionError;
+    private long? editingPostId;
+    private long? confirmDeleteId;
+    private bool confirmBlock;
+    private DateTimeOffset now = DateTimeOffset.UtcNow;
+
+    private long? reportingPostId;
+    private long? reportedPostId;
+    private ReportReason reportReason = ReportReason.Harassment;
+    private string reportComment = "";
+
+    private int ThreadId => conversation!.ThreadId;
+    private bool OnLastPage => page is not null && page.Page >= page.PageCount;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+        var key = $"{ConversationId}?{PageQuery}/{PostQuery}";
+        if (key == loadedKey)
+            return;
+        loadedKey = key;
+
+        conversation = await Messages.GetConversationAsync(ConversationId, userId);
+        if (conversation is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        // Ett länkat meddelande öppnar dess sida; annars den angivna sidan, första olästa eller sista sidan.
+        int target;
+        scrollTarget = null;
+        if (PostQuery is { } postId && await ThreadService.GetPageOfPostAsync(ThreadId, postId) is { } postPage)
+        {
+            target = postPage;
+            scrollTarget = $"post-{postId}";
+        }
+        else if (PageQuery is { } number)
+        {
+            target = number;
+        }
+        else if (await Unread.GetFirstUnreadPostIdAsync(ThreadId, userId) is { } unread && await ThreadService.GetPageOfPostAsync(ThreadId, unread) is { } unreadPage)
+        {
+            target = unreadPage;
+            scrollTarget = $"post-{unread}";
+        }
+        else
+        {
+            target = int.MaxValue;
+            scrollTarget = "composer";
+        }
+
+        page = await ThreadService.GetPostsPageAsync(ThreadId, target, userId);
+        posts.Clear();
+        posts.AddRange(page.Posts);
+        now = DateTimeOffset.UtcNow;
+        openMenu = null;
+        editingPostId = null;
+        confirmDeleteId = null;
+        actionError = null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Pages/Campaigns/ThreadPage.razor.js");
+            Notifier.PostCreated += OnPostCreated;
+            Notifier.PostChanged += OnPostChanged;
+            subscribed = true;
+        }
+        if (module is null || page is null || conversation is null)
+            return;
+
+        if (scrollTarget is { } target)
+        {
+            scrollTarget = null;
+            await module.InvokeVoidAsync("scrollToElement", target);
+        }
+        await MarkReadAsync();
+    }
+
+    private async Task MarkReadAsync()
+    {
+        if (posts.Count == 0 || userId.Length == 0)
+            return;
+        var last = posts[^1].Id;
+        if (last <= markedReadUpTo)
+            return;
+        markedReadUpTo = last;
+        try
+        {
+            await Unread.MarkReadAsync(ThreadId, userId, last);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Kunde inte markera konversation {ConversationId} som läst", ConversationId);
+        }
+    }
+
+    private async Task<string?> SubmitAsync(string content)
+    {
+        SentMessage sent;
+        try
+        {
+            sent = await Messages.SendAsync(userId, conversation!.OtherUserId, content);
+        }
+        catch (CampaignRuleException ex)
+        {
+            return ex.Message;
+        }
+
+        MessageNotification.Send(MessageEmail, NavigationManager, sent, Logger);
+        Notifier.NotifyPostCreated(0, ThreadId);
+        if (posts.Count >= ThreadLimits.PostsPerPage || !OnLastPage)
+        {
+            NavigationManager.NavigateTo(MessageLinks.Message(ConversationId, sent.PostId));
+            return null;
+        }
+        await AppendNewPostsAsync();
+        StateHasChanged();
+        return null;
+    }
+
+    private async Task AppendNewPostsAsync()
+    {
+        var after = posts.Count > 0 ? posts[^1].Id : 0;
+        var newer = await ThreadService.GetPostsAfterAsync(ThreadId, after, userId);
+        posts.AddRange(newer.Where(n => posts.All(p => p.Id != n.Id)));
+        await MarkReadAsync();
+    }
+
+    private void OnPostCreated(int campaignId, int threadId)
+    {
+        if (conversation is null || threadId != ThreadId)
+            return;
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                if (OnLastPage && posts.Count < ThreadLimits.PostsPerPage)
+                    await AppendNewPostsAsync();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Kunde inte hämta nya meddelanden i konversation {ConversationId}", ConversationId);
+            }
+        });
+    }
+
+    private void OnPostChanged(int threadId, long postId)
+    {
+        if (conversation is null || threadId != ThreadId || posts.All(p => p.Id != postId) || editingPostId == postId)
+            return;
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                if (await ThreadService.GetPostAsync(ThreadId, postId, userId) is { } updated)
+                {
+                    Replace(updated);
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Kunde inte hämta ändrat meddelande {PostId}", postId);
+            }
+        });
+    }
+
+    private void Replace(PostItem updated)
+    {
+        var index = posts.FindIndex(p => p.Id == updated.Id);
+        if (index >= 0)
+            posts[index] = updated;
+    }
+
+    private async Task RefreshPostAsync(long postId)
+    {
+        if (await ThreadService.GetPostAsync(ThreadId, postId, userId) is { } changed)
+            Replace(changed);
+        Notifier.NotifyPostChanged(ThreadId, postId);
+    }
+
+    private async Task<string?> SaveEditAsync(long postId, string content)
+    {
+        try
+        {
+            await Messages.EditAsync(postId, userId, content);
+        }
+        catch (CampaignRuleException ex)
+        {
+            return ex.Message;
+        }
+        editingPostId = null;
+        await RefreshPostAsync(postId);
+        return null;
+    }
+
+    private async Task DeleteAsync(long postId)
+    {
+        actionError = null;
+        try
+        {
+            await Messages.DeleteAsync(postId, userId);
+        }
+        catch (CampaignRuleException ex)
+        {
+            actionError = ex.Message;
+            return;
+        }
+        confirmDeleteId = null;
+        await RefreshPostAsync(postId);
+    }
+
+    private void StartReport(long postId)
+    {
+        openMenu = null;
+        reportingPostId = postId;
+        reportReason = ReportReason.Harassment;
+        reportComment = "";
+    }
+
+    private async Task SendReportAsync(long postId)
+    {
+        actionError = null;
+        try
+        {
+            await Moderation.ReportPostAsync(null, postId, userId, reportReason, reportComment);
+        }
+        catch (CampaignRuleException ex)
+        {
+            actionError = ex.Message;
+            return;
+        }
+        reportingPostId = null;
+        reportedPostId = postId;
+    }
+
+    private async Task BlockAsync()
+    {
+        confirmBlock = false;
+        await ChangeBlockAsync(() => Messages.BlockAsync(userId, conversation!.OtherUserId));
+    }
+
+    private async Task UnblockAsync()
+    {
+        openMenu = null;
+        await ChangeBlockAsync(() => Messages.UnblockAsync(userId, conversation!.OtherUserId));
+    }
+
+    private async Task ChangeBlockAsync(Func<Task> change)
+    {
+        actionError = null;
+        try
+        {
+            await change();
+        }
+        catch (CampaignRuleException ex)
+        {
+            actionError = ex.Message;
+            return;
+        }
+        conversation = await Messages.GetConversationAsync(ConversationId, userId) ?? conversation;
+    }
+
+    private void ToggleMenu(string key) => openMenu = openMenu == key ? null : key;
+
+    private void CloseMenu() => openMenu = null;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (subscribed)
+        {
+            Notifier.PostCreated -= OnPostCreated;
+            Notifier.PostChanged -= OnPostChanged;
+        }
+        if (module is not null)
+        {
+            try
+            {
+                await module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+
+    private RenderFragment MessageView(PostItem post) =>
+        @<article id="post-@post.Id" class="thread-post @(post.AuthorId == userId ? "message-mine" : "") @(post.Id == PostQuery ? "post-target" : "") @(post.IsDeleted ? "post-is-deleted" : "") @(post.IsHidden ? "post-is-hidden" : "")">
+            <div class="post-avatar">
+                @if (post.IsDeleted)
+                {
+                    <span class="post-avatar-deleted" aria-hidden="true"></span>
+                }
+                else
+                {
+                    <Avatar Name="@post.AuthorName" ImageUrl="@(post.AuthorIsDeleted ? null : post.AuthorAvatarUrl)" ColorKey="@post.AuthorId" Size="40" />
+                }
+            </div>
+            <div class="post-body">
+                @if (post.IsDeleted)
+                {
+                    <div class="text-secondary fst-italic post-deleted">This message was deleted.</div>
+                }
+                else
+                {
+                    <header class="post-header">
+                        <span class="post-meta">
+                            <strong class="post-author">@(post.AuthorId == userId ? "You" : post.AuthorName)</strong>
+                            <span class="text-secondary small post-time" title="@Dates.DateTime(post.CreatedAt)">
+                                <time datetime="@post.CreatedAt.ToString("o")">@Dates.Relative(post.CreatedAt, now)</time>
+                            </span>
+                            @if (post.EditedAt is { } editedAt)
+                            {
+                                <span class="small text-secondary post-edited" title="Edited @Dates.DateTime(editedAt)">(edited)</span>
+                            }
+                        </span>
+                        @if (post.CanEdit || post.CanDelete || post.CanReport)
+                        {
+                            <div class="menu-anchor ms-auto">
+                                <button type="button" class="btn btn-sm btn-link post-menu-toggle" title="More" aria-label="More actions"
+                                        aria-expanded="@(openMenu == $"post-{post.Id}" ? "true" : "false")" @onclick="@(() => ToggleMenu($"post-{post.Id}"))">
+                                    <Icon Name="three-dots" />
+                                </button>
+                                @if (openMenu == $"post-{post.Id}")
+                                {
+                                    <div class="menu-backdrop" @onclick="CloseMenu"></div>
+                                    <div class="action-menu border rounded shadow-sm" role="menu">
+                                        @if (post.CanEdit)
+                                        {
+                                            <button type="button" class="action-menu-item" role="menuitem"
+                                                    @onclick="() => { editingPostId = post.Id; confirmDeleteId = null; openMenu = null; }"><Icon Name="pencil" /> Edit</button>
+                                        }
+                                        @if (post.CanDelete)
+                                        {
+                                            <button type="button" class="action-menu-item text-danger" role="menuitem"
+                                                    @onclick="() => { confirmDeleteId = post.Id; editingPostId = null; openMenu = null; }"><Icon Name="trash" /> Delete</button>
+                                        }
+                                        @if (post.CanReport)
+                                        {
+                                            <button type="button" class="action-menu-item post-report-item" role="menuitem" @onclick="() => StartReport(post.Id)"><Icon Name="flag" /> Report</button>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </header>
+                    @if (editingPostId == post.Id)
+                    {
+                        <MarkdownEditor @key="post.Id" MaxLength="ThreadLimits.PostMaxLength" DraftKey="" InitialText="@post.Content"
+                                        OnSubmit="@(content => SaveEditAsync(post.Id, content))" SubmitText="Save" Label="Edit message" Rows="4"
+                                        ShowSpoilerButton="true" RenderPreview="@(text => PostHtml.Render(Markdown, text))" />
+                        <button type="button" class="btn btn-sm btn-link px-0" @onclick="() => editingPostId = null">Cancel</button>
+                    }
+                    else
+                    {
+                        @if (post.IsHidden)
+                        {
+                            <div class="small text-secondary fst-italic post-hidden-notice">
+                                This message was hidden by a moderator.@if (post.HiddenReason is { } hiddenReason)
+                                {
+                                    <span class="post-hidden-reason"> Reason: @hiddenReason</span>
+                                }
+                            </div>
+                        }
+                        @if (post.Content.Trim().Length > 0)
+                        {
+                            <div class="post-content">@PostHtml.Render(Markdown, post.Content)</div>
+                        }
+                        @if (reportedPostId == post.Id)
+                        {
+                            <div class="small text-success post-report-sent" role="status">Thank you. The report has been sent to the moderators, who will see this message only.</div>
+                        }
+                        @if (reportingPostId == post.Id)
+                        {
+                            <div class="post-report-form border rounded p-2 mt-2">
+                                <p class="small text-secondary mb-2">The moderators will see this message, but not the rest of the conversation.</p>
+                                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                    <label class="small" for="report-reason-@post.Id">Why are you reporting this message?</label>
+                                    <select id="report-reason-@post.Id" class="form-select form-select-sm w-auto" @bind="reportReason">
+                                        @foreach (var reason in Enum.GetValues<ReportReason>())
+                                        {
+                                            <option value="@reason">@ModerationLimits.ReasonText(reason)</option>
+                                        }
+                                    </select>
+                                </div>
+                                <textarea class="form-control form-control-sm mb-2" rows="2" maxlength="@ModerationLimits.CommentMaxLength"
+                                          placeholder="Anything the moderators should know (optional)" aria-label="Comment" @bind="reportComment"></textarea>
+                                <button type="button" class="btn btn-sm btn-danger" @onclick="() => SendReportAsync(post.Id)">Send report</button>
+                                <button type="button" class="btn btn-sm btn-link" @onclick="() => reportingPostId = null">Cancel</button>
+                            </div>
+                        }
+                        @if (confirmDeleteId == post.Id)
+                        {
+                            <div class="small post-confirm-delete">
+                                Delete this message?
+                                <button type="button" class="btn btn-sm btn-danger py-0 ms-1" @onclick="() => DeleteAsync(post.Id)">Yes, delete</button>
+                                <button type="button" class="btn btn-sm btn-link py-0" @onclick="() => confirmDeleteId = null">Cancel</button>
+                            </div>
+                        }
+                    }
+                }
+            </div>
+        </article>;
+}

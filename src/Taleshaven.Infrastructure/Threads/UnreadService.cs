@@ -44,14 +44,17 @@ internal sealed class UnreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             """, cancellationToken);
     }
 
-    // Kampanjens deltagare har läsposition i dess trådar; i forumet (B72) har alla inloggade det.
+    // Kampanjens deltagare har läsposition i dess trådar; i forumet (B72) har alla inloggade det, i en privat
+    // konversation (B73) de två deltagarna.
     private static async Task<bool> HasReadPositionAsync(TaleshavenDbContext db, int threadId, string userId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(userId))
             return false;
-        var thread = await db.Threads.Where(t => t.Id == threadId).Select(t => new { t.CampaignId }).SingleOrDefaultAsync(cancellationToken);
+        var thread = await db.Threads.Where(t => t.Id == threadId).Select(t => new { t.CampaignId, t.CategoryId }).SingleOrDefaultAsync(cancellationToken);
         if (thread is null)
             return false;
+        if (thread.CampaignId is null && thread.CategoryId is null)
+            return await db.Conversations.AnyAsync(c => c.ThreadId == threadId && (c.UserAId == userId || c.UserBId == userId), cancellationToken);
         if (thread.CampaignId is not { } campaignId)
             return true;
         return (await CampaignAccess.GetAsync(db, campaignId, userId, cancellationToken)).Role != CampaignRole.None;

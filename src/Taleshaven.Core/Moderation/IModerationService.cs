@@ -52,7 +52,11 @@ public interface IModerationService
 /// <summary>Moderationssidan. <see cref="Restricted"/> (avstängda och spärrade konton) fylls bara i för sajtens moderatorer.</summary>
 public sealed record ModerationQueue(bool IsSiteModerator, IReadOnlyList<ReportedPost> Posts, IReadOnlyList<RestrictedAccount> Restricted);
 
-/// <summary>Ett rapporterat inlägg med sina öppna rapporter. <see cref="CanSanctionAuthor"/>: varna, stänga av och spärra.</summary>
+/// <summary>
+/// Ett rapporterat inlägg med sina öppna rapporter. <see cref="CanSanctionAuthor"/>: varna, stänga av och spärra.
+/// <see cref="IsPrivateMessage"/>: ett privat meddelande (B73); moderatorerna ser bara det rapporterade meddelandet,
+/// inte konversationen.
+/// </summary>
 public sealed record ReportedPost(
     long PostId,
     int? CampaignId,
@@ -67,7 +71,8 @@ public sealed record ReportedPost(
     bool IsHidden,
     string? HiddenReason,
     IReadOnlyList<ReportView> Reports,
-    bool CanSanctionAuthor);
+    bool CanSanctionAuthor,
+    bool IsPrivateMessage = false);
 
 public sealed record ReportView(string ReporterName, ReportReason Reason, string? Comment, DateTimeOffset CreatedAt);
 

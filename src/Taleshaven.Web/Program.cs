@@ -59,11 +59,16 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 // E-post (B70): SMTP enligt avsnittet Email i konfigurationen; utan Email:Host skickas inga mejl.
 var emailOptions = builder.Configuration.GetSection("Email").Get<EmailOptions>() ?? new EmailOptions();
 if (string.IsNullOrWhiteSpace(emailOptions.Host))
+{
     builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+    builder.Services.AddSingleton<IMessageEmailSender, NoOpMessageEmailSender>();
+}
 else
 {
     builder.Services.AddSingleton(emailOptions);
-    builder.Services.AddSingleton<IEmailSender<ApplicationUser>, SmtpEmailSender>();
+    builder.Services.AddSingleton<SmtpEmailSender>();
+    builder.Services.AddSingleton<IEmailSender<ApplicationUser>>(sp => sp.GetRequiredService<SmtpEmailSender>());
+    builder.Services.AddSingleton<IMessageEmailSender>(sp => sp.GetRequiredService<SmtpEmailSender>());
 }
 
 var app = builder.Build();

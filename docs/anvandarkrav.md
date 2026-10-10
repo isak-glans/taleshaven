@@ -637,6 +637,28 @@ karaktärer och *Post as*.
 
 ---
 
+## 13b. Privata meddelanden
+
+- **PM-1 Konversationer** mellan **två personer**; alla inloggade får skriva till alla (utom vid blockering). Högst en
+  konversation per par. Bara de två kan läsa den; för alla andra, även moderatorerna, finns den inte (404).
+- **PM-2 Skriva:** *Send message* på profilsidan och kuvertet vid varje spelare i spelarlistan öppnar konversationen, eller
+  sidan `/messages/to/{id}` där konversationen skapas med första meddelandet. Inte till sig själv eller till borttagna konton.
+- **PM-3 Meddelandena** skrivs som inlägg (Markdown, spoilers, bildlänkar, sidor) men utan tärningar, svar och citat.
+  Avsändaren redigerar (med historik) och tar bort sina egna; ett borttaget visas som "This message was deleted.".
+- **PM-4 Listan** (`/messages`, *Messages* i menyn): konversationerna, senast aktiva först, med den andras namn och bild,
+  tid, antal olästa och början av senaste meddelandet (spoilerns innehåll visas inte). Menyn visar antalet konversationer
+  med olästa.
+- **PM-5 Blockera** i konversationens "…"-meny (med bekräftelse): ingen av de två kan skriva till den andra, och den
+  blockerade ser bara "You can't send messages to …". Konversationen kan fortfarande läsas. De blockerade listas på
+  *Messages* med *Unblock*.
+- **PM-6 Rapportera** ett mottaget meddelande som ett inlägg (MO-1). Rapporten går till sajtens moderatorer, som ser
+  meddelandet (märkt "Private message", utan länk) men inte resten av konversationen, och kan dölja det.
+- **PM-7 Mejl** "New message from …" med en länk men utan texten, när mottagaren inte redan har olästa meddelanden i
+  konversationen (ett mejl per omgång). Kan stängas av under kontots *Email* (standard på).
+- **PM-8:** privata meddelanden räknas inte i profilens antal inlägg, och ingår i nedladdningen av egna personuppgifter.
+
+---
+
 ## 14. Administration (sajtens roller)
 
 - **AD-1 Rollsidan** (bara administratörer): lista över alla med rollen Administratör eller Manager, och
@@ -719,6 +741,8 @@ users ──< campaign_memberships >── campaigns
 users ──< campaign_applications >── campaigns
 campaigns ──< threads ──< posts ──< post_rolls
 forum_categories ──< threads (forumtrådar, utan kampanj)
+conversations ── thread (privat konversation, utan kampanj och kategori)
+users ──< user_blocks >── users
 campaigns ──< characters ──< posts (valfri karaktär)
 posts ──< post_revisions
 posts ── reply_to? (posts)
@@ -729,13 +753,15 @@ users ──< user_roles
 
 | Tabell | Viktiga kolumner |
 |---|---|
-| users | id, email (unik, null för borttaget konto), email_confirmed, display_name, portrait_id (null, `ON DELETE SET NULL`), about, password_hash, is_deleted, failed_logins, locked_until, created_at |
+| users | id, email (unik, null för borttaget konto), email_confirmed, email_on_message (standard sant), display_name, portrait_id (null, `ON DELETE SET NULL`), about, password_hash, is_deleted, failed_logins, locked_until, created_at |
 | user_roles | user_id, role (`admin` / `manager`) |
 | campaigns | id, name, description, game_master_id, max_players, status (`open` / `ongoing` / `closed` / `archived`), tags, default_roll (standard `1d20`), created_at, updated_at |
 | campaign_memberships | campaign_id, user_id, joined_at |
 | campaign_applications | id, campaign_id, user_id, message, status (`pending` / `approved` / `rejected` / `withdrawn`), submitted_at, decided_at, decided_by |
 | forum_categories | id, name, description, position |
-| threads | id, campaign_id (null för forumtrådar), category_id (null för kampanjtrådar; exakt en av dem är satt), is_pinned, is_locked, title, status (`active` / `completed`), position, created_by, created_at, updated_at |
+| conversations | id, thread_id (unik), user_a_id, user_b_id (paret i ordning, unikt), created_at |
+| user_blocks | blocker_id, blocked_id, created_at |
+| threads | id, campaign_id (null för forumtrådar och konversationer), category_id (null för kampanjtrådar och konversationer; högst en av dem är satt), is_pinned, is_locked, title, status (`active` / `completed`), position, created_by, created_at, updated_at |
 | posts | id, thread_id, author_id, character_id (null), deleted_character_name (null), content, reply_to_post_id (null), created_at, edited_at (null), deleted_at (null), deleted_by (null) |
 | post_rolls | post_id, sort_order, notation, label (null), count, sides, modifier, mode (`normal` / `advantage` / `disadvantage`), results (t.ex. `"4,18"` eller JSON), total |
 | post_revisions | id, post_id, content, written_at, replaced_at |
@@ -784,6 +810,9 @@ Kommentarer:
 | `/forum` | Forumet |
 | `/forum/new` | Ny forumtråd (manager, administratör) |
 | `/forum/threads/{id}` | Forumtråd (`?page=N`, `?post=N`) |
+| `/messages` | Privata meddelanden |
+| `/messages/{id}` | En konversation (`?page=N`, `?post=N`) |
+| `/messages/to/{userId}` | Skriv till någon |
 | `/moderation` | Moderering (moderatorer och GM) |
 | `/rules` | Regler (alla) |
 | `/media/images/{key}` | Bild ur biblioteket (inloggad) |
@@ -795,7 +824,7 @@ inte skickar formuläret igen. Okända adresser och sådant man inte får se ger
 
 ## 18. Utseende och tillgänglighet
 
-- **UT-1:** Sajten har en sidomeny (mörk, med *Forum* (inloggade), *Campaigns*, *Create campaign*, *Portraits*/*Roles* för de som har
+- **UT-1:** Sajten har en sidomeny (mörk, med *Forum* (inloggade), *Campaigns*, *Create campaign*, *Messages* (inloggade, med märke för olästa), *Portraits*/*Roles* för de som har
   rollen, användarens namn och *Log out*) och innehållet till höger. På mobil fälls menyn ihop. Mellan 641 och 1199 px bredd är menyn en smal rad med bara ikoner (namnet som `title`).
 - **UT-2:** Alla sidor fungerar på mobil, utan horisontell scroll. Under 576 px bredd: inläggens porträtt är 40 px och
   står bredvid namnet medan texten tar hela bredden under; räknare bryts på två rader; fält har minst 16 px text
@@ -846,7 +875,7 @@ Inget av detta är ett krav, men det motsvarar det .NET-versionen använder:
 
 ## 21. Utanför den här versionen
 
-Sådant som har diskuterats men inte är byggt: inloggning med Google, Facebook eller Discord, privata meddelanden,
-notiser och e-postnotiser, privata (dolda) tärningsslag, reaktioner, bilder i inlägg, sökning, bokmärken, export,
+Sådant som har diskuterats men inte är byggt: inloggning med Google, Facebook eller Discord, notiser och e-postnotiser
+(utöver privata meddelanden), privata (dolda) tärningsslag, reaktioner, bilder i inlägg, sökning, bokmärken, export,
 mer avancerad tärningssyntax (t.ex. `4d6kh3`), att spelare skapar egna trådar och förhandsvisning av en karaktär när
 man håller muspekaren över namnet.

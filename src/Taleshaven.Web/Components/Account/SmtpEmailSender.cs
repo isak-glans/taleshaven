@@ -24,8 +24,13 @@ public sealed class EmailOptions
 /// Skickar kontots mejl (bekräftelse, nytt lösenord, byte av e-post) med SMTP (B70). Ett fel vid sändningen loggas men
 /// avbryter inte det användaren håller på med; sidorna säger bara "kolla din e-post".
 /// </summary>
-internal sealed class SmtpEmailSender(EmailOptions options, ILogger<SmtpEmailSender> logger) : IEmailSender<ApplicationUser>
+internal sealed class SmtpEmailSender(EmailOptions options, ILogger<SmtpEmailSender> logger) : IEmailSender<ApplicationUser>, IMessageEmailSender
 {
+    public Task SendNewMessageAsync(string email, string recipientName, string senderName, string link) =>
+        SendAsync(email, $"New message from {senderName}",
+            $"<p>Hi {WebUtility.HtmlEncode(recipientName)},</p><p>{WebUtility.HtmlEncode(senderName)} has sent you a message on Taleshaven. " +
+            $"<a href='{link}'>Read it here</a>.</p><p>You can turn these emails off under your profile.</p>");
+
     public Task SendConfirmationLinkAsync(ApplicationUser user, string email, string confirmationLink) =>
         SendAsync(email, "Confirm your email address",
             $"<p>Hi {WebUtility.HtmlEncode(user.DisplayName)},</p><p>Confirm your email address for Taleshaven by " +
