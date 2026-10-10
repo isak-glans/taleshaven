@@ -91,16 +91,23 @@ En arkiverad NPC kan inte väljas.
 
 ## 4. Konto
 
-- **KO-1 Registrering:** e-post, visningsnamn (2–50 tecken) och lösenord (minst 8 tecken). E-postadressen måste vara
-  unik och **bekräftas** via en länk innan man kan logga in.
-- **KO-2 Inloggning och utloggning,** med "Remember me" och tillfällig låsning efter flera felaktiga försök.
+- **KO-1 Registrering:** e-post, visningsnamn (2–50 tecken) och lösenord (minst 8 tecken), och en ruta för att
+  **godkänna reglerna** (MO-9; tidpunkten sparas). E-postadressen måste vara unik och **bekräftas** via en länk innan
+  man kan logga in. Mejl skickas med SMTP (MO-10).
+- **KO-2 Inloggning och utloggning,** med "Remember me" och tillfällig låsning efter flera felaktiga försök. Ingen
+  tvåfaktorsinloggning och inga passkeys. Ett spärrat konto (MO-6) kan inte logga in.
 - **KO-3 Glömt lösenord:** en återställningslänk skickas med e-post.
 - **KO-4 Mitt konto:** byta visningsnamn, e-postadress (med ny bekräftelse) och lösenord.
 - **KO-5 Ta bort kontot** (med lösenordet som bekräftelse):
   - Den som är GM för någon kampanj måste först radera kampanjen.
   - Kontot blir en anonym "gravsten" med namnet **"Deleted user"**: e-post, lösenord och inloggningsmöjlighet tas bort.
   - Inlägg och karaktärer ligger kvar och visas som skrivna av "Deleted user".
-  - Medlemskap, ansökningar, roller och läspositioner raderas.
+  - Medlemskap, ansökningar, roller, läspositioner och meddelanden från moderatorerna raderas.
+  - Enskilda inlägg som innehåller personuppgifter tas bort av en moderator på begäran.
+- **KO-5b Ladda ned personuppgifter:** en JSON-fil med kontot (e-post, visningsnamn, About me, profilbild, roller),
+  kampanjer som GM, medlemskap, ansökningar, skapade trådar, karaktärer (med dokument, räknare, tillstånd och sparade
+  slag) och **alla egna inlägg** med tråd, karaktär, slag och tidigare versioner. Andras inlägg och hemligheter
+  (lösenordshash, säkerhetsnycklar) ingår inte. Filen skapas när man klickar och sparas inte.
 - **KO-6 Profilbild:** användaren väljer en bild ur porträttbiblioteket (avsnitt 13) under *Mitt konto*; ingen egen
   uppladdning. Väljaren visar alla porträtt (aldrig ikoner) med samma kategoriknappar som porträttväljaren (PB-10),
   och man kan söka på taggar. Valet görs med radioknappar i ett rutnät, och
@@ -617,6 +624,31 @@ och ikoner, och alla väljer därifrån.
 - **AD-5 Menyn** visar *Portraits* för managers och administratörer och *Roles* för administratörer. Andra får 404
   på sidorna.
 
+### 14.1 Moderering
+
+- **MO-1 Rapportera:** *Report* i inläggets "…"-meny med skäl (*Harassment, Hate, Spam, Other*) och en valfri kommentar
+  (högst 500 tecken). En gång per inlägg och person; inte egna, borttagna eller dolda inlägg.
+- **MO-2 Vem hanterar:** kampanjens GM ser rapporter på inlägg i kampanjen utom sina egna; sajtens moderatorer
+  (administratörer och managers) ser alla. GM:s egna inlägg hanteras bara av moderatorerna.
+- **MO-3 Dölja:** GM (i sin kampanj) och moderatorerna (överallt) kan dölja ett inlägg med ett valfritt skäl och visa
+  det igen. Ett dolt inlägg visas som "This post was hidden by a moderator". Texten och slagen skickas **bara** till dem
+  som får moderera det; författaren och moderatorerna ser skälet. Originalet sparas. Ett dolt inlägg kan inte redigeras.
+- **MO-4 Avfärda:** rapporterna var obefogade; inlägget lämnas orört.
+- **MO-5 Varna** (bara moderatorer): ett meddelande som visas överst på varje sida tills användaren klickat
+  *I understand*.
+- **MO-6 Stänga av och spärra** (bara moderatorer): avstängning i 1, 3, 7 eller 30 dagar – användaren kan läsa men inte
+  skriva inlägg, söka till eller skapa kampanjer eller skapa karaktärer, och får ett meddelande. Spärr – kontot kan
+  inte logga in och loggas ut. Båda kan hävas. Administratörer och det egna kontot kan inte varnas, stängas av eller spärras.
+- **MO-7 Moderationssidan** (`/moderation`, för moderatorer och den som är GM): öppna rapporter grupperade per inlägg
+  (inlägget, länk till tråden, rapporterna med skäl och kommentar) med åtgärderna ovan, en **logg** och för
+  moderatorerna en lista över avstängda och spärrade konton. Menyn visar *Moderation* med antalet öppna rapporter.
+- **MO-8 Logg:** varje åtgärd sparas med vem, vad, när, kampanj, inlägg, konto och skäl. GM ser loggen för sina
+  kampanjer, moderatorerna allt. Loggen tas inte bort när inlägg eller konton tas bort.
+- **MO-9 Regler** (`/rules`, öppen för alla): hur man beter sig, vad som inte är tillåtet och hur modereringen går till.
+  Godkänns vid registreringen.
+- **MO-10 E-post:** SMTP med inställningar i konfigurationen (server, port, användare, avsändare). Under utvecklingen
+  en lokal testbrevlåda; ett fel vid sändning loggas men avbryter inte det användaren gör.
+
 ---
 
 ## 15. Gränser och regler
@@ -694,6 +726,10 @@ Kommentarer:
   medlemskap och ansökningar, och vidare till inlägg, slag, revisioner och läspositioner.
 - **Borttaget konto:** användarraden behålls som gravsten (`is_deleted`, namnet "Deleted user"), så att inlägg och
   karaktärer har kvar sin författare.
+- **Moderering:** tabellerna `post_reports` (post_id, reporter_id, reason, comment, status, resolved_by, resolved_at;
+  unik på post_id + reporter_id), `moderation_actions` (kind, moderator_id, campaign_id, post_id, target_user_id,
+  reason, until) och `user_notices` (user_id, message, acknowledged_at). `posts` får hidden_at, hidden_by, hidden_reason;
+  `users` får suspended_until, banned och accepted_rules_at.
 - **"Senast använd" i "Post as"** räknas fram från senaste inlägg per karaktär; ingen egen kolumn behövs.
 
 ---
@@ -719,6 +755,8 @@ Kommentarer:
 | `/campaigns/{id}/players` | Spelare och ansökningar |
 | `/portraits` | Bildbiblioteket, *Image library* (manager, administratör) |
 | `/admin/roles` | Roller (administratör) |
+| `/moderation` | Moderering (moderatorer och GM) |
+| `/rules` | Regler (alla) |
 | `/media/images/{key}` | Bild ur biblioteket (inloggad) |
 
 Alla ändringar görs med **POST** (aldrig GET) och följs av en omdirigering (Post/Redirect/Get), så att en omladdning

@@ -1,0 +1,40 @@
+@using Taleshaven.Core.Moderation
+
+@* Meddelanden från moderatorerna, t.ex. varningar och avstängningar (B70). Visas överst på varje sida tills användaren
+   har klickat "I understand". *@
+
+@inject IModerationService Moderation
+
+@foreach (var notice in notices)
+{
+    <div class="alert alert-warning d-flex flex-wrap align-items-start gap-2 user-notice" role="alert" @key="notice.Id">
+        <div class="flex-grow-1">
+            <strong>Message from the moderators</strong> <span class="small text-secondary">@Dates.DateTime(notice.CreatedAt)</span>
+            <div class="user-notice-message">@notice.Message</div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-dark" @onclick="() => AcknowledgeAsync(notice.Id)">I understand</button>
+    </div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private string? userId;
+    private IReadOnlyList<UserNoticeView> notices = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId();
+        if (userId is not null)
+            notices = await Moderation.GetNoticesAsync(userId);
+    }
+
+    private async Task AcknowledgeAsync(long noticeId)
+    {
+        if (userId is null)
+            return;
+        await Moderation.AcknowledgeNoticeAsync(userId, noticeId);
+        notices = notices.Where(n => n.Id != noticeId).ToList();
+    }
+}

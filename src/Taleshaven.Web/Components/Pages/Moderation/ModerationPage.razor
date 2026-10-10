@@ -1,0 +1,317 @@
+@page "/moderation"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Taleshaven.Core.Moderation
+@using Taleshaven.Core.Text
+@using Taleshaven.Web.Components.Playroom
+
+@* Moderering (B70). GM ser rapporter på inlägg i sina kampanjer (utom sina egna) och kan avfärda eller dölja. Sajtens
+   moderatorer ser allt och kan dessutom varna, stänga av och spärra konton. Alla åtgärder hamnar i loggen. *@
+
+@inject IModerationService Moderation
+@inject IMarkdownRenderer Markdown
+@inject NavigationManager NavigationManager
+
+@if (queue is null)
+{
+    return;
+}
+
+<PageTitle>Moderation</PageTitle>
+
+<h1 class="h3 mb-1">Moderation</h1>
+<p class="text-secondary">
+    @(queue.IsSiteModerator
+        ? "Reports from the whole site. As a moderator you can also warn, suspend and ban accounts."
+        : "Reports on posts in the campaigns where you are the GM. Reports on your own posts go to the site's moderators.")
+    See also the <a href="rules">rules</a>.
+</p>
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item">
+        <button type="button" class="nav-link @(tab == Tab.Reports ? "active" : "")" @onclick="() => tab = Tab.Reports">
+            Reports <span class="badge rounded-pill text-bg-secondary">@queue.Posts.Count</span>
+        </button>
+    </li>
+    <li class="nav-item">
+        <button type="button" class="nav-link @(tab == Tab.Log ? "active" : "")" @onclick="ShowLogAsync">Log</button>
+    </li>
+    @if (queue.IsSiteModerator)
+    {
+        <li class="nav-item">
+            <button type="button" class="nav-link @(tab == Tab.Accounts ? "active" : "")" @onclick="() => tab = Tab.Accounts">
+                Suspended and banned <span class="badge rounded-pill text-bg-secondary">@queue.Restricted.Count</span>
+            </button>
+        </li>
+    }
+</ul>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger py-2" role="alert">@error</div>
+}
+@if (status is not null)
+{
+    <div class="alert alert-success py-2" role="status">@status</div>
+}
+
+@if (tab == Tab.Reports)
+{
+    @if (queue.Posts.Count == 0)
+    {
+        <p class="text-secondary">No open reports.</p>
+    }
+    @foreach (var post in queue.Posts)
+    {
+        <article class="card mb-3 reported-post" data-post-id="@post.PostId" @key="post.PostId">
+            <div class="card-header small d-flex flex-wrap gap-2 align-items-center">
+                <a href="@ThreadLinks.Post(post.CampaignId, post.ThreadId, post.PostId)">@post.CampaignName › @post.ThreadTitle</a>
+                <span class="text-secondary">
+                    by <strong>@(post.CharacterName ?? post.AuthorName)</strong>@(post.CharacterName is null ? "" : $" ({post.AuthorName})")
+                    · @Dates.DateTime(post.CreatedAt)
+                </span>
+                @if (post.IsHidden)
+                {
+                    <span class="badge text-bg-warning">Hidden</span>
+                }
+            </div>
+            <div class="card-body">
+                <div class="post-content reported-content">@PostHtml.Render(Markdown, post.Content)</div>
+                <ul class="list-unstyled small mt-3 mb-0 report-list">
+                    @foreach (var report in post.Reports)
+                    {
+                        <li class="mb-1">
+                            <span class="badge text-bg-danger">@ModerationLimits.ReasonText(report.Reason)</span>
+                            <span class="text-secondary">@report.ReporterName · @Dates.DateTime(report.CreatedAt)</span>
+                            @if (report.Comment is not null)
+                            {
+                                <div class="report-comment">@report.Comment</div>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+            <div class="card-footer d-flex flex-wrap gap-2 align-items-center">
+                @if (active?.PostId == post.PostId)
+                {
+                    <div class="d-flex flex-wrap gap-2 align-items-center w-100 moderation-form">
+                        <strong class="small">@ActionTitle(active.Action, post)</strong>
+                        @if (active.Action == ModAction.Suspend)
+                        {
+                            <select class="form-select form-select-sm w-auto" aria-label="Days" @bind="suspendDays">
+                                @foreach (var days in ModerationLimits.SuspensionDays)
+                                {
+                                    <option value="@days">@days @(days == 1 ? "day" : "days")</option>
+                                }
+                            </select>
+                        }
+                        <input class="form-control form-control-sm flex-grow-1 moderation-text" style="min-width: 12rem"
+                               maxlength="@ModerationLimits.ReasonMaxLength" @bind="actionText" @bind:event="oninput"
+                               placeholder="@(active.Action == ModAction.Warn ? "Message to the user" : "Reason (optional)")" aria-label="Reason" />
+                        <button type="button" class="btn btn-sm @(active.Action is ModAction.Ban ? "btn-danger" : "btn-primary")"
+                                @onclick="() => ConfirmAsync(post)">Confirm</button>
+                        <button type="button" class="btn btn-sm btn-link" @onclick="() => active = null">Cancel</button>
+                    </div>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-sm btn-outline-secondary moderation-dismiss" @onclick="() => DismissAsync(post)">Dismiss</button>
+                    @if (post.IsHidden)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => UnhideAsync(post)">Show again</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-sm btn-warning moderation-hide" @onclick="() => Start(post.PostId, ModAction.Hide)">Hide post</button>
+                    }
+                    @if (post.CanSanctionAuthor)
+                    {
+                        <span class="text-secondary small ms-2">@post.AuthorName:</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary moderation-warn" @onclick="() => Start(post.PostId, ModAction.Warn)">Warn</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger moderation-suspend" @onclick="() => Start(post.PostId, ModAction.Suspend)">Suspend</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger moderation-ban" @onclick="() => Start(post.PostId, ModAction.Ban)">Ban</button>
+                    }
+                }
+            </div>
+        </article>
+    }
+}
+else if (tab == Tab.Log)
+{
+    @if (log is null || log.Count == 0)
+    {
+        <p class="text-secondary">Nothing has been done yet.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm moderation-log">
+                <thead>
+                    <tr><th>When</th><th>Who</th><th>What</th><th>Campaign</th><th>Account</th><th>Reason</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in log)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@Dates.DateTime(entry.CreatedAt)</td>
+                            <td>@entry.ModeratorName</td>
+                            <td>
+                                @KindText(entry.Kind)
+                                @if (entry.Until is { } until)
+                                {
+                                    <span class="text-secondary"> until @Dates.DateTime(until)</span>
+                                }
+                            </td>
+                            <td>@entry.CampaignName</td>
+                            <td>@entry.TargetName</td>
+                            <td>@entry.Reason</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+else if (tab == Tab.Accounts)
+{
+    @if (queue.Restricted.Count == 0)
+    {
+        <p class="text-secondary">No accounts are suspended or banned.</p>
+    }
+    else
+    {
+        <ul class="list-group restricted-accounts">
+            @foreach (var account in queue.Restricted)
+            {
+                <li class="list-group-item d-flex flex-wrap gap-2 align-items-center">
+                    <a href="@UserLinks.Profile(account.UserId)">@account.DisplayName</a>
+                    @if (account.IsBanned)
+                    {
+                        <span class="badge text-bg-danger">Banned</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" @onclick="() => LiftBanAsync(account)">Lift ban</button>
+                    }
+                    else if (account.SuspendedUntil is { } until)
+                    {
+                        <span class="badge text-bg-warning">Suspended until @Dates.DateTime(until)</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" @onclick="() => LiftSuspensionAsync(account)">Lift suspension</button>
+                    }
+                </li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    private enum Tab { Reports, Log, Accounts }
+
+    private enum ModAction { Hide, Warn, Suspend, Ban }
+
+    private sealed record ActiveAction(long PostId, ModAction Action);
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private string userId = "";
+    private ModerationQueue? queue;
+    private IReadOnlyList<ModerationLogEntry>? log;
+    private Tab tab = Tab.Reports;
+    private ActiveAction? active;
+    private string actionText = "";
+    private int suspendDays = ModerationLimits.SuspensionDays[0];
+    private string? error;
+    private string? status;
+
+    protected override async Task OnInitializedAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+        if (!await Moderation.CanSeeModerationAsync(userId))
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+        queue = await Moderation.GetQueueAsync(userId);
+    }
+
+    private async Task ShowLogAsync()
+    {
+        tab = Tab.Log;
+        log = await Moderation.GetLogAsync(userId);
+    }
+
+    private void Start(long postId, ModAction action)
+    {
+        active = new ActiveAction(postId, action);
+        actionText = "";
+        error = null;
+        status = null;
+    }
+
+    private Task DismissAsync(ReportedPost post) =>
+        DoAsync(() => Moderation.DismissReportsAsync(post.PostId, userId), "The reports were dismissed.");
+
+    private Task UnhideAsync(ReportedPost post) =>
+        DoAsync(() => Moderation.UnhidePostAsync(post.PostId, userId), "The post is shown again.");
+
+    private Task LiftBanAsync(RestrictedAccount account) =>
+        DoAsync(() => Moderation.LiftBanAsync(account.UserId, userId), $"The ban on {account.DisplayName} was lifted.");
+
+    private Task LiftSuspensionAsync(RestrictedAccount account) =>
+        DoAsync(() => Moderation.LiftSuspensionAsync(account.UserId, userId), $"The suspension of {account.DisplayName} was lifted.");
+
+    private Task ConfirmAsync(ReportedPost post)
+    {
+        if (active is not { } action)
+            return Task.CompletedTask;
+        var text = actionText;
+        return action.Action switch
+        {
+            ModAction.Hide => DoAsync(() => Moderation.HidePostAsync(post.PostId, userId, text), "The post is hidden."),
+            ModAction.Warn => DoAsync(() => Moderation.WarnAsync(post.AuthorId, userId, text, post.PostId), $"{post.AuthorName} has been warned."),
+            ModAction.Suspend => DoAsync(() => Moderation.SuspendAsync(post.AuthorId, userId, suspendDays, text, post.PostId),
+                $"{post.AuthorName} is suspended for {suspendDays} {(suspendDays == 1 ? "day" : "days")}."),
+            _ => DoAsync(() => Moderation.BanAsync(post.AuthorId, userId, text, post.PostId), $"{post.AuthorName} is banned."),
+        };
+    }
+
+    private async Task DoAsync(Func<Task> action, string done)
+    {
+        error = null;
+        status = null;
+        try
+        {
+            await action();
+        }
+        catch (CampaignRuleException ex)
+        {
+            error = ex.Message;
+            return;
+        }
+        active = null;
+        status = done;
+        queue = await Moderation.GetQueueAsync(userId);
+        if (tab == Tab.Log)
+            log = await Moderation.GetLogAsync(userId);
+    }
+
+    private static string ActionTitle(ModAction action, ReportedPost post) => action switch
+    {
+        ModAction.Hide => "Hide the post:",
+        ModAction.Warn => $"Warn {post.AuthorName}:",
+        ModAction.Suspend => $"Suspend {post.AuthorName} (can read but not post):",
+        _ => $"Ban {post.AuthorName} (can't log in):",
+    };
+
+    private static string KindText(ModerationActionKind kind) => kind switch
+    {
+        ModerationActionKind.DismissReports => "Dismissed reports",
+        ModerationActionKind.HidePost => "Hid a post",
+        ModerationActionKind.UnhidePost => "Showed a post again",
+        ModerationActionKind.Warn => "Warned",
+        ModerationActionKind.Suspend => "Suspended",
+        ModerationActionKind.LiftSuspension => "Lifted a suspension",
+        ModerationActionKind.Ban => "Banned",
+        ModerationActionKind.LiftBan => "Lifted a ban",
+        _ => kind.ToString(),
+    };
+}

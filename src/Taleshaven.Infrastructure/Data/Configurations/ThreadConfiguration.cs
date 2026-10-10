@@ -39,6 +39,7 @@ internal sealed class PostConfiguration : IEntityTypeConfiguration<Post>
     public void Configure(EntityTypeBuilder<Post> builder)
     {
         builder.Property(p => p.DeletedCharacterName).HasMaxLength(CharacterLimits.NameMaxLength);
+        builder.Property(p => p.HiddenReason).HasMaxLength(Taleshaven.Core.Moderation.ModerationLimits.ReasonMaxLength);
 
         builder.Property(p => p.Content)
             .IsRequired()

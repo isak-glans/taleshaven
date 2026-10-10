@@ -39,6 +39,10 @@ public static class SitePermissions
     public static bool CanManagePortraits(IReadOnlySet<SiteRole> roles) =>
         roles.Contains(SiteRole.Administrator) || roles.Contains(SiteRole.Manager);
 
+    /// <summary>Sajtens moderatorer (B70): hanterar rapporter överallt och kan varna, stänga av och spärra konton.</summary>
+    public static bool CanModerate(IReadOnlySet<SiteRole> roles) =>
+        roles.Contains(SiteRole.Administrator) || roles.Contains(SiteRole.Manager);
+
     /// <summary>
     /// Kastar om rollen inte får tas bort: en administratör kan inte ta bort sin egen administratörsroll (så att ingen låser ute
     /// sig själv), och administratörer från konfigurationen tas bort där, inte på sajten.

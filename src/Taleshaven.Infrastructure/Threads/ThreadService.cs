@@ -4,13 +4,18 @@ using Taleshaven.Core.Campaigns;
 using Taleshaven.Core.Dice;
 using Taleshaven.Core.Media;
 using Taleshaven.Core.Portraits;
+using Taleshaven.Core.Site;
 using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Campaigns;
 using Taleshaven.Infrastructure.Data;
 
 namespace Taleshaven.Infrastructure.Threads;
 
-internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFactory, TimeProvider timeProvider, IDiceRoller diceRoller) : IThreadService
+internal sealed class ThreadService(
+    IDbContextFactory<TaleshavenDbContext> dbFactory,
+    TimeProvider timeProvider,
+    IDiceRoller diceRoller,
+    ISiteRoleService siteRoles) : IThreadService
 {
     public async Task<IReadOnlyList<ThreadSummary>> GetThreadsAsync(int campaignId, string viewerId, CancellationToken cancellationToken = default)
     {
@@ -135,6 +140,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
 
         var thread = await LoadThreadAsync(db, campaignId, threadId, cancellationToken);
         var access = await CampaignAccess.GetAsync(db, campaignId, userId, cancellationToken);
+        await Moderation.AccountRestrictions.EnsureCanWriteAsync(db, userId, timeProvider.GetUtcNow(), cancellationToken);
         if (!CampaignPermissions.CanWritePost(access.Role, access.CampaignStatus, thread.Status))
             throw new CampaignRuleException(thread.Status == ThreadStatus.Completed
                 ? "The thread is completed."
@@ -192,8 +198,9 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var (post, thread, access) = await LoadPostAsync(db, campaignId, postId, userId, cancellationToken);
 
-        if (!CampaignPermissions.CanEditPost(access.Role, access.CampaignStatus, thread.Status, userId, post.AuthorId))
+        if (!CampaignPermissions.CanEditPost(access.Role, access.CampaignStatus, thread.Status, userId, post.AuthorId) || post.IsHidden)
             throw new CampaignRuleException("You can't edit this post.");
+        await Moderation.AccountRestrictions.EnsureCanWriteAsync(db, userId, timeProvider.GetUtcNow(), cancellationToken);
 
         db.PostRevisions.Add(post.Edit(content, timeProvider.GetUtcNow()));
         await db.SaveChangesAsync(cancellationToken);
@@ -233,6 +240,7 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         await EnsureCanManageAsync(db, campaignId, userId, cancellationToken);
+        await Moderation.AccountRestrictions.EnsureCanWriteAsync(db, userId, timeProvider.GetUtcNow(), cancellationToken);
 
         var position = (await db.Threads.Where(t => t.CampaignId == campaignId).MaxAsync(t => (int?)t.Position, cancellationToken) ?? 0) + 1;
         var thread = CampaignThread.Create(campaignId, title, position, userId, timeProvider.GetUtcNow());
@@ -345,9 +353,14 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
 
     // Projektionen sker efter filtrering och sortering, och ordningen återställs i minnet (äldst först).
     // Viewer.Role används bara för behörigheter; om läsaren är GM avgörs per kampanj i frågan (för trådlistan).
-    private static async Task<IReadOnlyList<PostItem>> ToPostItemsAsync(
+    // Ett dolt inlägg (B70) visar texten och slagen bara för den som får moderera det: sajtens moderatorer och kampanjens
+    // GM (utom för GM:s egna inlägg). Författaren och moderatorerna ser skälet.
+    private async Task<IReadOnlyList<PostItem>> ToPostItemsAsync(
         TaleshavenDbContext db, IQueryable<Post> posts, Viewer viewer, CancellationToken cancellationToken)
     {
+        var viewerIsModerator = viewer.UserId.Length > 0
+            && SitePermissions.CanModerate(await siteRoles.GetRolesAsync(viewer.UserId, cancellationToken));
+
         var rows = await (
                 from p in posts
                 join u in db.Users on p.AuthorId equals u.Id
@@ -378,6 +391,8 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                     CharacterIsHidden = (bool?)ch.IsHidden,
                     CharacterAlias = ch.Alias,
                     p.DeletedCharacterName,
+                    p.HiddenAt,
+                    p.HiddenReason,
                 })
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -426,13 +441,16 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             .Select(r =>
             {
                 var deleted = r.DeletedAt is not null;
+                var hidden = r.HiddenAt is not null;
+                var canModerate = !deleted && (viewerIsModerator || (r.ViewerIsGameMaster && !r.IsGameMaster));
+                var showContent = !deleted && (!hidden || canModerate);
                 var hasRolls = r.Rolls.Count > 0;
                 return new PostItem(
                     r.Id, r.ThreadId, r.AuthorId, r.DisplayName, r.IsGameMaster,
                     // Texten i ett borttaget inlägg lämnar aldrig servern (B30).
-                    Content: deleted ? "" : r.Content,
+                    Content: showContent ? r.Content : "",
                     r.CreatedAt, r.EditedAt,
-                    Rolls: deleted ? [] : r.Rolls.Select(View).ToList(),
+                    Rolls: showContent ? r.Rolls.Select(View).ToList() : [],
                     Character: r.CharacterId is not { } characterId
                         ? r.DeletedCharacterName is { } deletedName ? PostCharacter.Deleted(deletedName) : null
                         : PostCharacter.ForViewer(
@@ -443,12 +461,16 @@ internal sealed class ThreadService(IDbContextFactory<TaleshavenDbContext> dbFac
                         ? new PostReference(replyId, replyName)
                         : null,
                     IsDeleted: deleted,
-                    CanEdit: !deleted && CampaignPermissions.CanEditPost(viewer.Role, viewer.CampaignStatus, viewer.ThreadStatus, viewer.UserId, r.AuthorId),
+                    CanEdit: !deleted && !hidden && CampaignPermissions.CanEditPost(viewer.Role, viewer.CampaignStatus, viewer.ThreadStatus, viewer.UserId, r.AuthorId),
                     CanDelete: !deleted && CampaignPermissions.CanDeletePost(viewer.Role, viewer.CampaignStatus, viewer.ThreadStatus, viewer.UserId, r.AuthorId, hasRolls),
                     // Profilbilden visas när inlägget är skrivet utan karaktär, t.ex. GM som berättare (B50).
                     AuthorAvatarUrl: r.AuthorAvatarKey is null ? null : IImageStore.PortraitUrl(r.AuthorAvatarKey),
                     // Borttagna konton (B21) har ingen profilsida att länka till (B52).
-                    AuthorIsDeleted: r.AuthorIsDeleted);
+                    AuthorIsDeleted: r.AuthorIsDeleted,
+                    IsHidden: hidden,
+                    HiddenReason: hidden && (canModerate || r.AuthorId == viewer.UserId) ? r.HiddenReason : null,
+                    CanReport: !deleted && !hidden && viewer.UserId.Length > 0 && r.AuthorId != viewer.UserId,
+                    CanModerate: canModerate);
             })
             .ToList();
     }

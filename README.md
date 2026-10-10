@@ -9,7 +9,7 @@ Systemoberoende play-by-post-plattform för rollspel, byggd med .NET 10 och Blaz
 Kräver .NET 10 SDK och Docker.
 
 ```bash
-docker compose up -d        # startar PostgreSQL på localhost:5432
+docker compose up -d        # startar PostgreSQL (localhost:5432) och Mailpit (localhost:8025)
 dotnet build
 dotnet run --project src/Taleshaven.Web
 dotnet test
@@ -18,9 +18,14 @@ dotnet test
 I VS Code (med C# Dev Kit) räcker det att trycka **F5**: konfigurationen
 *Taleshaven.Web* startar databasen i Docker och sedan appen med debugger.
 
-I utvecklingsläge körs databasmigreringar automatiskt när appen startar. Ingen
-riktig e-posttjänst är kopplad än; efter registrering visas bekräftelselänken
-direkt på sidan.
+I utvecklingsläge körs databasmigreringar automatiskt när appen startar, och efter
+registrering visas bekräftelselänken också direkt på sidan.
+
+### E-post
+
+I utvecklingsmiljön skickas alla mejl (bekräftelse, nytt lösenord, byte av e-post) till Mailpit och läses på
+http://localhost:8025. I produktion anges SMTP-servern under `Email` i konfigurationen (`Host`, `Port`, `UserName`,
+`Password`, `EnableSsl`, `From`); utan `Email:Host` skickas inga mejl.
 
 ### Ny migrering
 

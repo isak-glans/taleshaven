@@ -226,3 +226,16 @@ a.post-player:hover {
     border-radius: 50%;
     vertical-align: -0.25em;
 }
+
+/* Dolda inlägg (B70): moderatorerna ser texten nedtonad med en gul kant. */
+.post-hidden-content {
+    border-left: 3px solid var(--bs-warning);
+    opacity: 0.6;
+    padding-left: 0.6rem;
+}
+
+.post-report-form,
+.post-hide-form {
+    background: var(--bs-tertiary-bg);
+    max-width: 36rem;
+}

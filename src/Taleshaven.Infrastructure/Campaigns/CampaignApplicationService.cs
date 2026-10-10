@@ -14,6 +14,7 @@ internal sealed class CampaignApplicationService(IDbContextFactory<TaleshavenDbC
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         var campaign = await LoadCampaignAsync(db, campaignId, cancellationToken);
+        await Moderation.AccountRestrictions.EnsureCanWriteAsync(db, userId, timeProvider.GetUtcNow(), cancellationToken);
 
         campaign.Apply(userId, message, timeProvider.GetUtcNow());
 

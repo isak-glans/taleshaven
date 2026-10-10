@@ -125,6 +125,7 @@ internal sealed class CampaignService(IDbContextFactory<TaleshavenDbContext> dbF
         var entity = Campaign.Create(gameMasterId, campaign.Name, campaign.Description, campaign.MaxPlayers, now, campaign.Tags, campaign.DefaultRoll);
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await Moderation.AccountRestrictions.EnsureCanWriteAsync(db, gameMasterId, now, cancellationToken);
 
         // En ny kampanj har inga trådar; GM skapar dem själv (B25).
         db.Campaigns.Add(entity);

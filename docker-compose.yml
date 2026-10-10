@@ -17,5 +17,13 @@ services:
       timeout: 5s
       retries: 10
 
+  # Låtsasbrevlåda för utveckling (B70): appen skickar till port 1025, mejlen läses på http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit
+    container_name: taleshaven-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
 volumes:
   taleshaven-pgdata:

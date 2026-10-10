@@ -5,6 +5,7 @@
 
 @using Taleshaven.Core.Characters
 @using Taleshaven.Core.Dice
+@using Taleshaven.Core.Moderation
 @using System.Text.Json
 @using System.Text.Json.Serialization
 
@@ -13,6 +14,7 @@
 
 @inject ICampaignService CampaignService
 @inject IThreadService ThreadService
+@inject IModerationService Moderation
 @inject ICharacterService CharacterService
 @inject IUnreadService Unread
 @inject IMarkdownRenderer Markdown
@@ -709,6 +711,73 @@
         }
     }
 
+    // Rapporter och moderering (B70).
+    private long? reportingPostId;
+    private long? reportedPostId;
+    private ReportReason reportReason = ReportReason.Harassment;
+    private string reportComment = "";
+    private long? hidingPostId;
+    private string hideReason = "";
+
+    private void StartReport(long postId)
+    {
+        openMenu = null;
+        reportingPostId = postId;
+        reportReason = ReportReason.Harassment;
+        reportComment = "";
+        hidingPostId = null;
+    }
+
+    private void StartHide(long postId)
+    {
+        openMenu = null;
+        hidingPostId = postId;
+        hideReason = "";
+        reportingPostId = null;
+    }
+
+    private async Task SendReportAsync(long postId)
+    {
+        actionError = null;
+        try
+        {
+            await Moderation.ReportPostAsync(CampaignId, postId, userId, reportReason, reportComment);
+        }
+        catch (CampaignRuleException ex)
+        {
+            actionError = ex.Message;
+            return;
+        }
+        reportingPostId = null;
+        reportedPostId = postId;
+    }
+
+    private Task HideAsync(long postId) => ModerateAsync(postId, () => Moderation.HidePostAsync(postId, userId, hideReason));
+
+    private Task UnhideAsync(long postId)
+    {
+        openMenu = null;
+        return ModerateAsync(postId, () => Moderation.UnhidePostAsync(postId, userId));
+    }
+
+    private async Task ModerateAsync(long postId, Func<Task> action)
+    {
+        actionError = null;
+        try
+        {
+            await action();
+        }
+        catch (CampaignRuleException ex)
+        {
+            actionError = ex.Message;
+            return;
+        }
+        hidingPostId = null;
+        if (await ThreadService.GetPostAsync(ThreadId, postId, userId) is { } changed)
+            Replace(changed);
+        Notifier.NotifyPostChanged(ThreadId, postId);
+    }
+
     private async Task DeleteAsync(long postId)
     {
         actionError = null;
@@ -839,7 +908,7 @@
     }
 
     private RenderFragment PostView(PostItem post) =>
-        @<article id="post-@post.Id" class="thread-post @(post.AuthorIsGameMaster ? "post-gm" : "") @(post.Id == PostQuery ? "post-target" : "") @(post.IsDeleted ? "post-is-deleted" : "")">
+        @<article id="post-@post.Id" class="thread-post @(post.AuthorIsGameMaster ? "post-gm" : "") @(post.Id == PostQuery ? "post-target" : "") @(post.IsDeleted ? "post-is-deleted" : "") @(post.IsHidden ? "post-is-hidden" : "")">
             <div class="post-avatar">
                 @if (post.IsDeleted)
                 {
@@ -953,6 +1022,22 @@
                                         <button type="button" class="action-menu-item text-danger" role="menuitem"
                                                 @onclick="() => { confirmDeleteId = post.Id; editingPostId = null; openMenu = null; }"><Icon Name="trash" /> Delete</button>
                                     }
+                                    @* Rapportera och moderera (B70). *@
+                                    @if (post.CanReport)
+                                    {
+                                        <button type="button" class="action-menu-item post-report-item" role="menuitem"
+                                                @onclick="() => StartReport(post.Id)"><Icon Name="flag" /> Report</button>
+                                    }
+                                    @if (post.CanModerate && !post.IsHidden)
+                                    {
+                                        <button type="button" class="action-menu-item post-hide-item" role="menuitem"
+                                                @onclick="() => StartHide(post.Id)"><Icon Name="eye-slash" /> Hide</button>
+                                    }
+                                    @if (post.CanModerate && post.IsHidden)
+                                    {
+                                        <button type="button" class="action-menu-item post-unhide-item" role="menuitem"
+                                                @onclick="() => UnhideAsync(post.Id)"><Icon Name="eye" /> Show again</button>
+                                    }
                                 </div>
                             }
                         </div>
@@ -979,11 +1064,56 @@
                     }
                     else
                     {
+                        @if (post.IsHidden)
+                        {
+                            @* Ett dolt inlägg (B70): texten och slagen finns bara här för den som får moderera det. *@
+                            <div class="small text-secondary fst-italic post-hidden-notice">
+                                This post was hidden by a moderator.@if (post.HiddenReason is { } hiddenReason)
+                                {
+                                    <span class="post-hidden-reason"> Reason: @hiddenReason</span>
+                                }
+                                @if (post.CanModerate)
+                                {
+                                    <span> Only moderators see the text below.</span>
+                                }
+                            </div>
+                        }
                         @if (post.Content.Trim().Length > 0)
                         {
-                            <div class="post-content">@PostHtml.Render(Markdown, post.Content)</div>
+                            <div class="post-content @(post.IsHidden ? "post-hidden-content" : "")">@PostHtml.Render(Markdown, post.Content)</div>
                         }
                         <DiceRolls Rolls="post.Rolls" />
+                        @if (reportedPostId == post.Id)
+                        {
+                            <div class="small text-success post-report-sent" role="status">Thank you. The report has been sent to the moderators.</div>
+                        }
+                        @if (reportingPostId == post.Id)
+                        {
+                            <div class="post-report-form border rounded p-2 mt-2">
+                                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                    <label class="small" for="report-reason-@post.Id">Why are you reporting this post?</label>
+                                    <select id="report-reason-@post.Id" class="form-select form-select-sm w-auto" @bind="reportReason">
+                                        @foreach (var reason in Enum.GetValues<ReportReason>())
+                                        {
+                                            <option value="@reason">@ModerationLimits.ReasonText(reason)</option>
+                                        }
+                                    </select>
+                                </div>
+                                <textarea class="form-control form-control-sm mb-2" rows="2" maxlength="@ModerationLimits.CommentMaxLength"
+                                          placeholder="Anything the moderators should know (optional)" aria-label="Comment" @bind="reportComment"></textarea>
+                                <button type="button" class="btn btn-sm btn-danger" @onclick="() => SendReportAsync(post.Id)">Send report</button>
+                                <button type="button" class="btn btn-sm btn-link" @onclick="() => reportingPostId = null">Cancel</button>
+                            </div>
+                        }
+                        @if (hidingPostId == post.Id)
+                        {
+                            <div class="post-hide-form border rounded p-2 mt-2">
+                                <input class="form-control form-control-sm mb-2" maxlength="@ModerationLimits.ReasonMaxLength"
+                                       placeholder="Reason, shown to the author (optional)" aria-label="Reason for hiding" @bind="hideReason" />
+                                <button type="button" class="btn btn-sm btn-warning" @onclick="() => HideAsync(post.Id)">Hide post</button>
+                                <button type="button" class="btn btn-sm btn-link" @onclick="() => hidingPostId = null">Cancel</button>
+                            </div>
+                        }
                         @if (confirmDeleteId == post.Id)
                         {
                             <div class="small post-confirm-delete">

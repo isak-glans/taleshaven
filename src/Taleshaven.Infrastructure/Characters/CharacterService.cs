@@ -186,6 +186,8 @@ internal sealed class CharacterService(
             throw new CampaignRuleException("Only the campaign's participants can create characters.");
         await EnsurePortraitExistsAsync(db, portraitId, cancellationToken);
 
+        await Moderation.AccountRestrictions.EnsureCanWriteAsync(db, userId, timeProvider.GetUtcNow(), cancellationToken);
+
         // GM:s karaktärer är alltid NPC:er, spelares aldrig.
         if (access.Role != CampaignRole.GameMaster)
             await EnsureRoomForPlayerCharacterAsync(db, campaignId, userId, cancellationToken);
@@ -230,6 +232,7 @@ internal sealed class CharacterService(
             throw new CampaignRuleException(character.IsNpc ? "Only the GM can duplicate NPCs." : "You can only duplicate your own characters.");
         if (!character.IsNpc)
             await EnsureRoomForPlayerCharacterAsync(db, campaignId, userId, cancellationToken);
+        await Moderation.AccountRestrictions.EnsureCanWriteAsync(db, userId, timeProvider.GetUtcNow(), cancellationToken);
 
         var names = await db.Characters.Where(c => c.CampaignId == campaignId).Select(c => c.Name).ToListAsync(cancellationToken);
         var copy = character.Duplicate(Character.NextNumberedName(character.Name, names), timeProvider.GetUtcNow());

@@ -44,6 +44,19 @@ public class Post
 
     public bool IsDeleted => DeletedAt is not null;
 
+    /// <summary>
+    /// När inlägget doldes av en moderator eller kampanjens GM (B70). Inlägget ligger kvar som "This post was hidden by a
+    /// moderator."; texten och slagen skickas bara till dem som får moderera det, och originalet finns kvar som bevis.
+    /// </summary>
+    public DateTimeOffset? HiddenAt { get; private set; }
+
+    public string? HiddenById { get; private set; }
+
+    /// <summary>Varför inlägget doldes; visas för författaren och moderatorerna.</summary>
+    public string? HiddenReason { get; private set; }
+
+    public bool IsHidden => HiddenAt is not null;
+
     /// <summary>Inlägg med tärningsslag kan bara tas bort av GM (B31, B42).</summary>
     public bool HasRolls => Rolls.Count > 0;
 
@@ -95,6 +108,21 @@ public class Post
     }
 
     /// <summary>Tar bort inlägget mjukt (B30). Vem som får ta bort avgörs av <see cref="Campaigns.CampaignPermissions.CanDeletePost"/>.</summary>
+    public void Hide(string moderatorId, string? reason, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(moderatorId);
+        HiddenReason = Moderation.ModerationLimits.Reason(reason, required: false);
+        HiddenAt = now;
+        HiddenById = moderatorId;
+    }
+
+    public void Unhide()
+    {
+        HiddenAt = null;
+        HiddenById = null;
+        HiddenReason = null;
+    }
+
     public void Delete(string deletedById, DateTimeOffset now)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(deletedById);

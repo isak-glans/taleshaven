@@ -50,45 +50,6 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
             return TypedResults.LocalRedirect($"~/{returnUrl}");
         });
 
-        accountGroup.MapPost("/PasskeyCreationOptions", async (
-            HttpContext context,
-            [FromServices] UserManager<ApplicationUser> userManager,
-            [FromServices] SignInManager<ApplicationUser> signInManager,
-            [FromServices] IAntiforgery antiforgery) =>
-        {
-            await antiforgery.ValidateRequestAsync(context);
-
-            var user = await userManager.GetUserAsync(context.User);
-            if (user is null)
-            {
-                return Results.NotFound($"Unable to load user with ID '{userManager.GetUserId(context.User)}'.");
-            }
-
-            var userId = await userManager.GetUserIdAsync(user);
-            var userName = await userManager.GetUserNameAsync(user) ?? "User";
-            var optionsJson = await signInManager.MakePasskeyCreationOptionsAsync(new()
-            {
-                Id = userId,
-                Name = userName,
-                DisplayName = userName
-            });
-            return TypedResults.Content(optionsJson, contentType: "application/json");
-        });
-
-        accountGroup.MapPost("/PasskeyRequestOptions", async (
-            HttpContext context,
-            [FromServices] UserManager<ApplicationUser> userManager,
-            [FromServices] SignInManager<ApplicationUser> signInManager,
-            [FromServices] IAntiforgery antiforgery,
-            [FromQuery] string? username) =>
-        {
-            await antiforgery.ValidateRequestAsync(context);
-
-            var user = string.IsNullOrEmpty(username) ? null : await userManager.FindByNameAsync(username);
-            var optionsJson = await signInManager.MakePasskeyRequestOptionsAsync(user);
-            return TypedResults.Content(optionsJson, contentType: "application/json");
-        });
-
         var manageGroup = accountGroup.MapGroup("/Manage").RequireAuthorization();
 
         manageGroup.MapPost("/LinkExternalLogin", async (
@@ -114,7 +75,7 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
         manageGroup.MapPost("/DownloadPersonalData", async (
             HttpContext context,
             [FromServices] UserManager<ApplicationUser> userManager,
-            [FromServices] AuthenticationStateProvider authenticationStateProvider) =>
+            [FromServices] Taleshaven.Core.Users.IAccountService accounts) =>
         {
             var user = await userManager.GetUserAsync(context.User);
             if (user is null)
@@ -125,23 +86,8 @@ internal static class IdentityComponentsEndpointRouteBuilderExtensions
             var userId = await userManager.GetUserIdAsync(user);
             downloadLogger.LogInformation("User with ID '{UserId}' asked for their personal data.", userId);
 
-            // Only include personal data for download
-            var personalData = new Dictionary<string, string>();
-            var personalDataProps = typeof(ApplicationUser).GetProperties().Where(
-                prop => Attribute.IsDefined(prop, typeof(PersonalDataAttribute)));
-            foreach (var p in personalDataProps)
-            {
-                personalData.Add(p.Name, p.GetValue(user)?.ToString() ?? "null");
-            }
-
-            var logins = await userManager.GetLoginsAsync(user);
-            foreach (var l in logins)
-            {
-                personalData.Add($"{l.LoginProvider} external login provider key", l.ProviderKey);
-            }
-
-            personalData.Add("Authenticator Key", (await userManager.GetAuthenticatorKeyAsync(user))!);
-            var fileBytes = JsonSerializer.SerializeToUtf8Bytes(personalData);
+            // Kontot, profilen, kampanjer, karaktärer och alla egna inlägg (B70); inga hemligheter.
+            var fileBytes = await accounts.ExportPersonalDataAsync(userId, context.RequestAborted);
 
             context.Response.Headers.TryAdd("Content-Disposition", "attachment; filename=PersonalData.json");
             return TypedResults.File(fileBytes, contentType: "application/json", fileDownloadName: "PersonalData.json");

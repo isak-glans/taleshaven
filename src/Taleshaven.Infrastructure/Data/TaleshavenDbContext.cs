@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Taleshaven.Core.Campaigns;
 using Taleshaven.Core.Characters;
+using Taleshaven.Core.Moderation;
 using Taleshaven.Core.Portraits;
 using Taleshaven.Core.Threads;
 using Taleshaven.Infrastructure.Identity;
@@ -19,6 +20,9 @@ public class TaleshavenDbContext(DbContextOptions<TaleshavenDbContext> options) 
     public DbSet<ReadMarker> ReadMarkers => Set<ReadMarker>();
     public DbSet<Character> Characters => Set<Character>();
     public DbSet<Portrait> Portraits => Set<Portrait>();
+    public DbSet<PostReport> PostReports => Set<PostReport>();
+    public DbSet<ModerationAction> ModerationActions => Set<ModerationAction>();
+    public DbSet<UserNotice> UserNotices => Set<UserNotice>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

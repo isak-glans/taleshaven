@@ -46,6 +46,12 @@
                 <label for="Input.ConfirmPassword">Confirm password</label>
                 <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
             </div>
+            @* Ordningsreglerna (B70) godkänns när kontot skapas. *@
+            <div class="form-check mb-3">
+                <InputCheckbox @bind-Value="Input.AcceptRules" id="Input.AcceptRules" class="form-check-input" />
+                <label class="form-check-label" for="Input.AcceptRules">I have read and accept the <a href="rules" target="_blank">rules</a></label>
+                <ValidationMessage For="() => Input.AcceptRules" class="text-danger" />
+            </div>
             <button type="submit" class="w-100 btn btn-lg btn-primary">Create account</button>
         </EditForm>
     </div>
@@ -71,6 +77,7 @@
     {
         var user = CreateUser();
         user.DisplayName = Input.DisplayName.Trim();
+        user.AcceptedRulesAt = DateTimeOffset.UtcNow;
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
         var emailStore = GetEmailStore();
@@ -148,5 +155,8 @@
         [DataType(DataType.Password)]
         [Compare("Password", ErrorMessage = "The passwords don't match.")]
         public string ConfirmPassword { get; set; } = "";
+
+        [Range(typeof(bool), "true", "true", ErrorMessage = "Accept the rules to create an account.")]
+        public bool AcceptRules { get; set; }
     }
 }

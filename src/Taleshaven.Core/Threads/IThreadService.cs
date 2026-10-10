@@ -101,7 +101,11 @@ public sealed record PostItem(
     bool CanEdit,
     bool CanDelete,
     string? AuthorAvatarUrl = null,
-    bool AuthorIsDeleted = false);
+    bool AuthorIsDeleted = false,
+    bool IsHidden = false,
+    string? HiddenReason = null,
+    bool CanReport = false,
+    bool CanModerate = false);
 
 /// <summary>Namnet som visas för ett inlägg: karaktären om det är skrivet som en, annars användaren.</summary>
 public sealed record PostAuthor(string Name, string? AvatarUrl, string ColorKey, bool IsHiddenNpc);

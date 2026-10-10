@@ -17,6 +17,12 @@ public interface IAccountService
 
     /// <summary>Väljer en profilbild ur porträttbiblioteket, eller tar bort den med <c>null</c> (B50).</summary>
     Task SetProfilePortraitAsync(string userId, int? portraitId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Användarens personuppgifter som JSON (B70): kontot, profilen, kampanjer, ansökningar, karaktärer och alla egna inlägg
+    /// med tidigare versioner. Andras inlägg och hemligheter (lösenord, säkerhetsnycklar) ingår inte.
+    /// </summary>
+    Task<byte[]> ExportPersonalDataAsync(string userId, CancellationToken cancellationToken = default);
 }
 
 public sealed record ProfilePortrait(int PortraitId, string Url);

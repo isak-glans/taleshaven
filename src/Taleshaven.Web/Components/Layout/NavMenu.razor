@@ -1,9 +1,11 @@
 @implements IDisposable
 
+@using Taleshaven.Core.Moderation
 @using Taleshaven.Core.Site
 
 @inject NavigationManager NavigationManager
 @inject ISiteRoleService RoleService
+@inject IModerationService Moderation
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -33,6 +35,19 @@
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="portraits">
                             <span class="bi bi-image-nav-menu" aria-hidden="true"></span> Image library
+                        </NavLink>
+                    </div>
+                }
+                @if (canModerate)
+                {
+                    @* Rapporter och moderering (B70): sajtens moderatorer och den som är GM; märket visar öppna rapporter. *@
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="moderation">
+                            <span class="bi bi-flag-nav-menu" aria-hidden="true"></span> Moderation
+                            @if (openReports > 0)
+                            {
+                                <span class="badge rounded-pill text-bg-danger ms-2 moderation-badge" title="Open reports">@openReports</span>
+                            }
                         </NavLink>
                     </div>
                 }
@@ -76,12 +91,19 @@
                 </div>
             </NotAuthorized>
         </AuthorizeView>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="rules">
+                <span class="bi bi-book-nav-menu" aria-hidden="true"></span> Rules
+            </NavLink>
+        </div>
     </nav>
 </div>
 
 @code {
     private string? currentUrl;
     private IReadOnlySet<SiteRole> siteRoles = new HashSet<SiteRole>();
+    private bool canModerate;
+    private int openReports;
 
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
@@ -93,7 +115,12 @@
 
         // Sajtroller läses från databasen vid varje sidvisning, så att en ny roll syns utan att man loggar in igen (B18).
         if ((await AuthenticationState).User.GetUserId() is { } userId)
+        {
             siteRoles = await RoleService.GetRolesAsync(userId);
+            canModerate = await Moderation.CanSeeModerationAsync(userId);
+            if (canModerate)
+                openReports = await Moderation.CountOpenAsync(userId);
+        }
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)

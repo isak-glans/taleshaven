@@ -56,8 +56,15 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddDefaultTokenProviders()
     .AddClaimsPrincipalFactory<ApplicationUserClaimsPrincipalFactory>();
 
-// TODO: Ersätt med en riktig e-posttjänst innan driftsättning.
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+// E-post (B70): SMTP enligt avsnittet Email i konfigurationen; utan Email:Host skickas inga mejl.
+var emailOptions = builder.Configuration.GetSection("Email").Get<EmailOptions>() ?? new EmailOptions();
+if (string.IsNullOrWhiteSpace(emailOptions.Host))
+    builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+else
+{
+    builder.Services.AddSingleton(emailOptions);
+    builder.Services.AddSingleton<IEmailSender<ApplicationUser>, SmtpEmailSender>();
+}
 
 var app = builder.Build();
 

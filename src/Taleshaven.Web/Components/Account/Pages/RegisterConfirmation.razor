@@ -9,6 +9,7 @@
 @inject IEmailSender<ApplicationUser> EmailSender
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject IWebHostEnvironment Environment
 
 <PageTitle>Confirm account</PageTitle>
 
@@ -19,7 +20,9 @@
 @if (emailConfirmationLink is not null)
 {
     <p>
-        No email service is configured yet, so the confirmation link is shown here instead of being emailed:
+        @(EmailSender is IdentityNoOpEmailSender
+            ? "No email service is configured yet, so the confirmation link is shown here instead of being emailed:"
+            : "Development: the email has been sent (see Mailpit), and the link is also shown here:")
         <a id="confirm-link" href="@emailConfirmationLink">Click here to confirm your account</a>
     </p>
 }
@@ -55,9 +58,9 @@ else
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
             statusMessage = "Error finding user for unspecified email";
         }
-        else if (EmailSender is IdentityNoOpEmailSender)
+        else if (EmailSender is IdentityNoOpEmailSender || Environment.IsDevelopment())
         {
-            // Once you add a real email sender, you should remove this code that lets you confirm the account
+            // Utan e-posttjänst, och alltid i utvecklingsmiljön, visas länken direkt (B70); i produktion bara via mejl.
             var userId = await UserManager.GetUserIdAsync(user);
             var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
             code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
