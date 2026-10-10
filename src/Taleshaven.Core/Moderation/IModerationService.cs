@@ -7,8 +7,8 @@ namespace Taleshaven.Core.Moderation;
 /// </summary>
 public interface IModerationService
 {
-    /// <summary>Rapporterar ett inlägg. Det egna, ett borttaget eller ett redan dolt inlägg går inte att rapportera.</summary>
-    Task ReportPostAsync(int campaignId, long postId, string userId, ReportReason reason, string? comment,
+    /// <summary>Rapporterar ett inlägg; <paramref name="campaignId"/> är null för forumet (B72). Det egna, ett borttaget eller ett redan dolt inlägg går inte att rapportera.</summary>
+    Task ReportPostAsync(int? campaignId, long postId, string userId, ReportReason reason, string? comment,
         CancellationToken cancellationToken = default);
 
     /// <summary>Om användaren får se moderationssidan: sajtens moderatorer och den som är GM för någon kampanj.</summary>
@@ -55,7 +55,7 @@ public sealed record ModerationQueue(bool IsSiteModerator, IReadOnlyList<Reporte
 /// <summary>Ett rapporterat inlägg med sina öppna rapporter. <see cref="CanSanctionAuthor"/>: varna, stänga av och spärra.</summary>
 public sealed record ReportedPost(
     long PostId,
-    int CampaignId,
+    int? CampaignId,
     string CampaignName,
     int ThreadId,
     string ThreadTitle,

@@ -12,12 +12,7 @@ internal sealed class UnreadService(IDbContextFactory<TaleshavenDbContext> dbFac
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-        var campaignId = await db.Threads.Where(t => t.Id == threadId).Select(t => (int?)t.CampaignId).SingleOrDefaultAsync(cancellationToken);
-        if (campaignId is null)
-            return null;
-
-        var access = await CampaignAccess.GetAsync(db, campaignId.Value, userId, cancellationToken);
-        if (access.Role == CampaignRole.None)
+        if (!await HasReadPositionAsync(db, threadId, userId, cancellationToken))
             return null;
 
         var lastRead = await db.ReadMarkers
@@ -36,12 +31,7 @@ internal sealed class UnreadService(IDbContextFactory<TaleshavenDbContext> dbFac
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
 
-        var campaignId = await db.Threads.Where(t => t.Id == threadId).Select(t => (int?)t.CampaignId).SingleOrDefaultAsync(cancellationToken);
-        if (campaignId is null)
-            return;
-
-        var access = await CampaignAccess.GetAsync(db, campaignId.Value, userId, cancellationToken);
-        if (access.Role == CampaignRole.None)
+        if (!await HasReadPositionAsync(db, threadId, userId, cancellationToken))
             return;
 
         // Atomisk uppdatering som bara flyttar läspositionen framåt, även om flera flikar markerar samtidigt.
@@ -52,6 +42,19 @@ internal sealed class UnreadService(IDbContextFactory<TaleshavenDbContext> dbFac
             SET "LastReadPostId" = GREATEST("ReadMarkers"."LastReadPostId", EXCLUDED."LastReadPostId"),
                 "UpdatedAt" = EXCLUDED."UpdatedAt"
             """, cancellationToken);
+    }
+
+    // Kampanjens deltagare har läsposition i dess trådar; i forumet (B72) har alla inloggade det.
+    private static async Task<bool> HasReadPositionAsync(TaleshavenDbContext db, int threadId, string userId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(userId))
+            return false;
+        var thread = await db.Threads.Where(t => t.Id == threadId).Select(t => new { t.CampaignId }).SingleOrDefaultAsync(cancellationToken);
+        if (thread is null)
+            return false;
+        if (thread.CampaignId is not { } campaignId)
+            return true;
+        return (await CampaignAccess.GetAsync(db, campaignId, userId, cancellationToken)).Role != CampaignRole.None;
     }
 
     public async Task<IReadOnlyDictionary<int, int>> GetThreadUnreadAsync(int campaignId, string userId, CancellationToken cancellationToken = default)
@@ -80,7 +83,7 @@ internal sealed class UnreadService(IDbContextFactory<TaleshavenDbContext> dbFac
         var rows = await UnreadQueries.CountPerThread(db, userId, participating).ToListAsync(cancellationToken);
 
         return rows
-            .GroupBy(r => r.CampaignId)
+            .GroupBy(r => r.CampaignId!.Value)
             .Select(g => (CampaignId: g.Key, Count: g.Sum(r => r.Count)))
             .Where(x => x.Count > 0)
             .ToDictionary(x => x.CampaignId, x => x.Count);
@@ -102,7 +105,7 @@ internal static class UnreadQueries
             db.Posts.Count(p => p.ThreadId == t.Id && p.AuthorId != userId && p.Id > lastRead && p.DeletedAt == null));
 }
 
-internal sealed record UnreadRow(int ThreadId, int CampaignId, int Count);
+internal sealed record UnreadRow(int ThreadId, int? CampaignId, int Count);
 /// <summary>Läspositioner som sätts av andra delar av systemet.</summary>
 internal static class ReadMarkers
 {

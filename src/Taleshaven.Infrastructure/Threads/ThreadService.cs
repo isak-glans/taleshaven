@@ -81,7 +81,7 @@ internal sealed class ThreadService(
         var access = await CampaignAccess.GetAsync(db, campaignId, viewerId, cancellationToken);
         var thread = row.Thread;
         return new ThreadDetails(
-            thread.Id, thread.CampaignId, thread.Status, thread.Title, thread.CreatedAt, row.PostCount, row.ParticipantCount,
+            thread.Id, campaignId, thread.Status, thread.Title, thread.CreatedAt, row.PostCount, row.ParticipantCount,
             CanWrite: CampaignPermissions.CanWritePost(access.Role, access.CampaignStatus, thread.Status),
             CanManage: CampaignPermissions.CanManageThreads(access.Role));
     }
@@ -332,11 +332,13 @@ internal sealed class ThreadService(
     {
         var thread = await db.Threads.AsNoTracking()
             .Where(t => t.Id == threadId)
-            .Select(t => new { t.CampaignId, t.Status })
+            .Select(t => new { t.CampaignId, t.Status, t.IsLocked })
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new CampaignRuleException("The thread doesn't exist.");
 
-        var access = await CampaignAccess.GetAsync(db, thread.CampaignId, viewerId, cancellationToken);
+        if (thread.CampaignId is not { } campaignId)
+            return new Viewer(viewerId, CampaignRole.None, CampaignStatus.Ongoing, thread.Status, IsForum: true, IsLocked: thread.IsLocked);
+        var access = await CampaignAccess.GetAsync(db, campaignId, viewerId, cancellationToken);
         return new Viewer(viewerId, access.Role, access.CampaignStatus, thread.Status);
     }
 
@@ -345,7 +347,8 @@ internal sealed class ThreadService(
         : new PostAuthor(post.AuthorName, post.AuthorAvatarUrl, post.AuthorId, false);
 
     /// <summary>Den som läser, för att maskera dolda NPC:er och räkna ut vad hen får göra med varje inlägg.</summary>
-    private sealed record Viewer(string UserId, CampaignRole Role, CampaignStatus CampaignStatus, ThreadStatus ThreadStatus)
+    private sealed record Viewer(string UserId, CampaignRole Role, CampaignStatus CampaignStatus, ThreadStatus ThreadStatus,
+        bool IsForum = false, bool IsLocked = false)
     {
         /// <summary>För listor där inga knappar visas; bara maskeringen spelar roll.</summary>
         public static Viewer ReadOnly(string userId) => new(userId, CampaignRole.None, CampaignStatus.Archived, ThreadStatus.Completed);
@@ -365,7 +368,8 @@ internal sealed class ThreadService(
                 from p in posts
                 join u in db.Users on p.AuthorId equals u.Id
                 join t in db.Threads on p.ThreadId equals t.Id
-                join c in db.Campaigns on t.CampaignId equals c.Id
+                join c in db.Campaigns on t.CampaignId equals (int?)c.Id into campaigns
+                from c in campaigns.DefaultIfEmpty()
                 join ch in db.Characters on p.CharacterId equals (int?)ch.Id into characters
                 from ch in characters.DefaultIfEmpty()
                 select new
@@ -405,7 +409,8 @@ internal sealed class ThreadService(
                     where replyIds.Contains(p.Id)
                     join u in db.Users on p.AuthorId equals u.Id
                     join t in db.Threads on p.ThreadId equals t.Id
-                    join c in db.Campaigns on t.CampaignId equals c.Id
+                    join c in db.Campaigns on t.CampaignId equals (int?)c.Id into campaigns
+                    from c in campaigns.DefaultIfEmpty()
                     join ch in db.Characters on p.CharacterId equals (int?)ch.Id into characters
                     from ch in characters.DefaultIfEmpty()
                     select new
@@ -461,8 +466,13 @@ internal sealed class ThreadService(
                         ? new PostReference(replyId, replyName)
                         : null,
                     IsDeleted: deleted,
-                    CanEdit: !deleted && !hidden && CampaignPermissions.CanEditPost(viewer.Role, viewer.CampaignStatus, viewer.ThreadStatus, viewer.UserId, r.AuthorId),
-                    CanDelete: !deleted && CampaignPermissions.CanDeletePost(viewer.Role, viewer.CampaignStatus, viewer.ThreadStatus, viewer.UserId, r.AuthorId, hasRolls),
+                    // I forumet (B72) redigerar författaren sitt inlägg om tråden inte är låst; författaren och moderatorerna tar bort.
+                    CanEdit: !deleted && !hidden && (viewer.IsForum
+                        ? r.AuthorId == viewer.UserId && !viewer.IsLocked
+                        : CampaignPermissions.CanEditPost(viewer.Role, viewer.CampaignStatus, viewer.ThreadStatus, viewer.UserId, r.AuthorId)),
+                    CanDelete: !deleted && (viewer.IsForum
+                        ? r.AuthorId == viewer.UserId || viewerIsModerator
+                        : CampaignPermissions.CanDeletePost(viewer.Role, viewer.CampaignStatus, viewer.ThreadStatus, viewer.UserId, r.AuthorId, hasRolls)),
                     // Profilbilden visas när inlägget är skrivet utan karaktär, t.ex. GM som berättare (B50).
                     AuthorAvatarUrl: r.AuthorAvatarKey is null ? null : IImageStore.PortraitUrl(r.AuthorAvatarKey),
                     // Borttagna konton (B21) har ingen profilsida att länka till (B52).

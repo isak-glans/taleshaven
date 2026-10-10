@@ -162,7 +162,8 @@ internal sealed class AccountService(IDbContextFactory<TaleshavenDbContext> dbFa
             .Where(c => db.Posts.Any(p => p.AuthorId == userId && p.CharacterId == c.Id))
             .ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
 
-        string? CampaignName(int id) => campaignNames.GetValueOrDefault(id);
+        // Forumtrådar (B72) har ingen kampanj.
+        string? CampaignName(int? id) => id is { } campaignId ? campaignNames.GetValueOrDefault(campaignId) : "Forum";
 
         // Allt som användaren själv har skrivit eller som beskriver hen (GDPR art. 15, B70). Andras inlägg ingår inte,
         // och inga hemligheter (lösenordshash, säkerhetsstämplar) följer med.

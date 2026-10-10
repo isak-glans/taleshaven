@@ -1,0 +1,671 @@
+@page "/forum/threads/{ThreadId:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+
+@using Taleshaven.Core.Forum
+@using Taleshaven.Core.Moderation
+
+@* En forumtråd (B72). Inläggen är vanliga inlägg (IThreadService), utan karaktärer och tärningar. Alla inloggade svarar,
+   utom i en låst tråd; administratörer och managers fäster, låser, byter namn på och tar bort trådar. *@
+
+@inject IForumService Forum
+@inject IThreadService ThreadService
+@inject IUnreadService Unread
+@inject IModerationService Moderation
+@inject IMarkdownRenderer Markdown
+@inject PostNotifier Notifier
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject ILogger<ForumThreadPage> Logger
+
+@if (thread is null || page is null)
+{
+    return;
+}
+
+<PageTitle>@thread.Title · Forum</PageTitle>
+
+<p class="small mb-2"><a href="forum">← Forum</a> · @thread.CategoryName</p>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+    @if (renaming)
+    {
+        <input class="form-control w-auto flex-grow-1 forum-rename" maxlength="@ThreadLimits.TitleMaxLength" @bind="newTitle" @bind:event="oninput" aria-label="Title" />
+        <button type="button" class="btn btn-sm btn-primary" @onclick="RenameAsync">Save</button>
+        <button type="button" class="btn btn-sm btn-link" @onclick="() => renaming = false">Cancel</button>
+    }
+    else
+    {
+        <h1 class="h3 mb-0">@thread.Title</h1>
+    }
+    @if (thread.IsPinned)
+    {
+        <span class="badge text-bg-light border forum-pinned"><Icon Name="pin" Size="12" /> Pinned</span>
+    }
+    @if (thread.IsLocked)
+    {
+        <span class="badge text-bg-light border forum-locked"><Icon Name="lock" Size="12" /> Locked</span>
+    }
+    @if (thread.CanManage && !renaming)
+    {
+        <div class="menu-anchor ms-auto">
+            <button type="button" class="btn btn-sm btn-outline-secondary forum-thread-menu" aria-label="Thread actions"
+                    aria-expanded="@(openMenu == "thread" ? "true" : "false")" @onclick="@(() => ToggleMenu("thread"))"><Icon Name="three-dots" /></button>
+            @if (openMenu == "thread")
+            {
+                <div class="menu-backdrop" @onclick="CloseMenu"></div>
+                <div class="action-menu border rounded shadow-sm" role="menu">
+                    <button type="button" class="action-menu-item forum-pin" role="menuitem" @onclick="() => ManageAsync(() => Forum.SetPinnedAsync(ThreadId, userId, !thread.IsPinned))">
+                        <Icon Name="pin" /> @(thread.IsPinned ? "Unpin" : "Pin to top")
+                    </button>
+                    <button type="button" class="action-menu-item forum-lock" role="menuitem" @onclick="() => ManageAsync(() => Forum.SetLockedAsync(ThreadId, userId, !thread.IsLocked))">
+                        <Icon Name="lock" /> @(thread.IsLocked ? "Unlock" : "Lock")
+                    </button>
+                    <button type="button" class="action-menu-item" role="menuitem" @onclick="StartRename"><Icon Name="pencil" /> Rename</button>
+                    <button type="button" class="action-menu-item text-danger forum-delete-thread" role="menuitem" @onclick="() => { confirmDeleteThread = true; openMenu = null; }"><Icon Name="trash" /> Delete thread</button>
+                </div>
+            }
+        </div>
+    }
+</div>
+<p class="small text-secondary mb-3">@thread.PostCount @(thread.PostCount == 1 ? "post" : "posts")</p>
+
+@if (confirmDeleteThread)
+{
+    <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2" role="alert">
+        <span class="me-auto">Delete the thread and all its posts?</span>
+        <button type="button" class="btn btn-sm btn-danger" @onclick="DeleteThreadAsync">Yes, delete</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => confirmDeleteThread = false">Cancel</button>
+    </div>
+}
+@if (actionError is not null)
+{
+    <div class="alert alert-danger py-2" role="alert">@actionError</div>
+}
+
+@foreach (var post in posts)
+{
+    @PostView(post)
+}
+
+<Pager Page="page.Page" PageCount="page.PageCount" ShowLatest="true" Href="@(p => ForumLinks.Thread(ThreadId, p))" />
+
+<div id="composer" class="mt-3">
+    @if (thread.CanReply)
+    {
+        @if (replyTo is { } reply)
+        {
+            <div class="small text-secondary mb-1">
+                <Icon Name="reply" /> Replying to @reply.Name
+                <button type="button" class="btn btn-sm btn-link py-0" @onclick="() => replyTo = null">Cancel</button>
+            </div>
+        }
+        <MarkdownEditor @ref="composer" MaxLength="ThreadLimits.PostMaxLength" DraftKey="@($"forum-{ThreadId}")" Label="Write a reply"
+                        OnSubmit="SubmitAsync" SubmitText="Post" ShortcutHint="Ctrl+Enter sends" ShowSpoilerButton="true"
+                        RenderPreview="@(text => PostHtml.Render(Markdown, text))" />
+    }
+    else
+    {
+        <p class="text-secondary"><Icon Name="lock" /> The thread is locked. Only administrators and managers can post here.</p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int ThreadId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "page")]
+    private int? PageQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "post")]
+    private long? PostQuery { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private string userId = "";
+    private ForumThreadDetails? thread;
+    private PostPage? page;
+    private readonly List<PostItem> posts = [];
+    private string? loadedKey;
+    private MarkdownEditor? composer;
+    private IJSObjectReference? module;
+    private bool subscribed;
+    private string? scrollTarget;
+    private long markedReadUpTo;
+    private string? openMenu;
+    private string? actionError;
+    private long? editingPostId;
+    private long? confirmDeleteId;
+    private long? copiedPostId;
+    private PostReference? replyTo;
+    private bool renaming;
+    private string newTitle = "";
+    private bool confirmDeleteThread;
+    private DateTimeOffset now = DateTimeOffset.UtcNow;
+
+    // Rapporter och moderering (B70).
+    private long? reportingPostId;
+    private long? reportedPostId;
+    private ReportReason reportReason = ReportReason.Harassment;
+    private string reportComment = "";
+    private long? hidingPostId;
+    private string hideReason = "";
+
+    private bool OnLastPage => page is not null && page.Page >= page.PageCount;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+        var key = $"{ThreadId}?{PageQuery}/{PostQuery}";
+        if (key == loadedKey)
+            return;
+        loadedKey = key;
+
+        thread = await Forum.GetThreadAsync(ThreadId, userId);
+        if (thread is null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+        // En länk till ett inlägg öppnar dess sida; annars den angivna sidan, första olästa eller första sidan.
+        int target;
+        scrollTarget = null;
+        if (PostQuery is { } postId && await ThreadService.GetPageOfPostAsync(ThreadId, postId) is { } postPage)
+        {
+            target = postPage;
+            scrollTarget = $"post-{postId}";
+        }
+        else if (PageQuery is { } number)
+        {
+            target = number;
+        }
+        else if (await Unread.GetFirstUnreadPostIdAsync(ThreadId, userId) is { } unread && await ThreadService.GetPageOfPostAsync(ThreadId, unread) is { } unreadPage)
+        {
+            target = unreadPage;
+            scrollTarget = $"post-{unread}";
+        }
+        else
+        {
+            target = 1;
+        }
+
+        page = await ThreadService.GetPostsPageAsync(ThreadId, target, userId);
+        posts.Clear();
+        posts.AddRange(page.Posts);
+        now = DateTimeOffset.UtcNow;
+        openMenu = null;
+        editingPostId = null;
+        confirmDeleteId = null;
+        actionError = null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Pages/Campaigns/ThreadPage.razor.js");
+            Notifier.PostCreated += OnPostCreated;
+            Notifier.PostChanged += OnPostChanged;
+            subscribed = true;
+        }
+        if (module is null || page is null)
+            return;
+
+        if (scrollTarget is { } target)
+        {
+            scrollTarget = null;
+            await module.InvokeVoidAsync("scrollToElement", target);
+        }
+        await MarkReadAsync();
+    }
+
+    private async Task MarkReadAsync()
+    {
+        if (posts.Count == 0 || userId.Length == 0)
+            return;
+        var last = posts[^1].Id;
+        if (last <= markedReadUpTo)
+            return;
+        markedReadUpTo = last;
+        try
+        {
+            await Unread.MarkReadAsync(ThreadId, userId, last);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Kunde inte markera forumtråd {ThreadId} som läst", ThreadId);
+        }
+    }
+
+    private async Task<string?> SubmitAsync(string content)
+    {
+        long postId;
+        try
+        {
+            postId = await Forum.ReplyAsync(ThreadId, userId, content, replyTo?.PostId);
+        }
+        catch (CampaignRuleException ex)
+        {
+            return ex.Message;
+        }
+
+        replyTo = null;
+        Notifier.NotifyPostCreated(0, ThreadId);
+        if (posts.Count >= ThreadLimits.PostsPerPage || !OnLastPage)
+        {
+            NavigationManager.NavigateTo(ForumLinks.Post(ThreadId, postId));
+            return null;
+        }
+        await AppendNewPostsAsync();
+        StateHasChanged();
+        return null;
+    }
+
+    private async Task AppendNewPostsAsync()
+    {
+        var after = posts.Count > 0 ? posts[^1].Id : 0;
+        var newer = await ThreadService.GetPostsAfterAsync(ThreadId, after, userId);
+        posts.AddRange(newer.Where(n => posts.All(p => p.Id != n.Id)));
+        thread = await Forum.GetThreadAsync(ThreadId, userId) ?? thread;
+        await MarkReadAsync();
+    }
+
+    private void OnPostCreated(int campaignId, int threadId)
+    {
+        if (threadId != ThreadId)
+            return;
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                if (OnLastPage && posts.Count < ThreadLimits.PostsPerPage)
+                    await AppendNewPostsAsync();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Kunde inte hämta nya inlägg i forumtråd {ThreadId}", ThreadId);
+            }
+        });
+    }
+
+    private void OnPostChanged(int threadId, long postId)
+    {
+        if (threadId != ThreadId || posts.All(p => p.Id != postId) || editingPostId == postId)
+            return;
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                if (await ThreadService.GetPostAsync(ThreadId, postId, userId) is { } updated)
+                {
+                    Replace(updated);
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Kunde inte hämta ändrat inlägg {PostId}", postId);
+            }
+        });
+    }
+
+    private void Replace(PostItem updated)
+    {
+        var index = posts.FindIndex(p => p.Id == updated.Id);
+        if (index >= 0)
+            posts[index] = updated;
+    }
+
+    private async Task RefreshPostAsync(long postId)
+    {
+        if (await ThreadService.GetPostAsync(ThreadId, postId, userId) is { } changed)
+            Replace(changed);
+        Notifier.NotifyPostChanged(ThreadId, postId);
+    }
+
+    private async Task<string?> SaveEditAsync(long postId, string content)
+    {
+        try
+        {
+            await Forum.EditPostAsync(postId, userId, content);
+        }
+        catch (CampaignRuleException ex)
+        {
+            return ex.Message;
+        }
+        editingPostId = null;
+        await RefreshPostAsync(postId);
+        return null;
+    }
+
+    private async Task DeleteAsync(long postId)
+    {
+        actionError = null;
+        try
+        {
+            await Forum.DeletePostAsync(postId, userId);
+        }
+        catch (CampaignRuleException ex)
+        {
+            actionError = ex.Message;
+            return;
+        }
+        confirmDeleteId = null;
+        await RefreshPostAsync(postId);
+    }
+
+    private async Task ReplyAsync(PostItem post)
+    {
+        openMenu = null;
+        replyTo = new PostReference(post.Id, post.AuthorName);
+        if (module is not null)
+            await module.InvokeVoidAsync("scrollToElement", "composer");
+    }
+
+    private async Task QuoteAsync(PostItem post)
+    {
+        openMenu = null;
+        if (composer is null)
+            return;
+        var lines = post.Content.Split('\n').Select(line => "> " + line.TrimEnd('\r'));
+        await composer.InsertAsync($"> **{post.AuthorName}** wrote:\n{string.Join("\n", lines)}\n\n");
+        if (module is not null)
+            await module.InvokeVoidAsync("scrollToElement", "composer");
+    }
+
+    private async Task CopyLinkAsync(PostItem post)
+    {
+        openMenu = null;
+        if (module is null)
+            return;
+        var url = NavigationManager.ToAbsoluteUri(ForumLinks.Post(ThreadId, post.Id)).ToString();
+        copiedPostId = await module.InvokeAsync<bool>("copyText", url) ? post.Id : null;
+    }
+
+    private void StartReport(long postId)
+    {
+        openMenu = null;
+        reportingPostId = postId;
+        reportReason = ReportReason.Harassment;
+        reportComment = "";
+        hidingPostId = null;
+    }
+
+    private void StartHide(long postId)
+    {
+        openMenu = null;
+        hidingPostId = postId;
+        hideReason = "";
+        reportingPostId = null;
+    }
+
+    private async Task SendReportAsync(long postId)
+    {
+        actionError = null;
+        try
+        {
+            await Moderation.ReportPostAsync(null, postId, userId, reportReason, reportComment);
+        }
+        catch (CampaignRuleException ex)
+        {
+            actionError = ex.Message;
+            return;
+        }
+        reportingPostId = null;
+        reportedPostId = postId;
+    }
+
+    private async Task ModeratePostAsync(long postId, Func<Task> action)
+    {
+        actionError = null;
+        try
+        {
+            await action();
+        }
+        catch (CampaignRuleException ex)
+        {
+            actionError = ex.Message;
+            return;
+        }
+        hidingPostId = null;
+        openMenu = null;
+        await RefreshPostAsync(postId);
+    }
+
+    private async Task ManageAsync(Func<Task> action)
+    {
+        openMenu = null;
+        actionError = null;
+        try
+        {
+            await action();
+        }
+        catch (CampaignRuleException ex)
+        {
+            actionError = ex.Message;
+            return;
+        }
+        thread = await Forum.GetThreadAsync(ThreadId, userId) ?? thread;
+        page = await ThreadService.GetPostsPageAsync(ThreadId, page!.Page, userId);
+        posts.Clear();
+        posts.AddRange(page.Posts);
+    }
+
+    private void StartRename()
+    {
+        openMenu = null;
+        newTitle = thread!.Title;
+        renaming = true;
+    }
+
+    private async Task RenameAsync()
+    {
+        await ManageAsync(() => Forum.RenameThreadAsync(ThreadId, userId, newTitle));
+        if (actionError is null)
+            renaming = false;
+    }
+
+    private async Task DeleteThreadAsync()
+    {
+        try
+        {
+            await Forum.DeleteThreadAsync(ThreadId, userId);
+        }
+        catch (CampaignRuleException ex)
+        {
+            actionError = ex.Message;
+            return;
+        }
+        NavigationManager.NavigateTo(ForumLinks.Forum);
+    }
+
+    private void ToggleMenu(string key) => openMenu = openMenu == key ? null : key;
+
+    private void CloseMenu() => openMenu = null;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (subscribed)
+        {
+            Notifier.PostCreated -= OnPostCreated;
+            Notifier.PostChanged -= OnPostChanged;
+        }
+        if (module is not null)
+        {
+            try
+            {
+                await module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+
+    private RenderFragment PostView(PostItem post) =>
+        @<article id="post-@post.Id" class="thread-post @(post.Id == PostQuery ? "post-target" : "") @(post.IsDeleted ? "post-is-deleted" : "") @(post.IsHidden ? "post-is-hidden" : "")">
+            <div class="post-avatar">
+                @if (post.IsDeleted)
+                {
+                    <span class="post-avatar-deleted" aria-hidden="true"></span>
+                }
+                else if (!post.AuthorIsDeleted)
+                {
+                    <a href="@UserLinks.Profile(post.AuthorId)" class="post-avatar-link" tabindex="-1" aria-hidden="true">
+                        <Avatar Name="@post.AuthorName" ImageUrl="@post.AuthorAvatarUrl" ColorKey="@post.AuthorId" Size="56" />
+                    </a>
+                }
+                else
+                {
+                    <Avatar Name="@post.AuthorName" ColorKey="@post.AuthorId" Size="56" />
+                }
+            </div>
+            <div class="post-body">
+                @if (post.IsDeleted)
+                {
+                    <div class="text-secondary fst-italic post-deleted">This post was deleted.</div>
+                }
+                else
+                {
+                    <header class="post-header">
+                        <span class="post-meta">
+                        @if (post.AuthorIsDeleted)
+                        {
+                            <strong class="post-author">@post.AuthorName</strong>
+                        }
+                        else
+                        {
+                            <a class="post-author post-author-link" href="@UserLinks.Profile(post.AuthorId)">@post.AuthorName</a>
+                        }
+                        <a class="text-secondary small post-time" href="@ForumLinks.Post(ThreadId, post.Id)" title="@Dates.DateTime(post.CreatedAt)">
+                            <time datetime="@post.CreatedAt.ToString("o")">@Dates.Relative(post.CreatedAt, now)</time>
+                        </a>
+                        @if (post.EditedAt is { } editedAt)
+                        {
+                            <span class="small text-secondary post-edited" title="Edited @Dates.DateTime(editedAt)">(edited)</span>
+                        }
+                        @if (copiedPostId == post.Id)
+                        {
+                            <span class="small text-success" role="status">Link copied</span>
+                        }
+                        </span>
+                        @if (thread!.CanReply)
+                        {
+                            <button type="button" class="btn btn-sm btn-link post-action ms-auto" title="Reply" aria-label="Reply"
+                                    @onclick="() => ReplyAsync(post)"><Icon Name="reply" /></button>
+                        }
+                        <div class="menu-anchor @(thread!.CanReply ? "" : "ms-auto")">
+                            <button type="button" class="btn btn-sm btn-link post-menu-toggle" title="More" aria-label="More actions"
+                                    aria-expanded="@(openMenu == $"post-{post.Id}" ? "true" : "false")" @onclick="@(() => ToggleMenu($"post-{post.Id}"))">
+                                <Icon Name="three-dots" />
+                            </button>
+                            @if (openMenu == $"post-{post.Id}")
+                            {
+                                <div class="menu-backdrop" @onclick="CloseMenu"></div>
+                                <div class="action-menu border rounded shadow-sm" role="menu">
+                                    @if (thread!.CanReply && !post.IsHidden)
+                                    {
+                                        <button type="button" class="action-menu-item" role="menuitem" @onclick="() => QuoteAsync(post)"><Icon Name="quote" /> Quote</button>
+                                    }
+                                    @if (post.CanEdit)
+                                    {
+                                        <button type="button" class="action-menu-item" role="menuitem"
+                                                @onclick="() => { editingPostId = post.Id; confirmDeleteId = null; openMenu = null; }"><Icon Name="pencil" /> Edit</button>
+                                    }
+                                    <button type="button" class="action-menu-item" role="menuitem" @onclick="() => CopyLinkAsync(post)"><Icon Name="link" /> Copy link</button>
+                                    @if (post.CanDelete)
+                                    {
+                                        <button type="button" class="action-menu-item text-danger" role="menuitem"
+                                                @onclick="() => { confirmDeleteId = post.Id; editingPostId = null; openMenu = null; }"><Icon Name="trash" /> Delete</button>
+                                    }
+                                    @if (post.CanReport)
+                                    {
+                                        <button type="button" class="action-menu-item post-report-item" role="menuitem" @onclick="() => StartReport(post.Id)"><Icon Name="flag" /> Report</button>
+                                    }
+                                    @if (post.CanModerate && !post.IsHidden)
+                                    {
+                                        <button type="button" class="action-menu-item post-hide-item" role="menuitem" @onclick="() => StartHide(post.Id)"><Icon Name="eye-slash" /> Hide</button>
+                                    }
+                                    @if (post.CanModerate && post.IsHidden)
+                                    {
+                                        <button type="button" class="action-menu-item post-unhide-item" role="menuitem"
+                                                @onclick="() => ModeratePostAsync(post.Id, () => Moderation.UnhidePostAsync(post.Id, userId))"><Icon Name="eye" /> Show again</button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </header>
+                    @if (post.ReplyTo is { } reply)
+                    {
+                        <div class="small text-secondary post-reply"><Icon Name="reply" /> Replying to <a href="@ForumLinks.Post(ThreadId, reply.PostId)">@reply.Name</a></div>
+                    }
+                    @if (editingPostId == post.Id)
+                    {
+                        <MarkdownEditor @key="post.Id" MaxLength="ThreadLimits.PostMaxLength" DraftKey="" InitialText="@post.Content"
+                                        OnSubmit="@(content => SaveEditAsync(post.Id, content))" SubmitText="Save" Label="Edit post" Rows="5"
+                                        ShowSpoilerButton="true" RenderPreview="@(text => PostHtml.Render(Markdown, text))" />
+                        <button type="button" class="btn btn-sm btn-link px-0" @onclick="() => editingPostId = null">Cancel</button>
+                    }
+                    else
+                    {
+                        @if (post.IsHidden)
+                        {
+                            <div class="small text-secondary fst-italic post-hidden-notice">
+                                This post was hidden by a moderator.@if (post.HiddenReason is { } hiddenReason)
+                                {
+                                    <span class="post-hidden-reason"> Reason: @hiddenReason</span>
+                                }
+                            </div>
+                        }
+                        @if (post.Content.Trim().Length > 0)
+                        {
+                            <div class="post-content @(post.IsHidden ? "post-hidden-content" : "")">@PostHtml.Render(Markdown, post.Content)</div>
+                        }
+                        @if (reportedPostId == post.Id)
+                        {
+                            <div class="small text-success post-report-sent" role="status">Thank you. The report has been sent to the moderators.</div>
+                        }
+                        @if (reportingPostId == post.Id)
+                        {
+                            <div class="post-report-form border rounded p-2 mt-2">
+                                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                    <label class="small" for="report-reason-@post.Id">Why are you reporting this post?</label>
+                                    <select id="report-reason-@post.Id" class="form-select form-select-sm w-auto" @bind="reportReason">
+                                        @foreach (var reason in Enum.GetValues<ReportReason>())
+                                        {
+                                            <option value="@reason">@ModerationLimits.ReasonText(reason)</option>
+                                        }
+                                    </select>
+                                </div>
+                                <textarea class="form-control form-control-sm mb-2" rows="2" maxlength="@ModerationLimits.CommentMaxLength"
+                                          placeholder="Anything the moderators should know (optional)" aria-label="Comment" @bind="reportComment"></textarea>
+                                <button type="button" class="btn btn-sm btn-danger" @onclick="() => SendReportAsync(post.Id)">Send report</button>
+                                <button type="button" class="btn btn-sm btn-link" @onclick="() => reportingPostId = null">Cancel</button>
+                            </div>
+                        }
+                        @if (hidingPostId == post.Id)
+                        {
+                            <div class="post-hide-form border rounded p-2 mt-2">
+                                <input class="form-control form-control-sm mb-2" maxlength="@ModerationLimits.ReasonMaxLength"
+                                       placeholder="Reason, shown to the author (optional)" aria-label="Reason for hiding" @bind="hideReason" />
+                                <button type="button" class="btn btn-sm btn-warning" @onclick="() => ModeratePostAsync(post.Id, () => Moderation.HidePostAsync(post.Id, userId, hideReason))">Hide post</button>
+                                <button type="button" class="btn btn-sm btn-link" @onclick="() => hidingPostId = null">Cancel</button>
+                            </div>
+                        }
+                        @if (confirmDeleteId == post.Id)
+                        {
+                            <div class="small post-confirm-delete">
+                                Delete this post?
+                                <button type="button" class="btn btn-sm btn-danger py-0 ms-1" @onclick="() => DeleteAsync(post.Id)">Yes, delete</button>
+                                <button type="button" class="btn btn-sm btn-link py-0" @onclick="() => confirmDeleteId = null">Cancel</button>
+                            </div>
+                        }
+                    }
+                }
+            </div>
+        </article>;
+}

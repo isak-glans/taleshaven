@@ -1,4 +1,4 @@
-/* Inläggen som ljusa kort med runda porträtt (B35, B36). */
+/* Forumtrådens inlägg (B72) ser ut som i kampanjernas trådar; stilarna är kopierade från ThreadPage.razor.css. */
 .thread-post {
     background: var(--bs-body-bg);
     border: 1px solid var(--bs-border-color-translucent);
@@ -56,11 +56,20 @@
     width: 2rem;
 }
 
+/* Namn och tid radbryts inom .post-meta; Reply och "…" stannar till höger på första raden. */
 .post-header {
     align-items: center;
     display: flex;
-    flex-wrap: wrap;
     gap: 0.4rem;
+}
+
+.post-meta {
+    align-items: baseline;
+    column-gap: 0.4rem;
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    min-width: 0;
 }
 
 .post-time {
@@ -163,71 +172,6 @@
     flex: 1;
 }
 
-.thread-composer {
-    border-top: 1px solid var(--bs-border-color);
-    padding-top: 0.75rem;
-}
-
-/* Tärningsslag i skrivfältet (B42): formel, beskrivning, fördel/nackdel och ta bort på en rad. */
-.roll-editor {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-}
-
-.roll-row {
-    align-items: center;
-    display: grid;
-    gap: 0.35rem;
-    grid-template-columns: auto 7rem minmax(8rem, 1fr) 9.5rem auto;
-}
-
-.roll-row .roll-error {
-    grid-column: 2 / -1;
-}
-
-@media (max-width: 575.98px) {
-    .roll-row {
-        grid-template-columns: auto 1fr 1fr auto;
-    }
-
-    .roll-row .roll-label {
-        grid-column: 2 / 4;
-        grid-row: 2;
-    }
-
-    .roll-row .roll-mode {
-        grid-column: 3;
-        grid-row: 1;
-    }
-}
-
-/* Spelarens namn bredvid karaktären leder till profilsidan (B52). */
-a.post-player {
-    text-decoration: none;
-}
-
-a.post-player:hover {
-    text-decoration: underline;
-}
-
-/* Den valda karaktärens sparade slag i skrivfältet (B57). */
-.saved-roll-picker {
-    align-items: center;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-}
-
-.saved-roll-search {
-    max-width: 12rem;
-}
-
-.saved-roll-icon {
-    border-radius: 50%;
-    vertical-align: -0.25em;
-}
-
 /* Dolda inlägg (B70): moderatorerna ser texten nedtonad med en gul kant. */
 .post-hidden-content {
     border-left: 3px solid var(--bs-warning);
@@ -265,7 +209,6 @@ a.post-player:hover {
 
     .thread-post ::deep .post-body > .post-header {
         align-self: center;
-        flex-wrap: wrap;
         grid-column: 2;
         row-gap: 0;
     }

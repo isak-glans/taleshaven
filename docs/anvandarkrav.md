@@ -613,6 +613,30 @@ och ikoner, och alla väljer därifrån.
 
 ---
 
+## 13a. Forumet
+
+Ett allmänt forum vid sidan av kampanjerna, för sådant som inte hör till en kampanj. Det använder samma inlägg som
+trådarna (Markdown, citat, svar, spoilers, bildlänkar, sidor, olästa, rapporter, dolda inlägg) men utan tärningsslag,
+karaktärer och *Post as*.
+
+- **FO-1 Kategorier:** forumet är indelat i kategorier (namn, beskrivning, ordning). Den första, *General* ("News,
+  questions and everything that isn't part of a campaign."), skapas vid installationen.
+- **FO-2 Forumsidan** (`/forum`, inloggade; *Forum* överst i sidomenyn): kategorierna med sina trådar, fästa först och
+  sedan senast aktiva. Varje tråd visar titel, märkena *Locked* och olästa, antal inlägg och senaste författare och tid.
+- **FO-3 Skapa tråd** (bara administratörer och managers, `/forum/new`): kategori, titel och första inlägg. Andra får 404.
+- **FO-4 Svara:** alla inloggade som inte är avstängda svarar, citerar och svarar på enskilda inlägg. Författaren
+  redigerar och tar bort sina inlägg; moderatorerna kan också ta bort och dölja andras.
+- **FO-5 Fästa och låsa** (administratörer och managers, i trådens "…"-meny): en fäst tråd ligger alltid överst. En låst
+  tråd kan läsas men bara administratörer och managers skriver i den, och inläggen kan inte redigeras. Samma meny
+  har *Rename* och *Delete thread* (med bekräftelse; inläggen tas bort med tråden).
+- **FO-6 Rapporter** på foruminlägg går till sajtens moderatorer (det finns ingen GM) och visas på moderationssidan som
+  "Forum › trådens titel".
+- **FO-7 Starttrådar:** *Welcome to Taleshaven – introduce yourself* (fäst), *FAQ – frequently asked questions* (fäst,
+  låst), *Rules* (fäst, låst, länk till `/rules`), *Looking for players and campaigns*, *Suggestions and feedback* och
+  *Bug reports*.
+
+---
+
 ## 14. Administration (sajtens roller)
 
 - **AD-1 Rollsidan** (bara administratörer): lista över alla med rollen Administratör eller Manager, och
@@ -694,6 +718,7 @@ Tabellerna nedan räcker för allt i dokumentet. Namnen är förslag. Tider spar
 users ──< campaign_memberships >── campaigns
 users ──< campaign_applications >── campaigns
 campaigns ──< threads ──< posts ──< post_rolls
+forum_categories ──< threads (forumtrådar, utan kampanj)
 campaigns ──< characters ──< posts (valfri karaktär)
 posts ──< post_revisions
 posts ── reply_to? (posts)
@@ -709,7 +734,8 @@ users ──< user_roles
 | campaigns | id, name, description, game_master_id, max_players, status (`open` / `ongoing` / `closed` / `archived`), tags, default_roll (standard `1d20`), created_at, updated_at |
 | campaign_memberships | campaign_id, user_id, joined_at |
 | campaign_applications | id, campaign_id, user_id, message, status (`pending` / `approved` / `rejected` / `withdrawn`), submitted_at, decided_at, decided_by |
-| threads | id, campaign_id, title, status (`active` / `completed`), position, created_by, created_at, updated_at |
+| forum_categories | id, name, description, position |
+| threads | id, campaign_id (null för forumtrådar), category_id (null för kampanjtrådar; exakt en av dem är satt), is_pinned, is_locked, title, status (`active` / `completed`), position, created_by, created_at, updated_at |
 | posts | id, thread_id, author_id, character_id (null), deleted_character_name (null), content, reply_to_post_id (null), created_at, edited_at (null), deleted_at (null), deleted_by (null) |
 | post_rolls | post_id, sort_order, notation, label (null), count, sides, modifier, mode (`normal` / `advantage` / `disadvantage`), results (t.ex. `"4,18"` eller JSON), total |
 | post_revisions | id, post_id, content, written_at, replaced_at |
@@ -755,6 +781,9 @@ Kommentarer:
 | `/campaigns/{id}/players` | Spelare och ansökningar |
 | `/portraits` | Bildbiblioteket, *Image library* (manager, administratör) |
 | `/admin/roles` | Roller (administratör) |
+| `/forum` | Forumet |
+| `/forum/new` | Ny forumtråd (manager, administratör) |
+| `/forum/threads/{id}` | Forumtråd (`?page=N`, `?post=N`) |
 | `/moderation` | Moderering (moderatorer och GM) |
 | `/rules` | Regler (alla) |
 | `/media/images/{key}` | Bild ur biblioteket (inloggad) |
@@ -766,8 +795,8 @@ inte skickar formuläret igen. Okända adresser och sådant man inte får se ger
 
 ## 18. Utseende och tillgänglighet
 
-- **UT-1:** Sajten har en sidomeny (mörk, med *Campaigns*, *Create campaign*, *Portraits*/*Roles* för de som har
-  rollen, användarens namn och *Log out*) och innehållet till höger. På mobil fälls menyn ihop.
+- **UT-1:** Sajten har en sidomeny (mörk, med *Forum* (inloggade), *Campaigns*, *Create campaign*, *Portraits*/*Roles* för de som har
+  rollen, användarens namn och *Log out*) och innehållet till höger. På mobil fälls menyn ihop. Mellan 641 och 1199 px bredd är menyn en smal rad med bara ikoner (namnet som `title`).
 - **UT-2:** Alla sidor fungerar på mobil, utan horisontell scroll. Under 576 px bredd: inläggens porträtt är 40 px och
   står bredvid namnet medan texten tar hela bredden under; räknare bryts på två rader; fält har minst 16 px text
   (annars zoomar iPhone in när man trycker i dem).

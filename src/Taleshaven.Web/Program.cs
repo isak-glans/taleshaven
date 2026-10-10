@@ -82,6 +82,8 @@ try
         ? Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, builder.Configuration["Storage:InboxPath"] ?? "../../assets/new_images"))
         : null;
     await ImageLibrarySync.RunAsync(app.Services, inbox, adminEmails);
+    // Forumets starttrådar (B72) läggs in en gång, när det finns en administratör.
+    await Taleshaven.Infrastructure.Forum.ForumSeed.SeedAsync(app.Services, adminEmails);
 }
 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Microsoft.EntityFrameworkCore.DbUpdateException)
 {

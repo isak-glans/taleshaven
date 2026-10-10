@@ -23,6 +23,7 @@ public class TaleshavenDbContext(DbContextOptions<TaleshavenDbContext> options) 
     public DbSet<PostReport> PostReports => Set<PostReport>();
     public DbSet<ModerationAction> ModerationActions => Set<ModerationAction>();
     public DbSet<UserNotice> UserNotices => Set<UserNotice>();
+    public DbSet<Taleshaven.Core.Forum.ForumCategory> ForumCategories => Set<Taleshaven.Core.Forum.ForumCategory>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

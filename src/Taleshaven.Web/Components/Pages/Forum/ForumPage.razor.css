@@ -1,0 +1,18 @@
+/* Trådens rad i forumet (B72): nål, titel och märken flyter som text, så att en lång titel radbryts naturligt. */
+.forum-thread-head .badge {
+    margin-left: 0.35rem;
+    vertical-align: 0.1em;
+}
+
+.forum-pin-icon {
+    color: var(--bs-secondary-color);
+    margin-right: 0.3rem;
+}
+
+.forum-thread-title {
+    text-decoration: none;
+}
+
+.forum-thread-title:hover {
+    text-decoration: underline;
+}

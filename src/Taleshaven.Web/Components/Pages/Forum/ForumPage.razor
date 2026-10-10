@@ -1,0 +1,83 @@
+@page "/forum"
+@attribute [Authorize]
+
+@using Taleshaven.Core.Forum
+
+@* Forumet (B72): kategorierna med sina trådar, fästa först och sedan senaste aktivitet. Administratörer och managers
+   skapar trådar; alla inloggade svarar. *@
+
+@inject IForumService Forum
+
+@if (forum is null)
+{
+    return;
+}
+
+<PageTitle>Forum</PageTitle>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0 me-auto">Forum</h1>
+    @if (forum.CanManage)
+    {
+        <a class="btn btn-primary btn-sm forum-new-thread" href="forum/new">+ New thread</a>
+    }
+</div>
+
+@foreach (var category in forum.Categories)
+{
+    <section class="mb-4 forum-category" data-category-id="@category.Id">
+        <h2 class="h5 mb-1">@category.Name</h2>
+        <p class="text-secondary small mb-2">@category.Description</p>
+        @if (category.Threads.Count == 0)
+        {
+            <p class="text-secondary">No threads yet.</p>
+        }
+        else
+        {
+            <ul class="list-group forum-threads">
+                @foreach (var thread in category.Threads)
+                {
+                    <li class="list-group-item forum-thread @(thread.IsPinned ? "forum-thread-pinned" : "")" data-thread-id="@thread.Id">
+                        <div class="forum-thread-head">
+                            @if (thread.IsPinned)
+                            {
+                                <span class="forum-pin-icon" title="Pinned" aria-label="Pinned"><Icon Name="pin" /></span>
+                            }
+                            <a class="forum-thread-title fw-semibold" href="@ForumLinks.Thread(thread.Id)">@thread.Title</a>
+                            @if (thread.IsLocked)
+                            {
+                                <span class="badge text-bg-light border" title="Only administrators and managers can post here"><Icon Name="lock" Size="12" /> Locked</span>
+                            }
+                            @if (thread.UnreadCount > 0)
+                            {
+                                <span class="badge rounded-pill text-bg-danger forum-unread">@UnreadDisplay.Format(thread.UnreadCount) new</span>
+                            }
+                        </div>
+                        <div class="small text-secondary d-flex flex-wrap align-items-center gap-1 mt-1">
+                            <span>@thread.PostCount @(thread.PostCount == 1 ? "post" : "posts")</span>
+                            @if (thread.LatestAt is { } latestAt)
+                            {
+                                <span>· Latest:</span>
+                                <Avatar Name="@(thread.LatestAuthorName ?? "?")" ImageUrl="@thread.LatestAuthorAvatarUrl" ColorKey="@thread.Id.ToString()" Size="18" />
+                                <span>@thread.LatestAuthorName · @Dates.Relative(latestAt, DateTimeOffset.UtcNow)</span>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private ForumOverview? forum;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = (await AuthenticationState).User.GetUserId() ?? "";
+        forum = await Forum.GetForumAsync(userId);
+    }
+}

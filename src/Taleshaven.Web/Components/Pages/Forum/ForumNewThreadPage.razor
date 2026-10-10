@@ -1,0 +1,74 @@
+@page "/forum/new"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Taleshaven.Core.Forum
+
+@* En ny forumtråd (B72): titel och första inlägg. Bara administratörer och managers. *@
+
+@inject IForumService Forum
+@inject IMarkdownRenderer Markdown
+@inject NavigationManager NavigationManager
+
+@if (forum is null)
+{
+    return;
+}
+
+<PageTitle>New thread · Forum</PageTitle>
+
+<p class="small mb-2"><a href="forum">← Forum</a></p>
+<h1 class="h3">New thread</h1>
+
+<div class="mb-3" style="max-width: 44rem">
+    <label class="form-label" for="forum-category">Category</label>
+    <select id="forum-category" class="form-select mb-3" @bind="categoryId">
+        @foreach (var category in forum.Categories)
+        {
+            <option value="@category.Id">@category.Name</option>
+        }
+    </select>
+    <label class="form-label" for="forum-title">Title</label>
+    <input id="forum-title" class="form-control mb-3" maxlength="@ThreadLimits.TitleMaxLength" @bind="title" @bind:event="oninput" />
+    <MarkdownEditor MaxLength="ThreadLimits.PostMaxLength" DraftKey="forum-new" Label="First post" Rows="10"
+                    OnSubmit="CreateAsync" SubmitText="Create thread" ShowSpoilerButton="true"
+                    RenderPreview="@(text => PostHtml.Render(Markdown, text))" />
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private string userId = "";
+    private ForumOverview? forum;
+    private int categoryId;
+    private string title = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        userId = (await AuthenticationState).User.GetUserId() ?? "";
+        forum = await Forum.GetForumAsync(userId);
+        if (!forum.CanManage)
+        {
+            forum = null;
+            NavigationManager.NotFound();
+            return;
+        }
+        categoryId = forum.Categories.FirstOrDefault()?.Id ?? 0;
+    }
+
+    private async Task<string?> CreateAsync(string content)
+    {
+        int threadId;
+        try
+        {
+            threadId = await Forum.CreateThreadAsync(categoryId, userId, title, content);
+        }
+        catch (CampaignRuleException ex)
+        {
+            return ex.Message;
+        }
+        NavigationManager.NavigateTo(ForumLinks.Thread(threadId));
+        return null;
+    }
+}

@@ -13,7 +13,7 @@ internal sealed class ModerationService(
     ISiteRoleService siteRoles,
     TimeProvider timeProvider) : IModerationService
 {
-    public async Task ReportPostAsync(int campaignId, long postId, string userId, ReportReason reason, string? comment,
+    public async Task ReportPostAsync(int? campaignId, long postId, string userId, ReportReason reason, string? comment,
         CancellationToken cancellationToken = default)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
@@ -71,13 +71,14 @@ internal sealed class ModerationService(
                 from p in db.Posts
                 where postIds.Contains(p.Id)
                 join t in db.Threads on p.ThreadId equals t.Id
-                join c in db.Campaigns on t.CampaignId equals c.Id
+                join c in db.Campaigns on t.CampaignId equals (int?)c.Id into campaigns
+                from c in campaigns.DefaultIfEmpty()
                 join u in db.Users on p.AuthorId equals u.Id
                 join ch in db.Characters on p.CharacterId equals (int?)ch.Id into characters
                 from ch in characters.DefaultIfEmpty()
                 select new
                 {
-                    p.Id, CampaignId = c.Id, CampaignName = c.Name, ThreadId = t.Id, ThreadTitle = t.Title, p.AuthorId,
+                    p.Id, CampaignId = (int?)c.Id, CampaignName = c.Name ?? "Forum", ThreadId = t.Id, ThreadTitle = t.Title, p.AuthorId,
                     AuthorName = u.DisplayName, AuthorUserName = u.UserName, CharacterName = ch.Name ?? p.DeletedCharacterName,
                     p.Content, p.CreatedAt, p.HiddenAt, p.HiddenReason,
                 })
@@ -276,15 +277,17 @@ internal sealed class ModerationService(
                select r;
     }
 
-    private async Task<(Post Post, int CampaignId)> LoadModeratablePostAsync(TaleshavenDbContext db, long postId, string userId,
+    // Forumets inlägg (B72) har ingen kampanj och hanteras bara av moderatorerna.
+    private async Task<(Post Post, int? CampaignId)> LoadModeratablePostAsync(TaleshavenDbContext db, long postId, string userId,
         CancellationToken cancellationToken)
     {
         var row = await (
                 from p in db.Posts
                 where p.Id == postId
                 join t in db.Threads on p.ThreadId equals t.Id
-                join c in db.Campaigns on t.CampaignId equals c.Id
-                select new { Post = p, CampaignId = c.Id, c.GameMasterId })
+                join c in db.Campaigns on t.CampaignId equals (int?)c.Id into campaigns
+                from c in campaigns.DefaultIfEmpty()
+                select new { Post = p, CampaignId = (int?)c.Id, c.GameMasterId })
             .SingleOrDefaultAsync(cancellationToken)
             ?? throw new CampaignRuleException("The post doesn't exist.");
 

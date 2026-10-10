@@ -9,7 +9,7 @@
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">Taleshaven</a>
+        <a class="navbar-brand" href="" title="Taleshaven"><span class="brand-full">Taleshaven</span><span class="brand-short" aria-hidden="true">T</span></a>
     </div>
 </div>
 
@@ -17,24 +17,32 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
+        @* Forumet (B72) överst, för det som inte hör till en kampanj. *@
+        <AuthorizeView>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="forum" title="Forum">
+                    <span class="bi bi-chat-nav-menu" aria-hidden="true"></span> <span class="nav-label">Forum</span>
+                </NavLink>
+            </div>
+        </AuthorizeView>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Campaigns
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All" title="Campaigns">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> <span class="nav-label">Campaigns</span>
             </NavLink>
         </div>
 
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="campaigns/new">
-                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Create campaign
+                    <NavLink class="nav-link" href="campaigns/new" title="Create campaign">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> <span class="nav-label">Create campaign</span>
                     </NavLink>
                 </div>
                 @if (SitePermissions.CanManagePortraits(siteRoles))
                 {
                     <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="portraits">
-                            <span class="bi bi-image-nav-menu" aria-hidden="true"></span> Image library
+                        <NavLink class="nav-link" href="portraits" title="Image library">
+                            <span class="bi bi-image-nav-menu" aria-hidden="true"></span> <span class="nav-label">Image library</span>
                         </NavLink>
                     </div>
                 }
@@ -42,8 +50,8 @@
                 {
                     @* Rapporter och moderering (B70): sajtens moderatorer och den som är GM; märket visar öppna rapporter. *@
                     <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="moderation">
-                            <span class="bi bi-flag-nav-menu" aria-hidden="true"></span> Moderation
+                        <NavLink class="nav-link" href="moderation" title="Moderation">
+                            <span class="bi bi-flag-nav-menu" aria-hidden="true"></span> <span class="nav-label">Moderation</span>
                             @if (openReports > 0)
                             {
                                 <span class="badge rounded-pill text-bg-danger ms-2 moderation-badge" title="Open reports">@openReports</span>
@@ -54,46 +62,46 @@
                 @if (SitePermissions.CanManageRoles(siteRoles))
                 {
                     <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="admin/roles">
-                            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Roles
+                        <NavLink class="nav-link" href="admin/roles" title="Roles">
+                            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> <span class="nav-label">Roles</span>
                         </NavLink>
                     </div>
                 }
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link nav-profile" href="Account/Manage">
+                    <NavLink class="nav-link nav-profile" href="Account/Manage" title="@context.User.GetDisplayName()">
                         @* Profilbilden eller initialerna (B50) i stället för en ikon. *@
                         <span class="nav-avatar" aria-hidden="true">
                             <Avatar Name="@context.User.GetDisplayName()" ImageUrl="@context.User.GetAvatarUrl()" ColorKey="@(context.User.GetUserId() ?? "")" Size="24" />
                         </span>
-                        @context.User.GetDisplayName()
+                        <span class="nav-label">@context.User.GetDisplayName()</span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <form action="Account/Logout" method="post">
                         <AntiforgeryToken />
                         <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <button type="submit" class="nav-link">
-                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Log out
+                        <button type="submit" class="nav-link" title="Log out">
+                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> <span class="nav-label">Log out</span>
                         </button>
                     </form>
                 </div>
             </Authorized>
             <NotAuthorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Register">
-                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Create account
+                    <NavLink class="nav-link" href="Account/Register" title="Create account">
+                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> <span class="nav-label">Create account</span>
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Login">
-                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Log in
+                    <NavLink class="nav-link" href="Account/Login" title="Log in">
+                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> <span class="nav-label">Log in</span>
                     </NavLink>
                 </div>
             </NotAuthorized>
         </AuthorizeView>
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="rules">
-                <span class="bi bi-book-nav-menu" aria-hidden="true"></span> Rules
+            <NavLink class="nav-link" href="rules" title="Rules">
+                <span class="bi bi-book-nav-menu" aria-hidden="true"></span> <span class="nav-label">Rules</span>
             </NavLink>
         </div>
     </nav>
