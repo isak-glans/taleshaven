@@ -1,5 +1,9 @@
 @inherits LayoutComponentBase
 
+@* Toppraden över hela bredden, menyn till vänster och innehållet till höger (B75). På mobil fälls menyn ut under
+   toppraden med hamburgerknappen, som styr kryssrutan nedan (utan JavaScript). *@
+<input type="checkbox" id="nav-toggle" class="nav-toggle" aria-label="Show menu" />
+<AppHeader />
 <div class="page">
     <div class="sidebar">
         <NavMenu />

@@ -1,0 +1,317 @@
+/* Taleshavens utseende (B75): sagolikt i ramarna (toppraden, menyn, startsidan) men lugnt där man läser.
+   Färgerna är variabler för ljust och mörkt läge (data-bs-theme sätts av js/theme.js) och styr Bootstraps variabler,
+   så att Bootstraps komponenter och sidornas egna stilar följer med. Kontrasten håller WCAG AA för text. */
+
+/* Typsnitt (SIL Open Font License, se fonts/OFL-*.txt), på egen server så att inga anrop går till Google. */
+@font-face {
+    font-family: "Fraunces";
+    font-style: normal;
+    font-weight: 600 700;
+    font-display: swap;
+    src: url("../fonts/fraunces-latin.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "Fraunces";
+    font-style: normal;
+    font-weight: 600 700;
+    font-display: swap;
+    src: url("../fonts/fraunces-latin-ext.woff2") format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("../fonts/inter-latin.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("../fonts/inter-latin-ext.woff2") format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* --- Färger --- */
+:root,
+[data-bs-theme=light] {
+    --th-font-heading: "Fraunces", Georgia, "Times New Roman", serif;
+    --th-font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+
+    --th-page: #f4eee2;             /* sidans bakgrund: varm krämvit */
+    --th-surface: #fffdf8;          /* kort, inlägg och fält */
+    --th-surface-2: #f6f0e4;        /* svag yta (hover, formulär i kort) */
+    --th-border: #e2d6c1;
+    --th-text: #1d2733;
+    --th-muted: #576170;            /* 5,6:1 mot krämvitt */
+    --th-primary: #1f6f78;          /* petrol */
+    --th-primary-rgb: 31, 111, 120;
+    --th-primary-hover: #185a62;
+    --th-on-primary: #ffffff;
+    --th-primary-subtle: #dcefee;
+    --th-link: #17636c;
+    --th-link-rgb: 23, 99, 108;
+    --th-gold: #c8963e;
+
+    --th-chrome: #13264a;           /* toppraden och menyn: djup marinblå */
+    --th-chrome-2: #0d1b36;
+    --th-chrome-accent: #1d5f68;
+    --th-chrome-text: #e9eef6;
+    --th-chrome-muted: #a9b6cc;
+    --th-chrome-active: rgba(68, 168, 172, 0.32);
+    --th-shadow: 0 1px 2px rgba(29, 39, 51, 0.06), 0 4px 14px rgba(29, 39, 51, 0.05);
+
+    --bs-body-font-family: var(--th-font-body);
+    --bs-body-bg: var(--th-surface);
+    --bs-body-bg-rgb: 255, 253, 248;
+    --bs-body-color: var(--th-text);
+    --bs-body-color-rgb: 29, 39, 51;
+    --bs-emphasis-color: #0f1822;
+    --bs-heading-color: #172230;
+    --bs-secondary-color: var(--th-muted);
+    --bs-secondary-rgb: 87, 97, 112;
+    --bs-tertiary-bg: var(--th-surface-2);
+    --bs-tertiary-bg-rgb: 246, 240, 228;
+    --bs-secondary-bg: #efe7d8;
+    --bs-border-color: var(--th-border);
+    --bs-border-color-translucent: rgba(120, 96, 60, 0.18);
+    --bs-primary: var(--th-primary);
+    --bs-primary-rgb: var(--th-primary-rgb);
+    --bs-primary-bg-subtle: var(--th-primary-subtle);
+    --bs-primary-border-subtle: #a9d3d3;
+    --bs-primary-text-emphasis: #0f454b;
+    --bs-link-color: var(--th-link);
+    --bs-link-color-rgb: var(--th-link-rgb);
+    --bs-link-hover-color: #0f454b;
+    --bs-link-hover-color-rgb: 15, 69, 75;
+    --bs-focus-ring-color: rgba(var(--th-primary-rgb), 0.3);
+    --bs-border-radius: 0.5rem;
+    --bs-border-radius-lg: 0.75rem;
+}
+
+[data-bs-theme=dark] {
+    --th-page: #0f1622;
+    --th-surface: #172131;
+    --th-surface-2: #1e2a3d;
+    --th-border: #2d3c53;
+    --th-text: #e8e3d9;
+    --th-muted: #a7b0bd;            /* 7:1 mot ytan */
+    --th-primary: #4fb3b9;
+    --th-primary-rgb: 79, 179, 185;
+    --th-primary-hover: #6fc6cb;
+    --th-on-primary: #08191c;
+    --th-primary-subtle: #173a40;
+    --th-link: #7dcfd3;
+    --th-link-rgb: 125, 207, 211;
+    --th-gold: #d9ab58;
+
+    --th-chrome: #0b1528;
+    --th-chrome-2: #070e1c;
+    --th-chrome-accent: #164a52;
+    --th-chrome-text: #e6ebf3;
+    --th-chrome-muted: #9aa7bd;
+    --th-chrome-active: rgba(79, 179, 185, 0.28);
+    --th-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.2);
+
+    --bs-body-bg: var(--th-surface);
+    --bs-body-bg-rgb: 23, 33, 49;
+    --bs-body-color: var(--th-text);
+    --bs-body-color-rgb: 232, 227, 217;
+    --bs-emphasis-color: #fbf8f2;
+    --bs-heading-color: #f3eee5;
+    --bs-secondary-color: var(--th-muted);
+    --bs-secondary-rgb: 167, 176, 189;
+    --bs-tertiary-bg: var(--th-surface-2);
+    --bs-tertiary-bg-rgb: 30, 42, 61;
+    --bs-secondary-bg: #24324a;
+    --bs-border-color: var(--th-border);
+    --bs-border-color-translucent: rgba(160, 180, 210, 0.16);
+    --bs-primary: var(--th-primary);
+    --bs-primary-rgb: var(--th-primary-rgb);
+    --bs-primary-bg-subtle: var(--th-primary-subtle);
+    --bs-primary-border-subtle: #2b6870;
+    --bs-primary-text-emphasis: #a5e1e4;
+    --bs-link-color: var(--th-link);
+    --bs-link-color-rgb: var(--th-link-rgb);
+    --bs-link-hover-color: #b0e6e8;
+    --bs-link-hover-color-rgb: 176, 230, 232;
+    --bs-focus-ring-color: rgba(var(--th-primary-rgb), 0.35);
+}
+
+/* --- Grund --- */
+body {
+    background-color: var(--th-page);
+    font-family: var(--th-font-body);
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4,
+.h1, .h2, .h3, .h4 {
+    font-family: var(--th-font-heading);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+/* Rubriker i inläggens Markdown följer brödtexten; sagotypsnittet är för sidornas egna rubriker. */
+.post-content h1, .post-content h2, .post-content h3, .post-content h4 {
+    font-family: var(--th-font-body);
+    letter-spacing: 0;
+}
+
+/* --- Bootstrap-komponenter i Taleshavens färger --- */
+.btn-primary {
+    --bs-btn-color: var(--th-on-primary);
+    --bs-btn-bg: var(--th-primary);
+    --bs-btn-border-color: var(--th-primary);
+    --bs-btn-hover-color: var(--th-on-primary);
+    --bs-btn-hover-bg: var(--th-primary-hover);
+    --bs-btn-hover-border-color: var(--th-primary-hover);
+    --bs-btn-active-color: var(--th-on-primary);
+    --bs-btn-active-bg: var(--th-primary-hover);
+    --bs-btn-active-border-color: var(--th-primary-hover);
+    --bs-btn-disabled-color: var(--th-on-primary);
+    --bs-btn-disabled-bg: var(--th-primary);
+    --bs-btn-disabled-border-color: var(--th-primary);
+    --bs-btn-focus-shadow-rgb: var(--th-primary-rgb);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--th-link);
+    --bs-btn-border-color: var(--th-primary);
+    --bs-btn-hover-color: var(--th-on-primary);
+    --bs-btn-hover-bg: var(--th-primary);
+    --bs-btn-hover-border-color: var(--th-primary);
+    --bs-btn-active-color: var(--th-on-primary);
+    --bs-btn-active-bg: var(--th-primary-hover);
+    --bs-btn-active-border-color: var(--th-primary-hover);
+    --bs-btn-disabled-color: var(--th-link);
+    --bs-btn-disabled-border-color: var(--th-primary);
+    --bs-btn-focus-shadow-rgb: var(--th-primary-rgb);
+}
+
+.btn-outline-secondary {
+    --bs-btn-color: var(--th-muted);
+    --bs-btn-border-color: var(--th-border);
+    --bs-btn-hover-color: var(--th-text);
+    --bs-btn-hover-bg: var(--th-surface-2);
+    --bs-btn-hover-border-color: var(--th-muted);
+    --bs-btn-active-color: var(--th-text);
+    --bs-btn-active-bg: var(--th-surface-2);
+    --bs-btn-active-border-color: var(--th-muted);
+}
+
+.btn-light {
+    --bs-btn-bg: var(--th-surface-2);
+    --bs-btn-border-color: var(--th-border);
+    --bs-btn-color: var(--th-text);
+    --bs-btn-hover-bg: var(--bs-secondary-bg);
+    --bs-btn-hover-border-color: var(--th-border);
+    --bs-btn-hover-color: var(--th-text);
+}
+
+.btn {
+    --bs-btn-border-radius: 0.5rem;
+    --bs-btn-font-weight: 500;
+}
+
+.btn-link {
+    --bs-btn-color: var(--th-link);
+    --bs-btn-hover-color: var(--bs-link-hover-color);
+}
+
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus,
+.btn:focus-visible {
+    border-color: rgba(var(--th-primary-rgb), 0.7);
+    box-shadow: 0 0 0 0.2rem rgba(var(--th-primary-rgb), 0.28);
+    outline: 0;
+}
+
+.form-check-input:checked {
+    background-color: var(--th-primary);
+    border-color: var(--th-primary);
+}
+
+.form-control,
+.form-select {
+    border-color: var(--th-border);
+}
+
+.pagination {
+    --bs-pagination-color: var(--th-link);
+    --bs-pagination-hover-color: var(--bs-link-hover-color);
+    --bs-pagination-focus-color: var(--bs-link-hover-color);
+    --bs-pagination-focus-box-shadow: 0 0 0 0.2rem rgba(var(--th-primary-rgb), 0.28);
+    --bs-pagination-active-bg: var(--th-primary);
+    --bs-pagination-active-border-color: var(--th-primary);
+    --bs-pagination-active-color: var(--th-on-primary);
+}
+
+.nav-tabs {
+    --bs-nav-tabs-link-active-bg: var(--th-surface);
+    --bs-nav-tabs-link-active-border-color: var(--th-border) var(--th-border) var(--th-surface);
+    --bs-nav-tabs-border-color: var(--th-border);
+}
+
+.nav-pills {
+    --bs-nav-pills-link-active-bg: var(--th-primary);
+    --bs-nav-pills-link-active-color: var(--th-on-primary);
+}
+
+.list-group {
+    --bs-list-group-active-bg: var(--th-primary);
+    --bs-list-group-active-border-color: var(--th-primary);
+    --bs-list-group-active-color: var(--th-on-primary);
+    --bs-list-group-border-color: var(--th-border);
+}
+
+/* Kort och listor: mjuka hörn och en svag skugga, som i sagoboken (B75). */
+.card,
+.list-group:not(.list-group-flush) {
+    border-color: var(--th-border);
+    box-shadow: var(--th-shadow);
+}
+
+.card {
+    --bs-card-border-radius: 0.75rem;
+    --bs-card-cap-bg: var(--th-surface-2);
+}
+
+.alert {
+    --bs-alert-border-radius: 0.6rem;
+}
+
+/* Ljusa märken (t.ex. Locked, Pinned) behöver mörk text även i mörkt läge. */
+[data-bs-theme=dark] .text-bg-light {
+    background-color: var(--th-surface-2) !important;
+    color: var(--th-text) !important;
+}
+
+[data-bs-theme=dark] .btn-light {
+    --bs-btn-bg: var(--th-surface-2);
+    --bs-btn-color: var(--th-text);
+    --bs-btn-hover-bg: var(--bs-secondary-bg);
+    --bs-btn-hover-color: var(--th-text);
+}
+
+/* Mörka märken (t.ex. GM) blir ljusa i mörkt läge, så att de syns mot den mörka ytan. */
+[data-bs-theme=dark] .text-bg-dark,
+[data-bs-theme=dark] .badge.bg-dark {
+    background-color: #e8e3d9 !important;
+    color: #121a26 !important;
+}
+
+/* Små rubriker (h5, h6 och .h5/.h6 på andra rubriker) har brödtextens typsnitt; sagotypsnittet är för de stora. */
+h5, h6,
+.h5, .h6 {
+    font-family: var(--th-font-body);
+    letter-spacing: 0;
+}

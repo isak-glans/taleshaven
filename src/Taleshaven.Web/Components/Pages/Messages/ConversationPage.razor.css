@@ -12,7 +12,7 @@
 
 /* GM:s inlägg syns tydligt (P-5). */
 .post-gm {
-    border-left: 3px solid var(--bs-dark);
+    border-left: 3px solid var(--th-gold);
 }
 
 .post-target {

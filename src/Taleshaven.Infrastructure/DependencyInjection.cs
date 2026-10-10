@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IModerationService, ModerationService>();
         services.AddScoped<Taleshaven.Core.Forum.IForumService, Forum.ForumService>();
         services.AddScoped<Taleshaven.Core.Messages.IMessageService, Messages.MessageService>();
+        services.AddScoped<Taleshaven.Core.Notifications.INotificationService, Notifications.NotificationService>();
         services.AddScoped<ISiteRoleService>(provider =>
             new SiteRoleService(provider.GetRequiredService<IDbContextFactory<TaleshavenDbContext>>(), adminEmails));
         services.AddSingleton<IMarkdownRenderer, MarkdownRenderer>();

@@ -1,157 +1,96 @@
-@implements IDisposable
-
 @using Taleshaven.Core.Moderation
 @using Taleshaven.Core.Site
 
-@inject NavigationManager NavigationManager
+@* Sidomenyn (B75) i grupper: spela, gemenskapen och (för den som har rollen) sköta sajten. Namnet, profilen,
+   utloggningen och märkena för olästa finns i toppraden. Mellan 641 och 1199 px visas bara ikonerna (B74); på mobil
+   fälls menyn ut under toppraden. *@
+
 @inject ISiteRoleService RoleService
 @inject IModerationService Moderation
-@inject Taleshaven.Core.Messages.IMessageService Messages
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="" title="Taleshaven"><span class="brand-full">Taleshaven</span><span class="brand-short" aria-hidden="true">T</span></a>
-    </div>
-</div>
-
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        @* Forumet (B72) överst, för det som inte hör till en kampanj. *@
-        <AuthorizeView>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="forum" title="Forum">
-                    <span class="bi bi-chat-nav-menu" aria-hidden="true"></span> <span class="nav-label">Forum</span>
-                </NavLink>
-            </div>
-        </AuthorizeView>
+<div class="nav-scrollable" onclick="document.getElementById('nav-toggle').checked = false">
+    <nav class="nav flex-column" aria-label="Main">
+        <div class="nav-section">Play</div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All" title="Campaigns">
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> <span class="nav-label">Campaigns</span>
             </NavLink>
         </div>
-
         <AuthorizeView>
-            <Authorized>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="campaigns/new" title="Create campaign">
+                    <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> <span class="nav-label">Create campaign</span>
+                </NavLink>
+            </div>
+
+            <div class="nav-section">Community</div>
+            @* Forumet (B72) och privata meddelanden (B73). *@
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="forum" title="Forum">
+                    <span class="bi bi-chat-nav-menu" aria-hidden="true"></span> <span class="nav-label">Forum</span>
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="messages" title="Messages">
+                    <span class="bi bi-envelope-nav-menu" aria-hidden="true"></span> <span class="nav-label">Messages</span>
+                </NavLink>
+            </div>
+
+            @if (canModerate || SitePermissions.CanManagePortraits(siteRoles) || SitePermissions.CanManageRoles(siteRoles))
+            {
+                <div class="nav-section">Manage</div>
+            }
+            @if (canModerate)
+            {
+                @* Rapporter och moderering (B70): sajtens moderatorer och den som är GM. Antalet öppna rapporter syns i klockan. *@
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="campaigns/new" title="Create campaign">
-                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> <span class="nav-label">Create campaign</span>
+                    <NavLink class="nav-link" href="moderation" title="Moderation">
+                        <span class="bi bi-flag-nav-menu" aria-hidden="true"></span> <span class="nav-label">Moderation</span>
                     </NavLink>
                 </div>
-                @* Privata meddelanden (B73); märket visar konversationer med olästa meddelanden. *@
+            }
+            @if (SitePermissions.CanManagePortraits(siteRoles))
+            {
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="messages" title="Messages">
-                        <span class="bi bi-envelope-nav-menu" aria-hidden="true"></span> <span class="nav-label">Messages</span>
-                        @if (unreadConversations > 0)
-                        {
-                            <span class="badge rounded-pill text-bg-danger ms-2 messages-badge" title="Conversations with new messages">@unreadConversations</span>
-                        }
+                    <NavLink class="nav-link" href="portraits" title="Image library">
+                        <span class="bi bi-image-nav-menu" aria-hidden="true"></span> <span class="nav-label">Image library</span>
                     </NavLink>
                 </div>
-                @if (SitePermissions.CanManagePortraits(siteRoles))
-                {
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="portraits" title="Image library">
-                            <span class="bi bi-image-nav-menu" aria-hidden="true"></span> <span class="nav-label">Image library</span>
-                        </NavLink>
-                    </div>
-                }
-                @if (canModerate)
-                {
-                    @* Rapporter och moderering (B70): sajtens moderatorer och den som är GM; märket visar öppna rapporter. *@
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="moderation" title="Moderation">
-                            <span class="bi bi-flag-nav-menu" aria-hidden="true"></span> <span class="nav-label">Moderation</span>
-                            @if (openReports > 0)
-                            {
-                                <span class="badge rounded-pill text-bg-danger ms-2 moderation-badge" title="Open reports">@openReports</span>
-                            }
-                        </NavLink>
-                    </div>
-                }
-                @if (SitePermissions.CanManageRoles(siteRoles))
-                {
-                    <div class="nav-item px-3">
-                        <NavLink class="nav-link" href="admin/roles" title="Roles">
-                            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> <span class="nav-label">Roles</span>
-                        </NavLink>
-                    </div>
-                }
+            }
+            @if (SitePermissions.CanManageRoles(siteRoles))
+            {
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link nav-profile" href="Account/Manage" title="@context.User.GetDisplayName()">
-                        @* Profilbilden eller initialerna (B50) i stället för en ikon. *@
-                        <span class="nav-avatar" aria-hidden="true">
-                            <Avatar Name="@context.User.GetDisplayName()" ImageUrl="@context.User.GetAvatarUrl()" ColorKey="@(context.User.GetUserId() ?? "")" Size="24" />
-                        </span>
-                        <span class="nav-label">@context.User.GetDisplayName()</span>
+                    <NavLink class="nav-link" href="admin/roles" title="Roles">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> <span class="nav-label">Roles</span>
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
-                    <form action="Account/Logout" method="post">
-                        <AntiforgeryToken />
-                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <button type="submit" class="nav-link" title="Log out">
-                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> <span class="nav-label">Log out</span>
-                        </button>
-                    </form>
-                </div>
-            </Authorized>
-            <NotAuthorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Register" title="Create account">
-                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> <span class="nav-label">Create account</span>
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Login" title="Log in">
-                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> <span class="nav-label">Log in</span>
-                    </NavLink>
-                </div>
-            </NotAuthorized>
+            }
         </AuthorizeView>
+
+        <div class="nav-section nav-section-end" aria-hidden="true"></div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="rules" title="Rules">
                 <span class="bi bi-book-nav-menu" aria-hidden="true"></span> <span class="nav-label">Rules</span>
             </NavLink>
         </div>
     </nav>
+    <p class="nav-motto">Different worlds.<br />Same table.</p>
 </div>
 
 @code {
-    private string? currentUrl;
     private IReadOnlySet<SiteRole> siteRoles = new HashSet<SiteRole>();
     private bool canModerate;
-    private int openReports;
-    private int unreadConversations;
 
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
-        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        NavigationManager.LocationChanged += OnLocationChanged;
-
         // Sajtroller läses från databasen vid varje sidvisning, så att en ny roll syns utan att man loggar in igen (B18).
         if ((await AuthenticationState).User.GetUserId() is { } userId)
         {
             siteRoles = await RoleService.GetRolesAsync(userId);
             canModerate = await Moderation.CanSeeModerationAsync(userId);
-            if (canModerate)
-                openReports = await Moderation.CountOpenAsync(userId);
-            unreadConversations = await Messages.CountUnreadConversationsAsync(userId);
         }
-    }
-
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
-        StateHasChanged();
-    }
-
-    public void Dispose()
-    {
-        NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }

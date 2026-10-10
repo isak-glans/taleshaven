@@ -824,8 +824,16 @@ inte skickar formuläret igen. Okända adresser och sådant man inte får se ger
 
 ## 18. Utseende och tillgänglighet
 
-- **UT-1:** Sajten har en sidomeny (mörk, med *Forum* (inloggade), *Campaigns*, *Create campaign*, *Messages* (inloggade, med märke för olästa), *Portraits*/*Roles* för de som har
-  rollen, användarens namn och *Log out*) och innehållet till höger. På mobil fälls menyn ihop. Mellan 641 och 1199 px bredd är menyn en smal rad med bara ikoner (namnet som `title`).
+- **UT-1:** Överst en **topprad** (64 px, mörkblå) med logotyp och namn till vänster och till höger en **klocka** (det
+  som väntar: olästa inlägg per kampanj, konversationer med olästa meddelanden, ansökningar för GM, öppna rapporter för
+  moderatorer och GM; ett klick visar listan med länkar) och **profilbilden** med en meny (*My profile*, *Account
+  settings*, *Messages*, ljust/mörkt/auto, *Log out*). Besökare ser *Log in* och *Create account*. Till vänster en
+  **sidomeny** i grupper: *Play* (Campaigns, Create campaign), *Community* (Forum, Messages), *Manage* (för dem som har
+  rollen) och *Rules*. Mellan 641 och 1199 px visar sidomenyn bara ikoner; på mobil öppnas den med en knapp i toppraden.
+- **UT-1b Utseende:** varm krämvit bakgrund, ljusa kort med mjuka hörn, mörkblå ramar och petrol som accentfärg.
+  Rubriker i ett serift typsnitt med sagokänsla, text i ett lättläst sans-serif. Trådarnas läsyta hålls lugn.
+  **Mörkt läge** följer datorns inställning och kan väljas i profilmenyn; valet sparas i webbläsaren. Kontrasten håller
+  WCAG AA i båda lägena. Logotyp och illustrationer läggs in som filer på fasta platser.
 - **UT-2:** Alla sidor fungerar på mobil, utan horisontell scroll. Under 576 px bredd: inläggens porträtt är 40 px och
   står bredvid namnet medan texten tar hela bredden under; räknare bryts på två rader; fält har minst 16 px text
   (annars zoomar iPhone in när man trycker i dem).

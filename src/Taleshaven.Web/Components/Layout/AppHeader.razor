@@ -1,0 +1,160 @@
+@using Taleshaven.Core.Notifications
+
+@* Toppraden (B75): logotyp och namn till vänster; klockan med det som väntar och profilmenyn till höger. Menyerna är
+   <details>, så att de fungerar utan JavaScript; js/theme.js stänger dem vid klick utanför och sätter ljust/mörkt läge.
+   Logotypen (img/brand/logo.svg) och bakgrundsbilden (img/art/header.webp) används om filerna finns. *@
+
+@inject INotificationService Notifications
+@inject NavigationManager NavigationManager
+@inject IWebHostEnvironment Environment
+
+<header class="app-header @(HasArt ? "app-header-art" : "")">
+    @* Hamburgerknappen styr kryssrutan #nav-toggle i MainLayout (bara på mobil). *@
+    <label for="nav-toggle" class="header-hamburger" title="Menu" aria-label="Menu">
+        <span aria-hidden="true"></span>
+    </label>
+
+    <a class="header-brand" href="" title="Taleshaven">
+        @if (HasLogo)
+        {
+            <img class="header-logo" src="img/brand/logo.svg" alt="" width="40" height="40" />
+        }
+        else
+        {
+            <svg class="header-logo" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+                <circle cx="24" cy="24" r="17" fill="none" stroke="currentColor" stroke-width="1.6" opacity="0.55" />
+                <path d="M24 2 28 20 46 24 28 28 24 46 20 28 2 24 20 20Z" fill="currentColor" />
+                <path d="M24 2 28 20 24 24ZM46 24 28 28 24 24ZM24 46 20 28 24 24ZM2 24 20 20 24 24Z" fill="#000" opacity="0.18" />
+                <circle cx="24" cy="24" r="2.6" fill="#13264a" />
+            </svg>
+        }
+        <span class="header-name">Taleshaven</span>
+    </a>
+    <span class="header-tagline">Your next story begins here.</span>
+
+    <div class="header-actions">
+        <AuthorizeView>
+            <Authorized>
+                <details class="header-menu notifications-menu">
+                    <summary class="header-icon-button" title="Notifications" aria-label="@NotificationLabel">
+                        <Icon Name="bell" Size="20" />
+                        @if (summary.Total > 0)
+                        {
+                            <span class="header-badge notifications-badge">@UnreadDisplay.Format(summary.Total)</span>
+                        }
+                    </summary>
+                    <div class="header-dropdown notifications-dropdown">
+                        <div class="dropdown-title">Notifications</div>
+                        @if (summary.Total == 0)
+                        {
+                            <p class="dropdown-empty">You're all caught up.</p>
+                        }
+                        @if (summary.UnreadConversations > 0)
+                        {
+                            <a class="dropdown-item-row notification-messages" href="messages">
+                                <Icon Name="envelope" />
+                                <span class="flex-grow-1">@(summary.UnreadConversations == 1 ? "1 conversation" : $"{summary.UnreadConversations} conversations") with new messages</span>
+                            </a>
+                        }
+                        @if (summary.UnreadPosts.Count > 0)
+                        {
+                            <div class="dropdown-section">New posts</div>
+                            @foreach (var campaign in summary.UnreadPosts)
+                            {
+                                <a class="dropdown-item-row notification-posts" href="campaigns/@campaign.CampaignId">
+                                    <Icon Name="chat" />
+                                    <span class="flex-grow-1 text-truncate">@campaign.CampaignName</span>
+                                    <span class="badge rounded-pill text-bg-danger">@UnreadDisplay.Format(campaign.Count)</span>
+                                </a>
+                            }
+                        }
+                        @if (summary.PendingApplications.Count > 0)
+                        {
+                            <div class="dropdown-section">Applications</div>
+                            @foreach (var campaign in summary.PendingApplications)
+                            {
+                                <a class="dropdown-item-row notification-applications" href="campaigns/@campaign.CampaignId/players">
+                                    <Icon Name="people" />
+                                    <span class="flex-grow-1 text-truncate">@campaign.CampaignName</span>
+                                    <span class="badge rounded-pill text-bg-warning">@campaign.Count waiting</span>
+                                </a>
+                            }
+                        }
+                        @if (summary.OpenReports > 0)
+                        {
+                            <div class="dropdown-section">Moderation</div>
+                            <a class="dropdown-item-row notification-reports" href="moderation">
+                                <Icon Name="flag" />
+                                <span class="flex-grow-1">@(summary.OpenReports == 1 ? "1 reported post" : $"{summary.OpenReports} reported posts")</span>
+                            </a>
+                        }
+                    </div>
+                </details>
+
+                <details class="header-menu profile-menu">
+                    <summary class="header-profile" title="Your account">
+                        <Avatar Name="@context.User.GetDisplayName()" ImageUrl="@context.User.GetAvatarUrl()" ColorKey="@(context.User.GetUserId() ?? "")" Size="36" />
+                        <span class="header-user-name">@context.User.GetDisplayName()</span>
+                        <Icon Name="chevron-down" Size="12" Class="header-chevron" />
+                    </summary>
+                    <div class="header-dropdown profile-dropdown">
+                        <div class="dropdown-title text-truncate">@context.User.GetDisplayName()</div>
+                        <a class="dropdown-item-row" href="@UserLinks.Profile(context.User.GetUserId() ?? "")"><Icon Name="person" /> My profile</a>
+                        <a class="dropdown-item-row" href="Account/Manage"><Icon Name="gear" /> Account settings</a>
+                        <a class="dropdown-item-row" href="messages"><Icon Name="envelope" /> Messages</a>
+                        @ThemeChoice
+                        <form action="Account/Logout" method="post" class="dropdown-logout">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                            <button type="submit" class="dropdown-item-row header-logout"><Icon Name="box-arrow-right" /> Log out</button>
+                        </form>
+                    </div>
+                </details>
+            </Authorized>
+            <NotAuthorized>
+                <details class="header-menu theme-menu">
+                    <summary class="header-icon-button" title="Light or dark" aria-label="Light or dark">
+                        <Icon Name="circle-half" Size="18" />
+                    </summary>
+                    <div class="header-dropdown">
+                        @ThemeChoice
+                    </div>
+                </details>
+                <a class="header-link header-login" href="Account/Login">Log in</a>
+                <a class="btn btn-sm header-register" href="Account/Register">Create account</a>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+</header>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private NotificationSummary summary = NotificationSummary.Empty;
+    private string? currentUrl;
+
+    private bool HasLogo => Environment.WebRootFileProvider.GetFileInfo("img/brand/logo.svg").Exists;
+
+    private bool HasArt => Environment.WebRootFileProvider.GetFileInfo("img/art/header.webp").Exists;
+
+    private string NotificationLabel => summary.Total == 0 ? "Notifications" : $"Notifications ({summary.Total})";
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        if ((await AuthenticationState).User.GetUserId() is { } userId)
+            summary = await Notifications.GetAsync(userId);
+    }
+
+    // Ljust, mörkt eller som datorn (B75); knapparna hanteras av js/theme.js och det valda markeras med CSS.
+    private static readonly RenderFragment ThemeChoice =
+        @<div class="theme-choice" role="group" aria-label="Appearance">
+            <span class="dropdown-section">Appearance</span>
+            <div class="theme-buttons">
+                <button type="button" class="theme-button" data-theme-choice-set="light" title="Light"><Icon Name="sun" /> Light</button>
+                <button type="button" class="theme-button" data-theme-choice-set="dark" title="Dark"><Icon Name="moon" /> Dark</button>
+                <button type="button" class="theme-button" data-theme-choice-set="auto" title="Same as your device"><Icon Name="circle-half" /> Auto</button>
+            </div>
+        </div>;
+}
